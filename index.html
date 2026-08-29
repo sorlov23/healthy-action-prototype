@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Healthy Action v0.6</title>
+<style>
+:root{--bg:#f5f7f5;--card:#fff;--text:#17211a;--muted:#6d786f;--line:#e2e7e2;--g:#239a55;--gs:#eaf6ee;--b:#4274df;--bs:#edf3ff}
+*{box-sizing:border-box}body{margin:0;background:#e8ede8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--text)}
+.app{width:min(430px,100vw);min-height:100vh;margin:auto;background:var(--bg);position:relative}
+.s{display:none;min-height:100vh;padding:22px 16px 112px}.s.on{display:block}
+.k{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+h1{font-size:32px;line-height:1.03;margin:5px 0 8px;letter-spacing:-.045em}h2{font-size:18px;margin:0}.sub{font-size:13px;color:var(--muted);line-height:1.5}
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:14px}
+.hero{background:linear-gradient(145deg,#173d29,#27794c);color:white;border:0}.hero .sub{color:#d8eadf}.hero b{display:block;font-size:24px;line-height:1.17;margin:7px 0 8px}
+.steps{display:flex;gap:6px;margin:18px 0}.step{height:5px;flex:1;border-radius:99px;background:#e3e7e3}.step.on{background:var(--g)}
+.choice{width:100%;border:1px solid var(--line);background:#fff;border-radius:18px;padding:15px;text-align:left;margin:5px 0}.choice.sel{border-color:#8ed2a7;background:#f3fbf5}.choice b{display:block}.choice span{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.btn{border:0;border-radius:17px;padding:14px 16px;font:inherit;font-weight:800}.primary{background:var(--g);color:#fff}.full{width:100%;margin-top:16px}
+.field{margin-top:12px}.field label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}.field input{width:100%;border:1px solid var(--line);border-radius:16px;padding:14px;font:inherit}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}.metric .v{font-size:24px;font-weight:850;margin-top:3px}
+.progress{height:7px;background:#edf0ed;border-radius:99px;overflow:hidden;margin-top:9px}.fill{height:100%;background:var(--g);border-radius:99px}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}.sec span{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.act{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;text-align:left;min-height:105px}.ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;margin-bottom:10px;background:var(--gs)}.act small{display:block;color:var(--muted);font-size:11px;line-height:1.35;margin-top:4px}
+.coach{background:linear-gradient(145deg,#eef8f1,#fbfdfb);border-color:#dceedd}.coach p{font-size:13px;color:#536058;line-height:1.5;margin:8px 0 0}
+.missions{display:grid;gap:8px}.m{background:#fff;border:1px solid var(--line);border-radius:17px;padding:13px;display:flex;gap:11px;align-items:center}.mi{width:36px;height:36px;border-radius:12px;background:var(--gs);display:grid;place-items:center}.mm{flex:1}.mm small{display:block;color:var(--muted);font-size:11px;margin-top:3px}.chk{width:24px;height:24px;border-radius:50%;border:2px solid #c9d2ca;display:grid;place-items:center;font-size:13px}.chk.done{background:var(--g);border-color:var(--g);color:#fff}
+.timeline{display:grid;gap:8px}.ev{background:#fff;border:1px solid var(--line);border-radius:17px;padding:13px}.time{font-size:11px;color:var(--muted);margin-bottom:4px}.ev p{font-size:12px;color:var(--muted);margin:5px 0 0}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100vw);height:82px;background:#fffffff4;border-top:1px solid var(--line);display:none;grid-template-columns:repeat(4,1fr);padding:8px;z-index:20}.nav button{border:0;background:transparent;color:var(--muted);font-size:11px;font-weight:800}.nav button b{display:block;font-size:18px;margin-bottom:4px}.nav .active{color:#177642}
+.fab{position:fixed;right:max(calc((100vw - min(430px,100vw))/2 + 18px),18px);bottom:94px;width:58px;height:58px;border-radius:50%;border:0;background:var(--g);color:#fff;font-size:28px;display:none;z-index:25}
+.sheetback{position:fixed;inset:0;background:#141b1548;display:none;align-items:flex-end;justify-content:center;z-index:50}.sheetback.on{display:flex}.sheet{width:min(430px,100vw);background:#fff;border-radius:28px 28px 0 0;padding:14px 16px 24px}.handle{width:42px;height:5px;background:#dce2dd;border-radius:99px;margin:0 auto 16px}.add{display:grid;gap:9px;margin-top:12px}.add div{border:1px solid var(--line);border-radius:17px;padding:13px;background:#fff}
+.sumrow{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)}.sumrow:last-child{border-bottom:0}.good{color:var(--g)}
+.chart{height:155px;border-radius:18px;margin-top:12px;background:linear-gradient(to top,transparent 24%,#edf0ed 25%,transparent 26%,transparent 49%,#edf0ed 50%,transparent 51%,transparent 74%,#edf0ed 75%,transparent 76%);position:relative}
+.chart svg{position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px)}
+.toast{position:fixed;z-index:90;top:18px;left:50%;transform:translateX(-50%) translateY(-80px);width:min(390px,calc(100vw - 32px));background:#17211a;color:#fff;padding:12px 16px;border-radius:16px;font-size:13px;transition:.25s}.toast.on{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+<div id="toast" class="toast"></div>
+
+<section id="o1" class="s on">
+<div class="k">первый запуск</div><h1>Что ты хочешь изменить?</h1><div class="sub">Начнём только с главного.</div>
+<div class="steps"><i class="step on"></i><i class="step"></i><i class="step"></i><i class="step"></i></div>
+<button class="choice sel"><b>Похудеть</b><span>Снизить вес и удерживать результат</span></button>
+<button class="choice"><b>Поддерживать вес</b><span>Стабильный режим</span></button>
+<button class="btn primary full" onclick="go('o2')">Продолжить</button>
+</section>
+
+<section id="o2" class="s">
+<div class="k">параметры</div><h1>Твоя стартовая точка</h1>
+<div class="steps"><i class="step on"></i><i class="step on"></i><i class="step"></i><i class="step"></i></div>
+<div class="field"><label>Текущий вес</label><input value="85 кг"></div>
+<div class="field"><label>Целевой вес</label><input value="75 кг"></div>
+<div class="field"><label>Рост</label><input value="176 см"></div>
+<div class="field"><label>Возраст</label><input value="37"></div>
+<div class="field"><label>Активность</label><input value="Низкая"></div>
+<button class="btn primary full" onclick="go('o3')">Дальше</button>
+</section>
+
+<section id="o3" class="s">
+<div class="k">фокус</div><h1>Что ещё хочется улучшить?</h1><div class="sub">Выбери максимум две вещи.</div>
+<div class="steps"><i class="step on"></i><i class="step on"></i><i class="step on"></i><i class="step"></i></div>
+<button class="choice sel"><b>🚭 Меньше курить / вейп</b><span>Отслеживать дни</span></button>
+<button class="choice sel"><b>🍔 Меньше фастфуда</b><span>Мягкий недельный лимит</span></button>
+<button class="choice"><b>💧 Больше воды</b><span>Дневная цель</span></button>
+<button class="btn primary full" onclick="go('o4')">Продолжить</button>
+</section>
+
+<section id="o4" class="s">
+<div class="k">готово</div><h1>Стартовый план готов</h1>
+<div class="steps"><i class="step on"></i><i class="step on"></i><i class="step on"></i><i class="step on"></i></div>
+<div class="card hero"><b>Начинаем без жёстких ограничений</b><div class="sub">План будет меняться по реальной динамике веса.</div></div>
+<div class="metrics"><div class="metric"><div class="sub">Калории</div><div class="v">1900</div></div><div class="metric"><div class="sub">Белок</div><div class="v">140 г</div></div><div class="metric"><div class="sub">Шаги</div><div class="v">8000</div></div><div class="metric"><div class="sub">Фокус</div><div class="v">2</div></div></div>
+<button class="btn primary full" onclick="start()">Начать день</button>
+</section>
+
+<section id="today" class="s">
+<div class="row"><div><div class="k">сегодня</div><h1>Что делаем сейчас?</h1><div class="sub">Цель: 85 → 75 кг</div></div><div style="width:42px;height:42px;border-radius:50%;background:var(--g);color:#fff;display:grid;place-items:center;font-weight:850">AI</div></div>
+<div class="card hero"><div class="k" style="color:#bfe7ce">фокус дня</div><b id="focus">Сначала — еда и немного движения</b><div class="sub" id="focus2">Запиши первый приём пищи или вес.</div></div>
+
+<div class="sec"><h2>Быстрые действия</h2><span>самое полезное сейчас</span></div>
+<div class="grid">
+<button class="act" onclick="openSheet('food')"><div class="ico">🍽</div><b>Записать еду</b><small>Быстро и без лишних форм</small></button>
+<button class="act" onclick="openSheet('weight')"><div class="ico" style="background:var(--bs)">⚖️</div><b>Взвеситься</b><small>Зафиксировать вес</small></button>
+<button class="act" onclick="walk()"><div class="ico">🚶</div><b>Прогулка 20 мин</b><small>Добавить движения</small></button>
+<button class="act" onclick="openSheet('water')"><div class="ico" style="background:var(--bs)">💧</div><b>Вода</b><small>Добавить стакан</small></button>
+</div>
+
+<div class="sec"><h2>Сегодня</h2><span>цифры вторичны</span></div>
+<div class="metrics">
+<div class="metric"><div class="sub">Калории</div><div class="v" id="cal">0</div><div class="sub">из 1900</div><div class="progress"><div id="cf" class="fill"></div></div></div>
+<div class="metric"><div class="sub">Белок</div><div class="v"><span id="pro">0</span> г</div><div class="sub">из 140</div><div class="progress"><div id="pf" class="fill" style="background:var(--b)"></div></div></div>
+</div>
+
+<div class="card coach"><b>✦ Следующий шаг</b><p id="coach">Запиши еду или вес. После этого рекомендации станут конкретнее.</p></div>
+
+<div class="sec"><h2>Миссии дня</h2><span id="done">1 из 4</span></div>
+<div class="missions">
+<div class="m"><div class="mi">🥩</div><div class="mm"><b>Белок 140 г</b><small id="pm">0 / 140 г</small></div><div id="pc" class="chk"></div></div>
+<div class="m"><div class="mi">👟</div><div class="mm"><b>8000 шагов</b><small id="sm">0 / 8000</small></div><div id="sc" class="chk"></div></div>
+<div class="m"><div class="mi">🍔</div><div class="mm"><b>Без фастфуда</b><small>фокус дня</small></div><div class="chk done">✓</div></div>
+<div class="m"><div class="mi">🚭</div><div class="mm"><b>Без вейпа</b><small id="vm">ещё не отмечено</small></div><div id="vc" class="chk"></div></div>
+</div>
+
+<div class="sec"><h2>Лента дня</h2><span>контекст</span></div><div id="timeline" class="timeline"></div>
+</section>
+
+<section id="actions" class="s"><div class="k">действия</div><h1>Миссия дня</h1><div class="sub">Только то, что реально двигает тебя к цели.</div><div class="card hero"><b id="ah">Фокус: питание + движение</b><div class="sub">Несколько простых действий достаточно.</div></div><div id="alist" class="missions"></div><div class="card coach"><b>✦ Coach рекомендует</b><p id="ac">Сначала запиши еду или вес.</p></div></section>
+
+<section id="progress" class="s"><div class="k">динамика</div><h1>Прогресс</h1><div class="sub">Тренд важнее одного дня.</div><div class="card"><div class="row"><div><div class="sub">Старт</div><b>85,0 кг</b></div><div><div class="sub">Текущий</div><b id="cw">—</b></div></div><div class="chart"><svg viewBox="0 0 300 120"><polyline fill="none" stroke="#239a55" stroke-width="4" points="0,15 60,30 120,43 180,58 240,75 300,92"/><circle cx="300" cy="92" r="5" fill="#239a55"/></svg></div></div><div class="card coach"><b>✦ Вывод Coach</b><p>После нескольких дней здесь появится реальный вывод: менять ли план и какие привычки работают.</p></div><div class="metrics"><div class="metric"><div class="sub">Действий</div><div class="v" id="pa">0</div></div><div class="metric"><div class="sub">Еды записано</div><div class="v" id="pe">0</div></div></div></section>
+
+<section id="profile" class="s"><div class="k">профиль</div><h1>Настройки</h1><div class="card"><div class="sumrow"><span>Цель</span><b>75 кг</b></div><div class="sumrow"><span>Калории</span><b>1900</b></div><div class="sumrow"><span>Белок</span><b>140 г</b></div><div class="sumrow"><span>Шаги</span><b>8000</b></div><div class="sumrow"><span>Coach</span><b>Спокойный</b></div></div></section>
+
+<section id="evening" class="s"><div class="k">итог дня</div><h1>День завершён</h1><div class="sub">Без оценок и наказаний.</div><div class="card"><div class="sumrow"><span>Калории</span><b id="ec">—</b></div><div class="sumrow"><span>Белок</span><b id="ep">—</b></div><div class="sumrow"><span>Шаги</span><b id="es">—</b></div><div class="sumrow"><span>Без фастфуда</span><b class="good">✓</b></div><div class="sumrow"><span>Без вейпа</span><b id="ev">—</b></div></div><div class="card coach"><b>✦ Итог Coach</b><p id="et">Завтра продолжаем обычный план.</p></div><button class="btn primary full" onclick="afterDay()">Посмотреть прогресс</button></section>
+
+<button id="fab" class="fab" onclick="openSheet()">+</button>
+<nav id="nav" class="nav"><button class="active" onclick="tab('today',this)"><b>⌂</b>Сегодня</button><button onclick="tab('actions',this)"><b>⚡</b>Действия</button><button onclick="tab('progress',this)"><b>↘</b>Прогресс</button><button onclick="tab('profile',this)"><b>☰</b>Профиль</button></nav>
+
+<div id="sheet" class="sheetback" onclick="if(event.target.id==='sheet')closeSheet()"><div class="sheet"><div class="handle"></div><h2 id="st">Что добавить?</h2><div id="sl" class="add"></div></div></div>
+</div>
+
+<script>
+const S={cal:0,p:0,steps:0,w:null,v:false,meals:0,acts:0,evs:[]};
+function go(id){document.querySelectorAll('.s').forEach(x=>x.classList.remove('on'));document.getElementById(id).classList.add('on')}
+function start(){nav.style.display='grid';fab.style.display='block';go('today');render()}
+function tab(id,b){go(id);document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()}
+function toast(t){toastEl=document.getElementById('toast');toastEl.textContent=t;toastEl.classList.add('on');setTimeout(()=>toastEl.classList.remove('on'),1500)}
+function addEv(t,d){S.evs.push({tm:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}),t,d})}
+function openSheet(type){
+ sheet.classList.add('on');
+ if(type==='food'){st.textContent='Добавить еду';sl.innerHTML=`<div onclick="meal(650,32,'Бургер + капучино')"><b>🍔 Бургер + капучино</b><div class="sub">≈650 ккал · 32 г белка</div></div><div onclick="meal(520,46,'Курица + рис + овощи')"><b>🍗 Курица + рис + овощи</b><div class="sub">≈520 ккал · 46 г белка</div></div>`}
+ else if(type==='weight'){st.textContent='Записать вес';sl.innerHTML=`<div onclick="weight(84.6)"><b>⚖️ 84,6 кг</b><div class="sub">пример для прототипа</div></div>`}
+ else if(type==='water'){st.textContent='Добавить воду';sl.innerHTML=`<div onclick="water()"><b>💧 +250 мл</b><div class="sub">быстрое добавление</div></div>`}
+ else{st.textContent='Что добавить?';sl.innerHTML=`<div onclick="openSheet('food')"><b>🍽 Еда</b></div><div onclick="openSheet('weight')"><b>⚖️ Вес</b></div><div onclick="openSheet('water')"><b>💧 Вода</b></div><div onclick="vape()"><b>🚭 Без вейпа сегодня</b></div><div onclick="finish()"><b>🌙 Завершить день</b></div>`}
+}
+function closeSheet(){sheet.classList.remove('on')}
+function meal(k,p,n){S.cal+=k;S.p+=p;S.meals++;S.acts++;addEv(n,`≈${k} ккал · ${p} г белка`);closeSheet();toast('Еда записана');render()}
+function weight(w){S.w=w;S.acts++;addEv('Вес',`${w} кг`);closeSheet();toast('Вес сохранён');render()}
+function water(){S.acts++;addEv('Вода','+250 мл');closeSheet();toast('Вода добавлена');render()}
+function walk(){S.steps+=3500;S.acts++;addEv('Прогулка','20 минут · +3500 шагов');toast('Прогулка завершена');render()}
+function vape(){S.v=true;S.acts++;addEv('Привычка','День без вейпа отмечен');closeSheet();toast('Привычка отмечена');render()}
+function render(){
+ cal.textContent=S.cal;pro.textContent=S.p;cf.style.width=Math.min(100,S.cal/1900*100)+'%';pf.style.width=Math.min(100,S.p/140*100)+'%';
+ pm.textContent=`${S.p} / 140 г`;sm.textContent=`${S.steps} / 8000`;vm.textContent=S.v?'выполнено':'ещё не отмечено';
+ pc.className='chk'+(S.p>=140?' done':'');pc.textContent=S.p>=140?'✓':'';sc.className='chk'+(S.steps>=8000?' done':'');sc.textContent=S.steps>=8000?'✓':'';vc.className='chk'+(S.v?' done':'');vc.textContent=S.v?'✓':'';
+ let d=1+(S.p>=140)+(S.steps>=8000)+(S.v?1:0);done.textContent=`${d} из 4`;
+ if(S.meals===0){focus.textContent='Сначала — еда и немного движения';focus2.textContent='Запиши первый приём пищи или вес.';coach.textContent='Запиши еду или вес. После этого рекомендации станут конкретнее.'}
+ else if(S.p<80){focus.textContent='Следующий шаг — добрать белок';focus2.textContent='По калориям всё спокойно.';coach.textContent='Следующий приём пищи лучше сделать белковым.'}
+ else{focus.textContent='Питание уже выглядит неплохо';focus2.textContent='Теперь главный резерв — движение.';coach.textContent='Добавь короткую прогулку и продолжай обычный день.'}
+ timeline.innerHTML=S.evs.length?S.evs.slice().reverse().map(e=>`<div class="ev"><div class="time">${e.tm}</div><b>${e.t}</b><p>${e.d}</p></div>`).join(''):`<div class="ev"><div class="time">утро</div><b>День начался</b><p>Пока никаких записей. Это нормально.</p></div>`;
+ alist.innerHTML=`<div class="m"><div class="mi">🥩</div><div class="mm"><b>Белок</b><small>${S.p} / 140 г</small></div><div class="chk ${S.p>=140?'done':''}">${S.p>=140?'✓':''}</div></div><div class="m"><div class="mi">👟</div><div class="mm"><b>Шаги</b><small>${S.steps} / 8000</small></div><div class="chk ${S.steps>=8000?'done':''}">${S.steps>=8000?'✓':''}</div></div><div class="m"><div class="mi">🍔</div><div class="mm"><b>Без фастфуда</b><small>фокус дня</small></div><div class="chk done">✓</div></div><div class="m"><div class="mi">🚭</div><div class="mm"><b>Без вейпа</b><small>${S.v?'выполнено':'не отмечено'}</small></div><div class="chk ${S.v?'done':''}">${S.v?'✓':''}</div></div>`;
+ ac.textContent=S.meals===0?'Сначала запиши еду или вес.':S.steps<3500?'Питание уже зафиксировано. Следующий лучший шаг — короткая прогулка.':'Сейчас достаточно продолжать обычный день.';
+ cw.textContent=S.w?S.w+' кг':'—';pa.textContent=S.acts;pe.textContent=S.meals;
+}
+function finish(){closeSheet();nav.style.display='none';fab.style.display='none';ec.textContent=S.cal+' / 1900';ep.textContent=S.p+' / 140 г';es.textContent=S.steps+' / 8000';ev.textContent=S.v?'✓':'не отмечено';et.textContent=S.cal<=2100?'День выглядит нормально. Завтра ничего менять не нужно.':'Сегодня плотнее обычного. Завтра не компенсируем — возвращаемся к стандартному плану.';go('evening')}
+function afterDay(){nav.style.display='grid';fab.style.display='block';go('progress');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav button')[2].classList.add('active');render()}
+</script>
+</body></html>
