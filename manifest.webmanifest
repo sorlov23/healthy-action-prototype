@@ -1,0 +1,21 @@
+{
+  "id": "/healthy-action-prototype/pwa.html",
+  "name": "Healthy Action",
+  "short_name": "Healthy",
+  "description": "Action-first прототип приложения для здорового образа жизни",
+  "lang": "ru",
+  "start_url": "/healthy-action-prototype/pwa.html",
+  "scope": "/healthy-action-prototype/",
+  "display": "standalone",
+  "background_color": "#f5f7f5",
+  "theme_color": "#239a55",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
