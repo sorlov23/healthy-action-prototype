@@ -14,14 +14,32 @@
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f5f7f5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f5f7f5}.loading{position:fixed;inset:0;display:grid;place-items:center;color:#59645c;font-size:13px;background:#f5f7f5;z-index:2}</style>
 </head>
 <body>
-<div id="loading" class="loading">Healthy Action · v0.7.1</div>
+<div id="loading" class="loading">Healthy Action · v0.7.2</div>
 <iframe id="app" src="./v07.html" title="Healthy Action"></iframe>
 <script>
 const frame=document.getElementById('app');
 
+function ensureUiStyle(doc){
+  if(doc.getElementById('pwa-shared-ui-polish'))return;
+  const style=doc.createElement('style');
+  style.id='pwa-shared-ui-polish';
+  style.textContent=`
+    .choice>b,.choice>span{display:block}
+    .choice>span{margin-top:4px;color:var(--muted);font-size:13px;line-height:1.35}
+    .sheet .choice{width:100%;min-height:74px;border-radius:20px;padding:14px 16px;text-align:left}
+    .sheet .quickChoice{display:flex;align-items:center;gap:14px}
+    .sheet .quickIcon{flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;font-size:26px;line-height:1}
+    .sheet .quickCopy{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+    .sheet .quickCopy b{display:block;font-size:17px;line-height:1.22;color:var(--text);font-weight:800}
+    .sheet .quickCopy span{display:block;font-size:13px;line-height:1.35;color:var(--muted);margin:0;overflow-wrap:anywhere}
+  `;
+  doc.head.appendChild(style);
+}
+
 function applyOnboardingPolish(){
   const doc=frame.contentDocument;
   if(!doc)return;
+  ensureUiStyle(doc);
   const ob=doc.getElementById('onboarding');
   if(!ob)return;
 
@@ -101,9 +119,42 @@ function applyOnboardingPolish(){
   }
 }
 
+function applyQuickMenuPolish(){
+  const doc=frame.contentDocument;
+  const win=frame.contentWindow;
+  if(!doc||!win)return;
+  ensureUiStyle(doc);
+  if(typeof win.openSheet!=='function')return;
+
+  win.openQuick=function(){
+    win.openSheet(`
+      <h2>Что добавить?</h2>
+      <div class="list">
+        <button class="choice quickChoice" onclick="openFood()">
+          <span class="quickIcon">🍽</span>
+          <span class="quickCopy"><b>Еда</b><span>Текст + оценка</span></span>
+        </button>
+        <button class="choice quickChoice" onclick="openWeight()">
+          <span class="quickIcon">⚖️</span>
+          <span class="quickCopy"><b>Вес</b><span>Любое значение</span></span>
+        </button>
+        <button class="choice quickChoice" onclick="addWater(250);closeSheet()">
+          <span class="quickIcon">💧</span>
+          <span class="quickCopy"><b>Вода</b><span>Добавить 250 мл</span></span>
+        </button>
+        <button class="choice quickChoice" onclick="addSteps(1000);closeSheet()">
+          <span class="quickIcon">👟</span>
+          <span class="quickCopy"><b>Шаги</b><span>Добавить 1000 шагов</span></span>
+        </button>
+      </div>
+    `);
+  };
+}
+
 frame.addEventListener('load',()=>{
   document.getElementById('loading').style.display='none';
   try{applyOnboardingPolish()}catch(e){}
+  try{applyQuickMenuPolish()}catch(e){}
 });
 
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
