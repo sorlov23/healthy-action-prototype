@@ -14,10 +14,98 @@
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f5f7f5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f5f7f5}.loading{position:fixed;inset:0;display:grid;place-items:center;color:#59645c;font-size:13px;background:#f5f7f5;z-index:2}</style>
 </head>
 <body>
-<div id="loading" class="loading">Healthy Action · v0.7</div>
+<div id="loading" class="loading">Healthy Action · v0.7.1</div>
 <iframe id="app" src="./v07.html" title="Healthy Action"></iframe>
 <script>
-const frame=document.getElementById('app');frame.addEventListener('load',()=>document.getElementById('loading').style.display='none');
+const frame=document.getElementById('app');
+
+function applyOnboardingPolish(){
+  const doc=frame.contentDocument;
+  if(!doc)return;
+  const ob=doc.getElementById('onboarding');
+  if(!ob)return;
+
+  if(!doc.getElementById('pwa-onboarding-polish')){
+    const style=doc.createElement('style');
+    style.id='pwa-onboarding-polish';
+    style.textContent=`
+      #onboarding{padding-top:max(28px,env(safe-area-inset-top));padding-left:18px;padding-right:18px;padding-bottom:36px}
+      #onboarding .k{font-size:10px;letter-spacing:.12em;color:#7b857d}
+      #onboarding h1{font-size:34px;line-height:1.02;margin:7px 0 10px;max-width:350px}
+      #onboarding> .sub{font-size:14px;line-height:1.5;max-width:360px;color:#778078}
+      #onboarding .steps{margin:22px 0 26px;gap:8px}
+      #onboarding .step{height:6px;background:#dfe6df}
+      #onboarding .step.on{background:linear-gradient(90deg,#28a65a,#39b96b)}
+      #onboarding .field{margin-top:15px}
+      #onboarding .field label{font-size:13px;color:#667168;margin-bottom:8px}
+      #onboarding .field input,#onboarding .field select{height:58px;border-radius:19px;padding:0 17px;font-size:18px;background:#fff;border:1px solid #dfe6df;box-shadow:0 1px 0 rgba(20,40,25,.02)}
+      #onboarding .field input:focus,#onboarding .field select:focus{border-color:#7bc894;box-shadow:0 0 0 4px rgba(39,158,83,.08)}
+      #onboarding .focusGroup{margin-top:18px}
+      #onboarding .focusGroup>label{font-size:13px;font-weight:800;color:#667168;margin-bottom:8px}
+      #onboarding .choice.focusChoice{display:flex;align-items:center;gap:14px;min-height:78px;border-radius:20px;margin:7px 0;padding:16px;border:1px solid #dfe6df;background:#fff;text-align:left;box-shadow:0 1px 0 rgba(20,40,25,.02)}
+      #onboarding .choice.focusChoice.sel{background:#f1faf4;border-color:#7fce9a;box-shadow:0 0 0 1px rgba(39,158,83,.05)}
+      #onboarding .focusIcon{flex:0 0 38px;width:38px;font-size:28px;line-height:1.1;text-align:center}
+      #onboarding .focusCopy{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+      #onboarding .focusCopy b{display:block;font-size:16px;line-height:1.24;color:#17211a}
+      #onboarding .focusCopy span{display:block;font-size:13px;line-height:1.35;color:#788179;margin:0}
+      #onboarding .onbBadge{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;background:#edf8f0;color:#237744;font-size:12px;font-weight:800;margin-top:10px}
+      #onboarding .onbBadgeDot{width:7px;height:7px;border-radius:50%;background:#2eac61}
+      #onboarding .onbNote{margin-top:12px;padding:12px 13px;border-radius:16px;background:#eef3ef;color:#6d786f;font-size:12px;line-height:1.45}
+      #onboarding .btn.full{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom));margin-top:22px;min-height:58px;border-radius:20px;font-size:17px;box-shadow:0 12px 26px rgba(35,154,85,.20);z-index:4}
+    `;
+    doc.head.appendChild(style);
+  }
+
+  const mainSub=ob.querySelector(':scope > .sub');
+  if(mainSub)mainSub.textContent='Эти значения сохранятся и будут влиять на дневные цели.';
+
+  if(!ob.querySelector('.onbBadge')){
+    const sub=ob.querySelector(':scope > .sub');
+    if(sub){
+      const badge=doc.createElement('div');
+      badge.className='onbBadge';
+      badge.innerHTML='<span class="onbBadgeDot"></span>Займёт меньше минуты';
+      sub.insertAdjacentElement('afterend',badge);
+    }
+  }
+
+  const focusField=[...ob.querySelectorAll('.field')].find(el=>el.querySelector('label')?.textContent.includes('Два фокуса'));
+  if(focusField){
+    focusField.classList.add('focusGroup');
+    const label=focusField.querySelector('label');
+    const choices=[...focusField.querySelectorAll('.choice[data-h]')];
+    const cfg={
+      vape:['🚭','Без вейпа / сигарет','Ежедневная отметка без давления и штрафов'],
+      fastfood:['🍔','Меньше фастфуда','Следить за частотой, а не запрещать полностью'],
+      water:['💧','Пить больше воды','Мягкая дневная цель без лишних напоминаний']
+    };
+    const updateCount=()=>{if(label){const n=choices.filter(x=>x.classList.contains('sel')).length;label.textContent=`Выбрано ${n} из 2`;}};
+    choices.forEach(choice=>{
+      const key=choice.dataset.h;
+      const c=cfg[key];
+      if(c&&!choice.classList.contains('focusChoice')){
+        choice.classList.add('focusChoice');
+        choice.innerHTML=`<span class="focusIcon">${c[0]}</span><span class="focusCopy"><b>${c[1]}</b><span>${c[2]}</span></span>`;
+        choice.addEventListener('click',()=>setTimeout(updateCount,0));
+      }
+    });
+    updateCount();
+
+    const cta=ob.querySelector('.btn.full');
+    if(cta&&!ob.querySelector('.onbNote')){
+      const note=doc.createElement('div');
+      note.className='onbNote';
+      note.textContent='Фокусы можно будет изменить в профиле в любой момент.';
+      cta.insertAdjacentElement('beforebegin',note);
+    }
+  }
+}
+
+frame.addEventListener('load',()=>{
+  document.getElementById('loading').style.display='none';
+  try{applyOnboardingPolish()}catch(e){}
+});
+
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 </script>
 </body>
