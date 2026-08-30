@@ -2,6 +2,8 @@
   const frame = document.getElementById('app');
   if(!frame) return;
 
+  const APP_VERSION = 'v0.9.1';
+
   const icons = {
     home: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.4 12 4l7.5 6.4v8.1a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.6h-3.6V20H6a1.5 1.5 0 0 1-1.5-1.5z"/></svg>`,
     bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.8 5.9 13h5.2l-.6 8.2L18.1 11h-5.2z"/></svg>`,
@@ -12,9 +14,10 @@
   };
 
   function ensureStyles(doc){
-    if(doc.getElementById('pwa-ui-polish-v2')) return;
+    if(doc.getElementById('pwa-ui-polish-v3')) return;
+    doc.getElementById('pwa-ui-polish-v2')?.remove();
     const style = doc.createElement('style');
-    style.id = 'pwa-ui-polish-v2';
+    style.id = 'pwa-ui-polish-v3';
     style.textContent = `
       button{-webkit-tap-highlight-color:transparent}
       .btn,.action,.choice,.datebtn,.check,.nav button,.pill,.del,.photoRemove{touch-action:manipulation}
@@ -26,9 +29,9 @@
       .item .left{width:40px;height:40px;border-radius:13px;font-size:20px}
       .item .main b{display:block;line-height:1.24}
       .item .main small{line-height:1.35}
-      .check{appearance:none;-webkit-appearance:none;flex:0 0 30px;width:30px;height:30px;min-width:30px;padding:0!important;margin:0;border-radius:50%;border:2.25px solid #c4cec6;background:#fff;display:grid;place-items:center;position:relative;box-sizing:border-box;font-size:0!important;line-height:0;box-shadow:none;overflow:hidden}
-      .check::before{content:'';width:14px;height:11px;opacity:0;transform:scale(.9);transition:opacity .16s ease,transform .16s ease;background-repeat:no-repeat;background-position:center;background-size:contain;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 11'%3E%3Cpath d='M1.2 5.6 4.9 9.2 12.8 1.4' fill='none' stroke='white' stroke-width='2.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
-      .check.done{background:var(--g);border-color:var(--g);box-shadow:0 4px 10px rgba(35,154,85,.16)}
+      .check{appearance:none;-webkit-appearance:none;flex:0 0 30px;width:30px;height:30px;min-width:30px;padding:0!important;margin:0;border-radius:50%;border:2px solid #c7d1c9;background:#fff;display:grid;place-items:center;position:relative;box-sizing:border-box;font-size:0!important;line-height:0;box-shadow:none!important;overflow:hidden}
+      .check::before{content:'';width:13px;height:10px;opacity:0;transform:scale(.96);background-repeat:no-repeat;background-position:center;background-size:13px 10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 10'%3E%3Cpath d='M1.2 5.1 4.6 8.4 11.8 1.5' fill='none' stroke='white' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");transition:opacity .14s ease,transform .14s ease}
+      .check.done{background:var(--g);border-color:var(--g);box-shadow:none!important}
       .check.done::before{opacity:1;transform:scale(1)}
 
       /* Controls */
@@ -39,15 +42,15 @@
       .datebtn{display:grid;place-items:center;font-size:0;color:#526058}
       .datebtn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
 
-      /* Navigation: one coherent icon family */
+      /* Navigation */
       .nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;line-height:1.1}
       .nav button b{height:24px;margin:0!important;display:grid!important;place-items:center;font-size:0!important;line-height:0}
       .nav button b svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-      .nav button.active b svg{stroke-width:2.25}
+      .nav button.active b svg{stroke-width:2.15}
 
       /* Perfectly centred plus */
       .fab{font-size:0!important;display:grid;place-items:center}
-      .fab::before,.fab::after{content:'';position:absolute;width:23px;height:2.6px;border-radius:99px;background:#fff;left:50%;top:50%;transform:translate(-50%,-50%)}
+      .fab::before,.fab::after{content:'';position:absolute;width:23px;height:2.4px;border-radius:99px;background:#fff;left:50%;top:50%;transform:translate(-50%,-50%)}
       .fab::after{transform:translate(-50%,-50%) rotate(90deg)}
 
       /* Small destructive/close controls */
@@ -84,11 +87,35 @@
     if(dateButtons[1]) dateButtons[1].innerHTML = icons.right;
   }
 
+  function syncVersions(doc){
+    const replaceText = root => {
+      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(node => {
+        const v = node.nodeValue;
+        if(v && /v\d+\.\d+(?:\.\d+)?/i.test(v)) node.nodeValue = v.replace(/v\d+\.\d+(?:\.\d+)?/gi, APP_VERSION);
+      });
+    };
+    replaceText(doc.body);
+    if(!doc.__haVersionObserver){
+      doc.__haVersionObserver = new MutationObserver(mutations => {
+        mutations.forEach(m => m.addedNodes.forEach(node => {
+          if(node.nodeType === 3){
+            if(/v\d+\.\d+(?:\.\d+)?/i.test(node.nodeValue || '')) node.nodeValue = node.nodeValue.replace(/v\d+\.\d+(?:\.\d+)?/gi, APP_VERSION);
+          } else if(node.nodeType === 1) replaceText(node);
+        }));
+      });
+      doc.__haVersionObserver.observe(doc.body,{subtree:true,childList:true});
+    }
+  }
+
   function apply(){
     const doc = frame.contentDocument;
     if(!doc) return;
     ensureStyles(doc);
     applyIcons(doc);
+    syncVersions(doc);
   }
 
   frame.addEventListener('load', () => {
