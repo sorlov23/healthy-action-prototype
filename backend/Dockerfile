@@ -2,12 +2,13 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package.json ./
+COPY backend/package.json ./
 RUN npm install --omit=dev
 
-COPY src ./src
-COPY scripts ./scripts
-COPY migrations ./migrations
+COPY backend/src ./src
+COPY backend/scripts ./scripts
+COPY backend/migrations ./migrations
+COPY food-catalog.js /food-catalog.js
 
 ENV NODE_ENV=production
 EXPOSE 8080
