@@ -6,6 +6,7 @@ import { searchFoods } from './food-search.js';
 import { resolveFoodText } from './food-resolver.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerFoodLogRoutes } from './food-logs.js';
+import { registerStateRoutes } from './state.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -22,7 +23,7 @@ await app.register(cors, {
     if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error('Origin not allowed'), false);
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
@@ -69,6 +70,7 @@ app.post('/api/v1/food/resolve', {
 
 await registerAuthRoutes(app);
 await registerFoodLogRoutes(app);
+await registerStateRoutes(app);
 
 app.setErrorHandler((error, request, reply) => {
   request.log.error(error);
