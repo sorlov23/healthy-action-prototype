@@ -1,31 +1,86 @@
 # Healthy Action backend
 
-Первый backend-контур для `v0.10 Real Food Flow`.
+Backend-контур для `v0.10 Real Food Flow`.
 
 ## Зафиксированная инфраструктура MVP
 
 - **Hosting:** Beget VPS, РФ
 - **Database:** PostgreSQL 17 на том же VPS на старте
 - **API:** Node.js 22 + Fastify
+- **Reverse proxy / HTTPS:** Caddy
 - **Frontend:** текущая PWA на GitHub Pages до отдельного решения по production frontend
-- **Photos:** не храним по умолчанию; когда понадобится хранение — S3-compatible storage в РФ
+- **Photos:** не храним по умолчанию; если понадобится история снимков — S3-compatible storage в РФ
 
-Backend не зависит от Beget API и переносим на любой обычный Linux + PostgreSQL.
+Backend не зависит от API Beget и переносим на любой обычный Linux + Docker + PostgreSQL.
 
-## Уже реализовано
+## Что уже реализовано
 
-- PostgreSQL schema для food catalog и базового пользовательского state
-- `pg_trgm` fuzzy search и алиасы продуктов
+### Food Catalog
+
+- PostgreSQL-каталог продуктов
+- `pg_trgm` fuzzy search
+- алиасы и русская нормализация
 - импорт текущего `../food-catalog.js` в PostgreSQL
+- детерминированный Food Resolver для известных продуктов
+
+### Auth
+
+Для MVP используется guest/device session без email и пароля:
+
+- клиент получает криптографически случайный bearer token;
+- в PostgreSQL хранится только SHA-256 hash токена;
+- сессия имеет срок действия и может быть отозвана;
+- реальный email/телефон для работы MVP не требуется.
+
+### Серверное состояние
+
+Уже есть модели и API для:
+
+- профиля/onboarding;
+- food logs и позиций еды;
+- веса;
+- воды;
+- шагов;
+- дневных привычек;
+- объединённого состояния дня.
+
+PWA остаётся local-first: локальная запись выполняется сразу, сервер получает данные в фоне. До подключения Beget `apiBase` пустой, поэтому существующий прототип работает полностью автономно.
+
+## API v1
+
+Публичные health/catalog endpoints:
+
 - `GET /health`
 - `GET /ready`
 - `GET /api/v1/foods/search?q=кур&limit=6`
-- `POST /api/v1/food/resolve` — первый детерминированный resolver по алиасам каталога
-- CORS для текущей PWA
-- Docker Compose для локальной разработки и будущего VPS
-- GitHub Actions smoke test с настоящим PostgreSQL 17
+- `POST /api/v1/food/resolve`
 
-## Первый запуск
+Auth:
+
+- `POST /api/v1/auth/guest`
+- `GET /api/v1/auth/me`
+
+Profile:
+
+- `GET /api/v1/profile`
+- `PUT /api/v1/profile`
+
+Food logs:
+
+- `POST /api/v1/food/logs`
+- `GET /api/v1/food/logs?day=YYYY-MM-DD&timezoneOffsetMinutes=0`
+
+Weight / daily state:
+
+- `POST /api/v1/weight/logs`
+- `GET /api/v1/weight/logs?limit=90`
+- `POST /api/v1/daily/metrics`
+- `PUT /api/v1/daily/habits/:habit`
+- `GET /api/v1/day?day=YYYY-MM-DD&timezoneOffsetMinutes=0`
+
+Все персональные endpoints требуют `Authorization: Bearer <token>`.
+
+## Первый локальный запуск
 
 Из папки `backend`:
 
@@ -40,7 +95,7 @@ docker compose run --rm api npm run seed:foods
 docker compose up -d api
 ```
 
-Проверка:
+Быстрая проверка:
 
 ```bash
 curl http://127.0.0.1:8080/health
@@ -51,39 +106,59 @@ curl -X POST http://127.0.0.1:8080/api/v1/food/resolve \
   -d '{"text":"куриная грудка с рисом"}'
 ```
 
-Ожидаемый смысл ответа search:
+## Production на Beget
 
-```json
-{
-  "query": "кур",
-  "items": [
-    {
-      "id": "chicken_breast",
-      "name": "Куриная грудка",
-      "icon": "🍗",
-      "kcal100": 165,
-      "protein100": 31,
-      "portion": 150
-    }
-  ]
-}
-```
+Подготовлены:
 
-Resolver сейчас намеренно не использует LLM: он находит известные продукты и их алиасы в свободной фразе и возвращает структуру для подтверждения пользователем. Позже AI/Vision будут подключены внутри этого же контракта.
+- `docker-compose.prod.yml`
+- `Caddyfile`
+- `.env.prod.example`
 
-## Что дальше
+На production PostgreSQL не должен публиковаться наружу. Caddy принимает внешний HTTPS-трафик и проксирует его к API внутри Docker-сети.
 
-1. Переключить autocomplete PWA с локального JS-каталога на `/api/v1/foods/search` с локальным fallback.
-2. Подключить PWA к `/api/v1/food/resolve` и экрану подтверждения состава.
-3. Добавить создание пользователя/профиля и серверное сохранение food logs.
-4. Добавить AI provider как fallback resolver для сложных фраз.
-5. Подключить Vision provider к тому же resolver-контракту.
-6. Поднять API на Beget, когда backend будет готов к реальному использованию.
+До покупки VPS production hostname не фиксируем. После появления домена/API-host нужно будет:
+
+1. создать `.env.prod` из шаблона;
+2. указать production hostname;
+3. применить migrations + seed;
+4. поднять production compose;
+5. проверить `/health` и `/ready` по HTTPS;
+6. вписать HTTPS API URL в корневой `runtime-config.js`;
+7. увеличить PWA asset revision.
+
+## CI
+
+`backend ci` поднимает настоящий PostgreSQL 17 и проверяет:
+
+- migrations;
+- импорт Food Catalog;
+- поиск продукта;
+- Food Resolver;
+- guest auth;
+- отсутствие plaintext session token в БД;
+- profile persistence;
+- food log persistence;
+- вес;
+- воду и шаги;
+- привычки;
+- day overview.
 
 ## Security baseline
 
 - секреты только через `.env`, никогда не коммитить;
 - PostgreSQL не публиковать наружу;
-- API слушает `127.0.0.1:8080` в Compose, наружу позже только через HTTPS reverse proxy;
-- перед production включить firewall, backup policy и отдельного непривилегированного пользователя VPS;
-- auth будет добавлен до записи реальных персональных данных.
+- наружу только HTTPS через Caddy;
+- bearer token хранится на сервере только как hash;
+- перед production включить firewall и backup policy;
+- не хранить фотографии еды без продуктовой необходимости;
+- до реальных пользователей добавить удаление аккаунта/данных и финализировать privacy-flow.
+
+## Следующие этапы
+
+1. Первичная синхронизация/reconciliation при запуске PWA: профиль + текущий день + история веса.
+2. Endpoint удаления guest account и всех связанных данных.
+3. Развернуть API на Beget.
+4. Переключить `runtime-config.js` на production API.
+5. Добавить AI provider как fallback для сложных фраз.
+6. Подключить Vision provider к тому же Food Resolver-контракту.
+7. Начать формировать серверный `Next Action / Coach` из реального состояния дня.
