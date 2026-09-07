@@ -1,0 +1,78 @@
+# Healthy Action backend
+
+Первый backend-контур для `v0.10 Real Food Flow`.
+
+## Зафиксированная инфраструктура MVP
+
+- **Hosting:** Beget VPS, РФ
+- **Database:** PostgreSQL 17 на том же VPS на старте
+- **API:** Node.js 22 + Fastify
+- **Frontend:** текущая PWA на GitHub Pages до отдельного решения по production frontend
+- **Photos:** не храним по умолчанию; когда понадобится хранение — S3-compatible storage в РФ
+
+Backend не зависит от Beget API и переносим на любой обычный Linux + PostgreSQL.
+
+## Уже реализовано
+
+- PostgreSQL schema для food catalog и базового пользовательского state
+- `pg_trgm` fuzzy search и алиасы продуктов
+- импорт текущего `../food-catalog.js` в PostgreSQL
+- `GET /health`
+- `GET /ready`
+- `GET /api/v1/foods/search?q=кур&limit=6`
+- CORS для текущей PWA
+- Docker Compose для локальной разработки и будущего VPS
+
+## Первый запуск
+
+```bash
+cp .env.example .env
+# обязательно замени пароль БД перед реальным VPS
+export POSTGRES_PASSWORD='change-me'
+docker compose up -d postgres
+npm install
+npm run migrate
+npm run seed:foods
+docker compose up -d --build api
+```
+
+Проверка:
+
+```bash
+curl http://127.0.0.1:8080/health
+curl 'http://127.0.0.1:8080/api/v1/foods/search?q=кур&limit=6'
+```
+
+Ожидаемый смысл ответа search:
+
+```json
+{
+  "query": "кур",
+  "items": [
+    {
+      "id": "chicken_breast",
+      "name": "Куриная грудка",
+      "icon": "🍗",
+      "kcal100": 165,
+      "protein100": 31,
+      "portion": 150
+    }
+  ]
+}
+```
+
+## Что дальше
+
+1. Поднять API на Beget только когда backend готов к реальному использованию.
+2. Переключить autocomplete PWA с локального JS-каталога на `/api/v1/foods/search` с локальным fallback.
+3. Добавить `POST /api/v1/food/resolve` для свободной фразы.
+4. Добавить создание пользователя/профиля и серверное сохранение food logs.
+5. Подключить Vision provider к тому же resolver-контракту.
+
+## Security baseline
+
+- секреты только через `.env`, никогда не коммитить;
+- PostgreSQL не публиковать наружу;
+- API слушает `127.0.0.1:8080` в Compose, наружу позже только через HTTPS reverse proxy;
+- перед production включить firewall, backup policy и отдельного непривилегированного пользователя VPS;
+- auth будет добавлен до записи реальных персональных данных.
