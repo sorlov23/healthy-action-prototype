@@ -1,5 +1,5 @@
-const CACHE='healthy-action-pwa-v14';
-const ASSETS=['./pwa.html','./v07.html?rev=14','./runtime-config.js?rev=14','./food-catalog.js?rev=14','./pwa-enhancements.js?rev=14','./pwa-api.js?rev=14','./pwa-sync.js?rev=14','./ui-polish.js?rev=14','./manifest.webmanifest','./icon.svg'];
+const CACHE='healthy-action-pwa-v15';
+const ASSETS=['./pwa.html','./v07.html?rev=15','./runtime-config.js?rev=15','./food-catalog.js?rev=15','./pwa-enhancements.js?rev=15','./pwa-api.js?rev=15','./pwa-sync.js?rev=15','./pwa-state-sync.js?rev=15','./ui-polish.js?rev=15','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;event.respondWith(fetch(event.request,{cache:'no-store'}).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request).then(r=>r||caches.match('./pwa.html'))));});
