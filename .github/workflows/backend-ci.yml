@@ -47,7 +47,7 @@ jobs:
       - run: npm install
       - run: npm run migrate
       - run: npm run seed:foods
-      - name: Smoke test food flow, auth, profile and state persistence
+      - name: Smoke test complete MVP persistence lifecycle
         run: |
           node --input-type=module <<'NODE'
           import { searchFoods } from './src/food-search.js';
@@ -56,6 +56,8 @@ jobs:
           import { upsertProfile, getProfile } from './src/profile.js';
           import { createFoodLog, getFoodLogsForDay } from './src/food-logs.js';
           import { createWeightLog, applyDailyMetricDelta, setDailyHabit, getDayOverview } from './src/state.js';
+          import { buildBootstrap } from './src/bootstrap.js';
+          import { deleteAccount } from './src/account.js';
           import { pool } from './src/db.js';
 
           const search = await searchFoods('кур', 6);
@@ -129,6 +131,22 @@ jobs:
             throw new Error(`day overview mismatch: ${JSON.stringify(overview)}`);
           }
 
-          console.log({ auth: { userId: auth.userId }, profile, overview });
+          const bootstrap = await buildBootstrap(session.userId, '2026-09-07', 0);
+          if (bootstrap.profile?.targetWeightKg !== 75 || bootstrap.day.metrics.waterMl !== 500 || bootstrap.weights.length !== 1) {
+            throw new Error(`bootstrap mismatch: ${JSON.stringify(bootstrap)}`);
+          }
+
+          const deleted = await deleteAccount(session.userId);
+          if (!deleted) throw new Error('account deletion failed');
+          const afterDelete = await authenticateToken(session.token);
+          if (afterDelete) throw new Error('session survived account deletion');
+          const userRows = await pool.query('select 1 from app_users where id = $1', [session.userId]);
+          const logRows = await pool.query('select 1 from food_logs where user_id = $1', [session.userId]);
+          const weightRows = await pool.query('select 1 from weight_logs where user_id = $1', [session.userId]);
+          if (userRows.rowCount || logRows.rowCount || weightRows.rowCount) {
+            throw new Error('cascade deletion incomplete');
+          }
+
+          console.log({ lifecycle: 'ok', bootstrap: { profile: bootstrap.profile, day: bootstrap.day } });
           await pool.end();
           NODE
