@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import 'dotenv/config';
 import { pingDb, pool } from './db.js';
 import { searchFoods } from './food-search.js';
+import { resolveFoodText } from './food-resolver.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -49,6 +50,19 @@ app.get('/api/v1/foods/search', {
   const items = await searchFoods(request.query.q, request.query.limit);
   return { query: request.query.q, items };
 });
+
+app.post('/api/v1/food/resolve', {
+  schema: {
+    body: {
+      type: 'object',
+      required: ['text'],
+      additionalProperties: false,
+      properties: {
+        text: { type: 'string', minLength: 2, maxLength: 1000 },
+      },
+    },
+  },
+}, async (request) => resolveFoodText(request.body.text));
 
 app.setErrorHandler((error, request, reply) => {
   request.log.error(error);
