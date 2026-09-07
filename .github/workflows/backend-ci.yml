@@ -47,12 +47,13 @@ jobs:
       - run: npm install
       - run: npm run migrate
       - run: npm run seed:foods
-      - name: Smoke test food flow, auth and state persistence
+      - name: Smoke test food flow, auth, profile and state persistence
         run: |
           node --input-type=module <<'NODE'
           import { searchFoods } from './src/food-search.js';
           import { resolveFoodText } from './src/food-resolver.js';
           import { createGuestSession, authenticateToken } from './src/auth.js';
+          import { upsertProfile, getProfile } from './src/profile.js';
           import { createFoodLog, getFoodLogsForDay } from './src/food-logs.js';
           import { createWeightLog, applyDailyMetricDelta, setDailyHabit, getDayOverview } from './src/state.js';
           import { pool } from './src/db.js';
@@ -76,6 +77,22 @@ jobs:
 
           const plaintext = await pool.query('select 1 from auth_sessions where token_hash = $1', [session.token]);
           if (plaintext.rowCount) throw new Error('plaintext session token stored in database');
+
+          await upsertProfile(session.userId, {
+            startWeightKg: 85,
+            targetWeightKg: 75,
+            heightCm: 176,
+            ageYears: 37,
+            activity: 'low',
+            focuses: ['vape', 'fastfood'],
+            calorieTarget: 1700,
+            proteinTargetG: 135,
+            stepTarget: 8000,
+          });
+          const profile = await getProfile(session.userId);
+          if (!profile || profile.startWeightKg !== 85 || profile.targetWeightKg !== 75 || profile.focuses.join(',') !== 'vape,fastfood') {
+            throw new Error(`profile persistence mismatch: ${JSON.stringify(profile)}`);
+          }
 
           const log = await createFoodLog(session.userId, {
             eatenAt: '2026-09-07T12:00:00.000Z',
@@ -112,6 +129,6 @@ jobs:
             throw new Error(`day overview mismatch: ${JSON.stringify(overview)}`);
           }
 
-          console.log({ auth: { userId: auth.userId }, overview });
+          console.log({ auth: { userId: auth.userId }, profile, overview });
           await pool.end();
           NODE
