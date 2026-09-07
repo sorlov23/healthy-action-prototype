@@ -5,9 +5,11 @@ import { pingDb, pool } from './db.js';
 import { searchFoods } from './food-search.js';
 import { resolveFoodText } from './food-resolver.js';
 import { registerAuthRoutes } from './auth.js';
+import { registerProfileRoutes } from './profile.js';
 import { registerFoodLogRoutes } from './food-logs.js';
 import { registerStateRoutes } from './state.js';
-import { registerProfileRoutes } from './profile.js';
+import { registerBootstrapRoutes } from './bootstrap.js';
+import { registerAccountRoutes } from './account.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -24,7 +26,7 @@ await app.register(cors, {
     if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error('Origin not allowed'), false);
   },
-  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
@@ -73,6 +75,8 @@ await registerAuthRoutes(app);
 await registerProfileRoutes(app);
 await registerFoodLogRoutes(app);
 await registerStateRoutes(app);
+await registerBootstrapRoutes(app);
+await registerAccountRoutes(app);
 
 app.setErrorHandler((error, request, reply) => {
   request.log.error(error);
