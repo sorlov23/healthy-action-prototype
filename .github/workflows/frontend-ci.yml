@@ -8,6 +8,7 @@ on:
       - 'food-catalog.js'
       - 'pwa-enhancements.js'
       - 'pwa-api.js'
+      - 'pwa-sync.js'
       - 'ui-polish.js'
       - 'service-worker.js'
       - '.github/workflows/frontend-ci.yml'
@@ -18,6 +19,7 @@ on:
       - 'food-catalog.js'
       - 'pwa-enhancements.js'
       - 'pwa-api.js'
+      - 'pwa-sync.js'
       - 'ui-polish.js'
       - 'service-worker.js'
       - '.github/workflows/frontend-ci.yml'
@@ -36,10 +38,12 @@ jobs:
           node --check food-catalog.js
           node --check pwa-enhancements.js
           node --check pwa-api.js
+          node --check pwa-sync.js
           node --check ui-polish.js
           node --check service-worker.js
       - name: Check PWA asset wiring
         run: |
-          grep -q 'runtime-config.js?rev=13' pwa.html
-          grep -q 'pwa-api.js?rev=13' pwa.html
-          grep -q "healthy-action-pwa-v13" service-worker.js
+          grep -q 'runtime-config.js?rev=14' pwa.html
+          grep -q 'pwa-api.js?rev=14' pwa.html
+          grep -q 'pwa-sync.js?rev=14' pwa.html
+          grep -q "healthy-action-pwa-v14" service-worker.js
