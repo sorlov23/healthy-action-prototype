@@ -47,13 +47,14 @@ jobs:
       - run: npm install
       - run: npm run migrate
       - run: npm run seed:foods
-      - name: Smoke test food flow, auth and persistence
+      - name: Smoke test food flow, auth and state persistence
         run: |
           node --input-type=module <<'NODE'
           import { searchFoods } from './src/food-search.js';
           import { resolveFoodText } from './src/food-resolver.js';
           import { createGuestSession, authenticateToken } from './src/auth.js';
           import { createFoodLog, getFoodLogsForDay } from './src/food-logs.js';
+          import { createWeightLog, applyDailyMetricDelta, setDailyHabit, getDayOverview } from './src/state.js';
           import { pool } from './src/db.js';
 
           const search = await searchFoods('кур', 6);
@@ -93,11 +94,24 @@ jobs:
           });
           if (!log.id || log.items.length < 2) throw new Error('food log persistence failed');
 
-          const day = await getFoodLogsForDay(session.userId, '2026-09-07', 0);
-          if (day.items.length !== 1 || day.totals.kcal !== resolved.totals.kcal) {
-            throw new Error(`day persistence mismatch: ${JSON.stringify(day)}`);
+          const dayFood = await getFoodLogsForDay(session.userId, '2026-09-07', 0);
+          if (dayFood.items.length !== 1 || dayFood.totals.kcal !== resolved.totals.kcal) {
+            throw new Error(`day food persistence mismatch: ${JSON.stringify(dayFood)}`);
           }
 
-          console.log({ search: search.slice(0, 3), resolved, auth: { userId: auth.userId }, day });
+          await createWeightLog(session.userId, 84.6, '2026-09-07T07:00:00.000Z');
+          let metrics = await applyDailyMetricDelta(session.userId, '2026-09-07', { waterMlDelta: 250, stepsDelta: 1000 });
+          metrics = await applyDailyMetricDelta(session.userId, '2026-09-07', { waterMlDelta: 250, stepsDelta: 3500 });
+          metrics = await setDailyHabit(session.userId, '2026-09-07', 'vape', true);
+          if (metrics.waterMl !== 500 || metrics.steps !== 4500 || metrics.habits.vape !== true) {
+            throw new Error(`daily metrics mismatch: ${JSON.stringify(metrics)}`);
+          }
+
+          const overview = await getDayOverview(session.userId, '2026-09-07', 0);
+          if (overview.weight?.weightKg !== 84.6 || overview.metrics.steps !== 4500 || overview.food.items.length !== 1) {
+            throw new Error(`day overview mismatch: ${JSON.stringify(overview)}`);
+          }
+
+          console.log({ auth: { userId: auth.userId }, overview });
           await pool.end();
           NODE
