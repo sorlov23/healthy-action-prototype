@@ -37,6 +37,7 @@ jobs:
     env:
       DATABASE_URL: postgres://healthy_action:healthy_action@127.0.0.1:5432/healthy_action
       FRONTEND_ORIGINS: https://sorlov23.github.io
+      SESSION_TTL_DAYS: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -46,11 +47,13 @@ jobs:
       - run: npm install
       - run: npm run migrate
       - run: npm run seed:foods
-      - name: Smoke test food search and resolver
+      - name: Smoke test food flow, auth and persistence
         run: |
           node --input-type=module <<'NODE'
           import { searchFoods } from './src/food-search.js';
           import { resolveFoodText } from './src/food-resolver.js';
+          import { createGuestSession, authenticateToken } from './src/auth.js';
+          import { createFoodLog, getFoodLogsForDay } from './src/food-logs.js';
           import { pool } from './src/db.js';
 
           const search = await searchFoods('кур', 6);
@@ -64,6 +67,37 @@ jobs:
             throw new Error(`resolver mismatch: ${ids.join(', ')}`);
           }
 
-          console.log({ search: search.slice(0, 3), resolved });
+          const session = await createGuestSession();
+          const auth = await authenticateToken(session.token);
+          if (!auth || auth.userId !== session.userId) {
+            throw new Error('guest session authentication failed');
+          }
+
+          const plaintext = await pool.query('select 1 from auth_sessions where token_hash = $1', [session.token]);
+          if (plaintext.rowCount) throw new Error('plaintext session token stored in database');
+
+          const log = await createFoodLog(session.userId, {
+            eatenAt: '2026-09-07T12:00:00.000Z',
+            source: 'text',
+            originalText: 'куриная грудка с рисом',
+            totalKcal: resolved.totals.kcal,
+            totalProtein: resolved.totals.protein,
+            items: resolved.items.map((item) => ({
+              foodId: item.food.id,
+              name: item.food.name,
+              grams: item.grams,
+              kcal: item.kcal,
+              protein: item.protein,
+              confidence: item.confidence,
+            })),
+          });
+          if (!log.id || log.items.length < 2) throw new Error('food log persistence failed');
+
+          const day = await getFoodLogsForDay(session.userId, '2026-09-07', 0);
+          if (day.items.length !== 1 || day.totals.kcal !== resolved.totals.kcal) {
+            throw new Error(`day persistence mismatch: ${JSON.stringify(day)}`);
+          }
+
+          console.log({ search: search.slice(0, 3), resolved, auth: { userId: auth.userId }, day });
           await pool.end();
           NODE
