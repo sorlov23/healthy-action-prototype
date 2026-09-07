@@ -1,0 +1,45 @@
+name: frontend ci
+
+on:
+  push:
+    paths:
+      - 'pwa.html'
+      - 'runtime-config.js'
+      - 'food-catalog.js'
+      - 'pwa-enhancements.js'
+      - 'pwa-api.js'
+      - 'ui-polish.js'
+      - 'service-worker.js'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    paths:
+      - 'pwa.html'
+      - 'runtime-config.js'
+      - 'food-catalog.js'
+      - 'pwa-enhancements.js'
+      - 'pwa-api.js'
+      - 'ui-polish.js'
+      - 'service-worker.js'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check runtime-config.js
+          node --check food-catalog.js
+          node --check pwa-enhancements.js
+          node --check pwa-api.js
+          node --check ui-polish.js
+          node --check service-worker.js
+      - name: Check PWA asset wiring
+        run: |
+          grep -q 'runtime-config.js?rev=13' pwa.html
+          grep -q 'pwa-api.js?rev=13' pwa.html
+          grep -q "healthy-action-pwa-v13" service-worker.js
