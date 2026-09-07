@@ -25,21 +25,24 @@ Backend не зависит от Beget API и переносим на любой
 
 ## Первый запуск
 
+Из папки `backend`:
+
 ```bash
 cp .env.example .env
 # обязательно замени пароль БД перед реальным VPS
 export POSTGRES_PASSWORD='change-me'
 docker compose up -d postgres
-npm install
-npm run migrate
-npm run seed:foods
-docker compose up -d --build api
+docker compose build api
+docker compose run --rm api npm run migrate
+docker compose run --rm api npm run seed:foods
+docker compose up -d api
 ```
 
 Проверка:
 
 ```bash
 curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/ready
 curl 'http://127.0.0.1:8080/api/v1/foods/search?q=кур&limit=6'
 ```
 
@@ -63,11 +66,11 @@ curl 'http://127.0.0.1:8080/api/v1/foods/search?q=кур&limit=6'
 
 ## Что дальше
 
-1. Поднять API на Beget только когда backend готов к реальному использованию.
-2. Переключить autocomplete PWA с локального JS-каталога на `/api/v1/foods/search` с локальным fallback.
-3. Добавить `POST /api/v1/food/resolve` для свободной фразы.
-4. Добавить создание пользователя/профиля и серверное сохранение food logs.
-5. Подключить Vision provider к тому же resolver-контракту.
+1. Переключить autocomplete PWA с локального JS-каталога на `/api/v1/foods/search` с локальным fallback.
+2. Добавить `POST /api/v1/food/resolve` для свободной фразы.
+3. Добавить создание пользователя/профиля и серверное сохранение food logs.
+4. Подключить Vision provider к тому же resolver-контракту.
+5. Поднять API на Beget, когда backend будет готов к реальному использованию.
 
 ## Security baseline
 
