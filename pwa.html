@@ -19,17 +19,18 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f5f7f5;fon
 </head>
 <body>
 <div id="loading" class="loading">Healthy Action · v0.9.2</div>
-<iframe id="app" src="./v07.html?rev=15" title="Healthy Action"></iframe>
-<script src="./runtime-config.js?rev=15"></script>
-<script src="./food-catalog.js?rev=15"></script>
-<script src="./pwa-enhancements.js?rev=15"></script>
-<script src="./pwa-api.js?rev=15"></script>
-<script src="./pwa-sync.js?rev=15"></script>
-<script src="./pwa-state-sync.js?rev=15"></script>
-<script src="./ui-polish.js?rev=15"></script>
+<iframe id="app" src="./v07.html?rev=16" title="Healthy Action"></iframe>
+<script src="./runtime-config.js?rev=16"></script>
+<script src="./food-catalog.js?rev=16"></script>
+<script src="./pwa-enhancements.js?rev=16"></script>
+<script src="./pwa-api.js?rev=16"></script>
+<script src="./pwa-sync.js?rev=16"></script>
+<script src="./pwa-state-sync.js?rev=16"></script>
+<script src="./pwa-profile-sync.js?rev=16"></script>
+<script src="./ui-polish.js?rev=16"></script>
 <script>
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=15',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=16',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
