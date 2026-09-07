@@ -10,6 +10,7 @@ on:
       - 'pwa-api.js'
       - 'pwa-sync.js'
       - 'pwa-state-sync.js'
+      - 'pwa-profile-sync.js'
       - 'ui-polish.js'
       - 'service-worker.js'
       - '.github/workflows/frontend-ci.yml'
@@ -22,6 +23,7 @@ on:
       - 'pwa-api.js'
       - 'pwa-sync.js'
       - 'pwa-state-sync.js'
+      - 'pwa-profile-sync.js'
       - 'ui-polish.js'
       - 'service-worker.js'
       - '.github/workflows/frontend-ci.yml'
@@ -42,12 +44,14 @@ jobs:
           node --check pwa-api.js
           node --check pwa-sync.js
           node --check pwa-state-sync.js
+          node --check pwa-profile-sync.js
           node --check ui-polish.js
           node --check service-worker.js
       - name: Check PWA asset wiring
         run: |
-          grep -q 'runtime-config.js?rev=15' pwa.html
-          grep -q 'pwa-api.js?rev=15' pwa.html
-          grep -q 'pwa-sync.js?rev=15' pwa.html
-          grep -q 'pwa-state-sync.js?rev=15' pwa.html
-          grep -q "healthy-action-pwa-v15" service-worker.js
+          grep -q 'runtime-config.js?rev=16' pwa.html
+          grep -q 'pwa-api.js?rev=16' pwa.html
+          grep -q 'pwa-sync.js?rev=16' pwa.html
+          grep -q 'pwa-state-sync.js?rev=16' pwa.html
+          grep -q 'pwa-profile-sync.js?rev=16' pwa.html
+          grep -q "healthy-action-pwa-v16" service-worker.js
