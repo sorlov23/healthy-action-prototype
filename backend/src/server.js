@@ -4,6 +4,8 @@ import 'dotenv/config';
 import { pingDb, pool } from './db.js';
 import { searchFoods } from './food-search.js';
 import { resolveFoodText } from './food-resolver.js';
+import { registerAuthRoutes } from './auth.js';
+import { registerFoodLogRoutes } from './food-logs.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -21,6 +23,7 @@ await app.register(cors, {
     cb(new Error('Origin not allowed'), false);
   },
   methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 
 app.get('/health', async () => ({ status: 'ok', service: 'healthy-action-api' }));
@@ -63,6 +66,9 @@ app.post('/api/v1/food/resolve', {
     },
   },
 }, async (request) => resolveFoodText(request.body.text));
+
+await registerAuthRoutes(app);
+await registerFoodLogRoutes(app);
 
 app.setErrorHandler((error, request, reply) => {
   request.log.error(error);
