@@ -7,6 +7,7 @@ import { resolveFoodText } from './food-resolver.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerFoodLogRoutes } from './food-logs.js';
 import { registerStateRoutes } from './state.js';
+import { registerProfileRoutes } from './profile.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -69,6 +70,7 @@ app.post('/api/v1/food/resolve', {
 }, async (request) => resolveFoodText(request.body.text));
 
 await registerAuthRoutes(app);
+await registerProfileRoutes(app);
 await registerFoodLogRoutes(app);
 await registerStateRoutes(app);
 
