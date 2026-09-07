@@ -17,11 +17,11 @@ Backend не зависит от API Beget и переносим на любой
 
 ### Food Catalog
 
-- PostgreSQL-каталог продуктов
-- `pg_trgm` fuzzy search
-- алиасы и русская нормализация
-- импорт текущего `../food-catalog.js` в PostgreSQL
-- детерминированный Food Resolver для известных продуктов
+- PostgreSQL-каталог продуктов;
+- `pg_trgm` fuzzy search;
+- алиасы и русская нормализация;
+- импорт текущего `../food-catalog.js` в PostgreSQL;
+- детерминированный Food Resolver для известных продуктов.
 
 ### Auth
 
@@ -30,11 +30,11 @@ Backend не зависит от API Beget и переносим на любой
 - клиент получает криптографически случайный bearer token;
 - в PostgreSQL хранится только SHA-256 hash токена;
 - сессия имеет срок действия и может быть отозвана;
-- реальный email/телефон для работы MVP не требуется.
+- email/телефон для работы MVP не требуется.
 
 ### Серверное состояние
 
-Уже есть модели и API для:
+Есть модели и API для:
 
 - профиля/onboarding;
 - food logs и позиций еды;
@@ -42,7 +42,9 @@ Backend не зависит от API Beget и переносим на любой
 - воды;
 - шагов;
 - дневных привычек;
-- объединённого состояния дня.
+- объединённого состояния дня;
+- bootstrap-снимка приложения;
+- полного удаления guest-account со всеми связанными данными.
 
 PWA остаётся local-first: локальная запись выполняется сразу, сервер получает данные в фоне. До подключения Beget `apiBase` пустой, поэтому существующий прототип работает полностью автономно.
 
@@ -55,10 +57,11 @@ PWA остаётся local-first: локальная запись выполня
 - `GET /api/v1/foods/search?q=кур&limit=6`
 - `POST /api/v1/food/resolve`
 
-Auth:
+Auth / account:
 
 - `POST /api/v1/auth/guest`
 - `GET /api/v1/auth/me`
+- `DELETE /api/v1/account`
 
 Profile:
 
@@ -77,6 +80,12 @@ Weight / daily state:
 - `POST /api/v1/daily/metrics`
 - `PUT /api/v1/daily/habits/:habit`
 - `GET /api/v1/day?day=YYYY-MM-DD&timezoneOffsetMinutes=0`
+
+Bootstrap:
+
+- `GET /api/v1/bootstrap?day=YYYY-MM-DD&timezoneOffsetMinutes=0`
+
+Bootstrap возвращает профиль, состояние выбранного дня, последние записи веса и server time одним запросом.
 
 Все персональные endpoints требуют `Authorization: Bearer <token>`.
 
@@ -128,20 +137,18 @@ curl -X POST http://127.0.0.1:8080/api/v1/food/resolve \
 
 ## CI
 
-`backend ci` поднимает настоящий PostgreSQL 17 и проверяет:
+`backend ci` поднимает настоящий PostgreSQL 17 и проверяет полный жизненный цикл MVP:
 
-- migrations;
-- импорт Food Catalog;
-- поиск продукта;
-- Food Resolver;
+- migrations и импорт Food Catalog;
+- поиск и Food Resolver;
 - guest auth;
 - отсутствие plaintext session token в БД;
 - profile persistence;
 - food log persistence;
-- вес;
-- воду и шаги;
-- привычки;
-- day overview.
+- вес, воду, шаги и привычки;
+- day overview;
+- bootstrap;
+- каскадное удаление account/data и инвалидирование сессии.
 
 ## Security baseline
 
@@ -151,14 +158,14 @@ curl -X POST http://127.0.0.1:8080/api/v1/food/resolve \
 - bearer token хранится на сервере только как hash;
 - перед production включить firewall и backup policy;
 - не хранить фотографии еды без продуктовой необходимости;
-- до реальных пользователей добавить удаление аккаунта/данных и финализировать privacy-flow.
+- удаление guest-account уже каскадно удаляет связанные серверные данные.
 
 ## Следующие этапы
 
-1. Первичная синхронизация/reconciliation при запуске PWA: профиль + текущий день + история веса.
-2. Endpoint удаления guest account и всех связанных данных.
+1. Безопасная initial reconciliation при запуске PWA, без дублирования локальных событий.
+2. Добавить idempotency/client event IDs для надёжной повторной синхронизации.
 3. Развернуть API на Beget.
 4. Переключить `runtime-config.js` на production API.
 5. Добавить AI provider как fallback для сложных фраз.
 6. Подключить Vision provider к тому же Food Resolver-контракту.
-7. Начать формировать серверный `Next Action / Coach` из реального состояния дня.
+7. Формировать серверный `Next Action / Coach` из реального состояния дня.
