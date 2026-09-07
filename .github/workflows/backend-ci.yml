@@ -1,0 +1,69 @@
+name: backend ci
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'food-catalog.js'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'food-catalog.js'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: healthy_action
+          POSTGRES_USER: healthy_action
+          POSTGRES_PASSWORD: healthy_action
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U healthy_action -d healthy_action"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgres://healthy_action:healthy_action@127.0.0.1:5432/healthy_action
+      FRONTEND_ORIGINS: https://sorlov23.github.io
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run migrate
+      - run: npm run seed:foods
+      - name: Smoke test food search and resolver
+        run: |
+          node --input-type=module <<'NODE'
+          import { searchFoods } from './src/food-search.js';
+          import { resolveFoodText } from './src/food-resolver.js';
+          import { pool } from './src/db.js';
+
+          const search = await searchFoods('кур', 6);
+          if (!search.some((x) => x.id === 'chicken_breast')) {
+            throw new Error('chicken_breast not found for кур');
+          }
+
+          const resolved = await resolveFoodText('куриная грудка с рисом');
+          const ids = resolved.items.map((x) => x.food.id);
+          if (!ids.includes('chicken_breast') || !ids.includes('rice_white')) {
+            throw new Error(`resolver mismatch: ${ids.join(', ')}`);
+          }
+
+          console.log({ search: search.slice(0, 3), resolved });
+          await pool.end();
+          NODE
