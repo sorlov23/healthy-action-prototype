@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Rinlo</title>
 <meta name="theme-color" content="#f3f6f4">
+<meta name="color-scheme" content="light">
+<meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Rinlo">
@@ -14,33 +16,75 @@
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
 #app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f3f6f4}
-.loading{position:fixed;inset:0;display:grid;place-items:center;background:#f3f6f4;z-index:2;color:#0f1720}
+.loading{position:fixed;inset:0;display:grid;place-items:center;background:#f3f6f4;z-index:2;color:#0f1720;transition:opacity .18s ease}
+.loading.off{opacity:0;pointer-events:none}
+.loadingContent{display:grid;justify-items:center;gap:14px;padding:28px;text-align:center}
 .loadingBrand{display:flex;align-items:flex-start;position:relative;padding-right:9px;font-size:28px;font-weight:600;line-height:1;letter-spacing:-.045em}
 .loadingDot{position:absolute;right:0;top:6px;width:6px;height:6px;border-radius:50%;background:#2e7d64}
+.loadingHint{display:none;max-width:260px;font-size:12px;line-height:1.45;color:#68757a}
+.loadingHint.on{display:block}
+.loadingRetry{display:none;min-height:42px;border:1px solid #e2e8e5;border-radius:13px;background:#fff;padding:0 15px;color:#243036;font:600 12px/1 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.loadingRetry.on{display:inline-flex;align-items:center;justify-content:center}
+@media(prefers-reduced-motion:reduce){.loading{transition:none}}
 </style>
 </head>
 <body>
-<div id="loading" class="loading"><div class="loadingBrand">Rinlo<span class="loadingDot"></span></div></div>
-<iframe id="app" src="./v07.html?rev=24" title="Rinlo"></iframe>
-<script src="./runtime-config.js?rev=24"></script>
-<script src="./food-catalog.js?rev=24"></script>
-<script src="./pwa-enhancements.js?rev=24"></script>
-<script src="./pwa-api.js?rev=24"></script>
-<script src="./pwa-sync.js?rev=24"></script>
-<script src="./pwa-state-sync.js?rev=24"></script>
-<script src="./pwa-profile-sync.js?rev=24"></script>
-<script src="./pwa-account-sync.js?rev=24"></script>
-<script src="./ui-polish.js?rev=24"></script>
-<script src="./rinlo-wordmark.js?rev=24"></script>
-<script src="./rinlo-polish-v03.js?rev=24"></script>
-<script src="./rinlo-onboarding-v01.js?rev=24"></script>
-<script src="./rinlo-plan-v01.js?rev=24"></script>
-<script src="./rinlo-insights-v01.js?rev=24"></script>
-<script src="./rinlo-profile-v01.js?rev=24"></script>
-<script src="./rinlo-system-v01.js?rev=24"></script>
+<div id="loading" class="loading" role="status" aria-live="polite">
+  <div class="loadingContent">
+    <div class="loadingBrand">Rinlo<span class="loadingDot"></span></div>
+    <div id="loadingHint" class="loadingHint">Загрузка занимает чуть больше времени. Ваши данные на устройстве сохраняются.</div>
+    <button id="loadingRetry" class="loadingRetry" type="button">Попробовать ещё раз</button>
+  </div>
+</div>
+<iframe id="app" src="./v07.html?rev=25" title="Rinlo"></iframe>
+<script src="./runtime-config.js?rev=25"></script>
+<script src="./food-catalog.js?rev=25"></script>
+<script src="./pwa-enhancements.js?rev=25"></script>
+<script src="./pwa-api.js?rev=25"></script>
+<script src="./pwa-sync.js?rev=25"></script>
+<script src="./pwa-state-sync.js?rev=25"></script>
+<script src="./pwa-profile-sync.js?rev=25"></script>
+<script src="./pwa-account-sync.js?rev=25"></script>
+<script src="./ui-polish.js?rev=25"></script>
+<script src="./rinlo-wordmark.js?rev=25"></script>
+<script src="./rinlo-polish-v03.js?rev=25"></script>
+<script src="./rinlo-onboarding-v01.js?rev=25"></script>
+<script src="./rinlo-plan-v01.js?rev=25"></script>
+<script src="./rinlo-insights-v01.js?rev=25"></script>
+<script src="./rinlo-profile-v01.js?rev=25"></script>
+<script src="./rinlo-system-v01.js?rev=25"></script>
+<script src="./rinlo-system-v02.js?rev=25"></script>
 <script>
+(() => {
+  const frame = document.getElementById('app');
+  const loading = document.getElementById('loading');
+  const hint = document.getElementById('loadingHint');
+  const retry = document.getElementById('loadingRetry');
+  let revealed = false;
+
+  const reveal = () => {
+    if (revealed || !loading) return;
+    revealed = true;
+    loading.classList.add('off');
+    setTimeout(() => loading.remove(), 220);
+  };
+
+  frame.addEventListener('load', reveal, {once:true});
+  retry.addEventListener('click', () => window.location.reload());
+
+  setTimeout(() => {
+    if (revealed || !loading?.isConnected) return;
+    hint.classList.add('on');
+    retry.classList.add('on');
+  }, 6500);
+
+  try {
+    if (frame.contentDocument?.readyState === 'complete') setTimeout(reveal, 0);
+  } catch {}
+})();
+
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=24',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=25',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>

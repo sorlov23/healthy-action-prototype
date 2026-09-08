@@ -20,6 +20,7 @@ on:
       - 'rinlo-insights-v01.js'
       - 'rinlo-profile-v01.js'
       - 'rinlo-system-v01.js'
+      - 'rinlo-system-v02.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'service-worker.js'
@@ -43,6 +44,7 @@ on:
       - 'rinlo-insights-v01.js'
       - 'rinlo-profile-v01.js'
       - 'rinlo-system-v01.js'
+      - 'rinlo-system-v02.js'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'service-worker.js'
@@ -74,15 +76,20 @@ jobs:
           node --check rinlo-insights-v01.js
           node --check rinlo-profile-v01.js
           node --check rinlo-system-v01.js
+          node --check rinlo-system-v02.js
           node --check service-worker.js
       - name: Check PWA asset wiring
         run: |
-          grep -q 'runtime-config.js?rev=24' pwa.html
-          grep -q 'pwa-api.js?rev=24' pwa.html
-          grep -q 'pwa-sync.js?rev=24' pwa.html
-          grep -q 'pwa-state-sync.js?rev=24' pwa.html
-          grep -q 'pwa-profile-sync.js?rev=24' pwa.html
-          grep -q 'pwa-account-sync.js?rev=24' pwa.html
-          grep -q 'rinlo-system-v01.js?rev=24' pwa.html
-          grep -q "rinlo-pwa-v24" service-worker.js
-          grep -q "./rinlo-system-v01.js?rev=24" service-worker.js
+          grep -q 'runtime-config.js?rev=25' pwa.html
+          grep -q 'pwa-api.js?rev=25' pwa.html
+          grep -q 'pwa-sync.js?rev=25' pwa.html
+          grep -q 'pwa-state-sync.js?rev=25' pwa.html
+          grep -q 'pwa-profile-sync.js?rev=25' pwa.html
+          grep -q 'pwa-account-sync.js?rev=25' pwa.html
+          grep -q 'rinlo-system-v01.js?rev=25' pwa.html
+          grep -q 'rinlo-system-v02.js?rev=25' pwa.html
+          grep -q "rinlo-pwa-v25" service-worker.js
+          grep -q "./rinlo-system-v01.js?rev=25" service-worker.js
+          grep -q "./rinlo-system-v02.js?rev=25" service-worker.js
+          grep -q '"start_url": "./pwa.html"' manifest.webmanifest
+          grep -q '"scope": "./"' manifest.webmanifest
