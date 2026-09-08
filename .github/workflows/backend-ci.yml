@@ -56,6 +56,8 @@ jobs:
           import { upsertProfile, getProfile } from './src/profile.js';
           import { createFoodLog, getFoodLogsForDay } from './src/food-logs.js';
           import { createWeightLog, applyDailyMetricDelta, setDailyHabit, getDayOverview } from './src/state.js';
+          import { upsertDailyCheckin, getDailyCheckin } from './src/checkins.js';
+          import { suggestNextAction, addActionEvent, listActionsForDay } from './src/actions.js';
           import { buildBootstrap } from './src/bootstrap.js';
           import { deleteAccount } from './src/account.js';
           import { pool } from './src/db.js';
@@ -87,12 +89,15 @@ jobs:
             ageYears: 37,
             activity: 'low',
             focuses: ['vape', 'fastfood'],
+            primaryGoal: 'weight_loss',
+            secondaryGoals: ['movement'],
+            calorieTrackingEnabled: true,
             calorieTarget: 1700,
             proteinTargetG: 135,
             stepTarget: 8000,
           });
           const profile = await getProfile(session.userId);
-          if (!profile || profile.startWeightKg !== 85 || profile.targetWeightKg !== 75 || profile.focuses.join(',') !== 'vape,fastfood') {
+          if (!profile || profile.startWeightKg !== 85 || profile.targetWeightKg !== 75 || profile.focuses.join(',') !== 'vape,fastfood' || profile.primaryGoal !== 'weight_loss') {
             throw new Error(`profile persistence mismatch: ${JSON.stringify(profile)}`);
           }
 
@@ -126,13 +131,46 @@ jobs:
             throw new Error(`daily metrics mismatch: ${JSON.stringify(metrics)}`);
           }
 
+          const checkin = await upsertDailyCheckin(session.userId, '2026-09-07', {
+            wellbeing: 'poor',
+            energy: 2,
+            sleepQuality: 2,
+            sleepMinutes: 330,
+            note: 'Устал после короткой ночи',
+          });
+          if (checkin.wellbeing !== 'poor' || checkin.sleepMinutes !== 330) {
+            throw new Error(`checkin persistence mismatch: ${JSON.stringify(checkin)}`);
+          }
+          const readCheckin = await getDailyCheckin(session.userId, '2026-09-07');
+          if (readCheckin?.energy !== 2) throw new Error('checkin read failed');
+
+          const firstSuggestion = await suggestNextAction(session.userId, '2026-09-07', { timezoneOffsetMinutes: 0, localHour: 19 });
+          if (firstSuggestion.action.kind !== 'recovery' || firstSuggestion.reused) {
+            throw new Error(`unexpected first suggestion: ${JSON.stringify(firstSuggestion)}`);
+          }
+          const reused = await suggestNextAction(session.userId, '2026-09-07', { timezoneOffsetMinutes: 0, localHour: 19 });
+          if (!reused.reused || reused.action.id !== firstSuggestion.action.id) {
+            throw new Error('active action was not reused');
+          }
+
+          await addActionEvent(session.userId, firstSuggestion.action.id, { eventType: 'replaced', reasonCode: 'low_energy' });
+          const secondSuggestion = await suggestNextAction(session.userId, '2026-09-07', { timezoneOffsetMinutes: 0, localHour: 19 });
+          if (secondSuggestion.action.id === firstSuggestion.action.id || secondSuggestion.action.kind === 'recovery') {
+            throw new Error(`replacement did not produce an alternative: ${JSON.stringify(secondSuggestion)}`);
+          }
+          await addActionEvent(session.userId, secondSuggestion.action.id, { eventType: 'completed', payload: { useful: true } });
+          const actions = await listActionsForDay(session.userId, '2026-09-07');
+          if (actions.length !== 2 || !actions.some((x) => x.status === 'completed') || !actions.some((x) => x.status === 'replaced')) {
+            throw new Error(`action lifecycle mismatch: ${JSON.stringify(actions)}`);
+          }
+
           const overview = await getDayOverview(session.userId, '2026-09-07', 0);
           if (overview.weight?.weightKg !== 84.6 || overview.metrics.steps !== 4500 || overview.food.items.length !== 1) {
             throw new Error(`day overview mismatch: ${JSON.stringify(overview)}`);
           }
 
           const bootstrap = await buildBootstrap(session.userId, '2026-09-07', 0);
-          if (bootstrap.profile?.targetWeightKg !== 75 || bootstrap.day.metrics.waterMl !== 500 || bootstrap.weights.length !== 1) {
+          if (bootstrap.profile?.targetWeightKg !== 75 || bootstrap.day.metrics.waterMl !== 500 || bootstrap.weights.length !== 1 || bootstrap.checkin?.wellbeing !== 'poor' || bootstrap.actions.length !== 2) {
             throw new Error(`bootstrap mismatch: ${JSON.stringify(bootstrap)}`);
           }
 
@@ -143,10 +181,12 @@ jobs:
           const userRows = await pool.query('select 1 from app_users where id = $1', [session.userId]);
           const logRows = await pool.query('select 1 from food_logs where user_id = $1', [session.userId]);
           const weightRows = await pool.query('select 1 from weight_logs where user_id = $1', [session.userId]);
-          if (userRows.rowCount || logRows.rowCount || weightRows.rowCount) {
+          const checkinRows = await pool.query('select 1 from daily_checkins where user_id = $1', [session.userId]);
+          const actionRows = await pool.query('select 1 from rinlo_actions where user_id = $1', [session.userId]);
+          if (userRows.rowCount || logRows.rowCount || weightRows.rowCount || checkinRows.rowCount || actionRows.rowCount) {
             throw new Error('cascade deletion incomplete');
           }
 
-          console.log({ lifecycle: 'ok', bootstrap: { profile: bootstrap.profile, day: bootstrap.day } });
+          console.log({ lifecycle: 'ok', bootstrap: { profile: bootstrap.profile, day: bootstrap.day, checkin: bootstrap.checkin, actions: bootstrap.actions } });
           await pool.end();
           NODE

@@ -10,6 +10,8 @@ import { registerFoodLogRoutes } from './food-logs.js';
 import { registerStateRoutes } from './state.js';
 import { registerBootstrapRoutes } from './bootstrap.js';
 import { registerAccountRoutes } from './account.js';
+import { registerCheckinRoutes } from './checkins.js';
+import { registerActionRoutes } from './actions.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -75,6 +77,8 @@ await registerAuthRoutes(app);
 await registerProfileRoutes(app);
 await registerFoodLogRoutes(app);
 await registerStateRoutes(app);
+await registerCheckinRoutes(app);
+await registerActionRoutes(app);
 await registerBootstrapRoutes(app);
 await registerAccountRoutes(app);
 
