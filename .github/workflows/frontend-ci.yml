@@ -14,6 +14,7 @@ on:
       - 'pwa-account-sync.js'
       - 'ui-polish.js'
       - 'rinlo-wordmark.js'
+      - 'rinlo-logo.svg'
       - 'rinlo-polish-v03.js'
       - 'rinlo-onboarding-v01.js'
       - 'rinlo-plan-v01.js'
@@ -38,6 +39,7 @@ on:
       - 'pwa-account-sync.js'
       - 'ui-polish.js'
       - 'rinlo-wordmark.js'
+      - 'rinlo-logo.svg'
       - 'rinlo-polish-v03.js'
       - 'rinlo-onboarding-v01.js'
       - 'rinlo-plan-v01.js'
@@ -88,7 +90,14 @@ jobs:
           grep -q 'pwa-account-sync.js?rev=24' pwa.html
           grep -q 'rinlo-system-v01.js?rev=24' pwa.html
           grep -q 'rinlo-core-ui-v1.js?rev=25' pwa.html
-          grep -q 'service-worker.js?rev=25' pwa.html
-          grep -q "rinlo-pwa-v25" service-worker.js
+          grep -q 'rinlo-wordmark.js?rev=26' pwa.html
+          grep -q 'rinlo-logo.svg?rev=26' pwa.html
+          grep -q 'service-worker.js?rev=26' pwa.html
+          grep -q "rinlo-pwa-v26" service-worker.js
           grep -q "./rinlo-core-ui-v1.js?rev=25" service-worker.js
+          grep -q "./rinlo-wordmark.js?rev=26" service-worker.js
+          grep -q "./rinlo-logo.svg?rev=26" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
+          core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
+          brand_line=$(grep -n 'rinlo-wordmark.js?rev=26' pwa.html | cut -d: -f1)
+          test "$core_line" -lt "$brand_line"
