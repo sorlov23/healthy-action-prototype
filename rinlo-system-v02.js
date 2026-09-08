@@ -76,6 +76,7 @@
 
   function enhanceA11y(doc, win) {
     const toast = doc.getElementById('toast');
+    const nav = doc.querySelector('.nav');
     if (toast) {
       toast.setAttribute('role', 'status');
       toast.setAttribute('aria-live', 'polite');
