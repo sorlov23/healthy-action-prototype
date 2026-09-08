@@ -30,29 +30,31 @@ export async function getProfile(userId) {
 }
 
 export async function upsertProfile(userId, payload) {
+  const hasSex = Object.hasOwn(payload, 'sex');
   const hasPrimaryGoal = Object.hasOwn(payload, 'primaryGoal');
   const hasSecondaryGoals = Object.hasOwn(payload, 'secondaryGoals');
   const hasCalorieTracking = Object.hasOwn(payload, 'calorieTrackingEnabled');
 
   const result = await pool.query(`
     insert into profiles(
-      user_id, start_weight_kg, target_weight_kg, height_cm, age_years,
+      user_id, start_weight_kg, target_weight_kg, height_cm, age_years, sex,
       activity, focuses, calorie_target, protein_target_g, step_target,
       primary_goal, secondary_goals, calorie_tracking_enabled, updated_at
-    ) values($1,$2,$3,$4,$5,$6,$7::text[],$8,$9,$10,$11,$12::text[],$13,now())
+    ) values($1,$2,$3,$4,$5,$6,$7,$8::text[],$9,$10,$11,$12,$13::text[],$14,now())
     on conflict(user_id) do update set
       start_weight_kg = excluded.start_weight_kg,
       target_weight_kg = excluded.target_weight_kg,
       height_cm = excluded.height_cm,
       age_years = excluded.age_years,
+      sex = case when $15::boolean then excluded.sex else profiles.sex end,
       activity = excluded.activity,
       focuses = excluded.focuses,
       calorie_target = excluded.calorie_target,
       protein_target_g = excluded.protein_target_g,
       step_target = excluded.step_target,
-      primary_goal = case when $14::boolean then excluded.primary_goal else profiles.primary_goal end,
-      secondary_goals = case when $15::boolean then excluded.secondary_goals else profiles.secondary_goals end,
-      calorie_tracking_enabled = case when $16::boolean then excluded.calorie_tracking_enabled else profiles.calorie_tracking_enabled end,
+      primary_goal = case when $16::boolean then excluded.primary_goal else profiles.primary_goal end,
+      secondary_goals = case when $17::boolean then excluded.secondary_goals else profiles.secondary_goals end,
+      calorie_tracking_enabled = case when $18::boolean then excluded.calorie_tracking_enabled else profiles.calorie_tracking_enabled end,
       updated_at = now()
     returning *
   `, [
@@ -61,6 +63,7 @@ export async function upsertProfile(userId, payload) {
     payload.targetWeightKg ?? null,
     payload.heightCm ?? null,
     payload.ageYears ?? null,
+    payload.sex ?? null,
     payload.activity ?? null,
     payload.focuses || [],
     payload.calorieTarget ?? null,
@@ -69,6 +72,7 @@ export async function upsertProfile(userId, payload) {
     payload.primaryGoal ?? null,
     payload.secondaryGoals || [],
     payload.calorieTrackingEnabled ?? true,
+    hasSex,
     hasPrimaryGoal,
     hasSecondaryGoals,
     hasCalorieTracking,
@@ -96,6 +100,12 @@ export async function registerProfileRoutes(app) {
           targetWeightKg: { type: 'number', minimum: 30, maximum: 300 },
           heightCm: { type: 'number', minimum: 120, maximum: 230 },
           ageYears: { type: 'integer', minimum: 14, maximum: 100 },
+          sex: {
+            anyOf: [
+              { type: 'string', enum: ['male','female','other'] },
+              { type: 'null' },
+            ],
+          },
           activity: { type: 'string', enum: ['low','medium','high'] },
           focuses: {
             type: 'array',
