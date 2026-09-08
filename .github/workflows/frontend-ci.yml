@@ -13,6 +13,15 @@ on:
       - 'pwa-profile-sync.js'
       - 'pwa-account-sync.js'
       - 'ui-polish.js'
+      - 'rinlo-wordmark.js'
+      - 'rinlo-polish-v03.js'
+      - 'rinlo-onboarding-v01.js'
+      - 'rinlo-plan-v01.js'
+      - 'rinlo-insights-v01.js'
+      - 'rinlo-profile-v01.js'
+      - 'rinlo-system-v01.js'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
       - 'service-worker.js'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
@@ -27,6 +36,15 @@ on:
       - 'pwa-profile-sync.js'
       - 'pwa-account-sync.js'
       - 'ui-polish.js'
+      - 'rinlo-wordmark.js'
+      - 'rinlo-polish-v03.js'
+      - 'rinlo-onboarding-v01.js'
+      - 'rinlo-plan-v01.js'
+      - 'rinlo-insights-v01.js'
+      - 'rinlo-profile-v01.js'
+      - 'rinlo-system-v01.js'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
       - 'service-worker.js'
       - '.github/workflows/frontend-ci.yml'
 
@@ -49,13 +67,22 @@ jobs:
           node --check pwa-profile-sync.js
           node --check pwa-account-sync.js
           node --check ui-polish.js
+          node --check rinlo-wordmark.js
+          node --check rinlo-polish-v03.js
+          node --check rinlo-onboarding-v01.js
+          node --check rinlo-plan-v01.js
+          node --check rinlo-insights-v01.js
+          node --check rinlo-profile-v01.js
+          node --check rinlo-system-v01.js
           node --check service-worker.js
       - name: Check PWA asset wiring
         run: |
-          grep -q 'runtime-config.js?rev=17' pwa.html
-          grep -q 'pwa-api.js?rev=17' pwa.html
-          grep -q 'pwa-sync.js?rev=17' pwa.html
-          grep -q 'pwa-state-sync.js?rev=17' pwa.html
-          grep -q 'pwa-profile-sync.js?rev=17' pwa.html
-          grep -q 'pwa-account-sync.js?rev=17' pwa.html
-          grep -q "healthy-action-pwa-v17" service-worker.js
+          grep -q 'runtime-config.js?rev=24' pwa.html
+          grep -q 'pwa-api.js?rev=24' pwa.html
+          grep -q 'pwa-sync.js?rev=24' pwa.html
+          grep -q 'pwa-state-sync.js?rev=24' pwa.html
+          grep -q 'pwa-profile-sync.js?rev=24' pwa.html
+          grep -q 'pwa-account-sync.js?rev=24' pwa.html
+          grep -q 'rinlo-system-v01.js?rev=24' pwa.html
+          grep -q "rinlo-pwa-v24" service-worker.js
+          grep -q "./rinlo-system-v01.js?rev=24" service-worker.js

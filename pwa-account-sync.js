@@ -62,7 +62,7 @@
     return result;
   };
 
-  function clearLocalHealthyActionData() {
+  function clearLocalRinloData() {
     localStorage.removeItem(APP_KEY);
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem('ha_food_usage');
@@ -79,19 +79,19 @@
     win.__healthyAccountSyncPatched = true;
 
     win.resetAll = async function() {
-      if (!win.confirm('Удалить все данные Healthy Action? Это действие нельзя отменить.')) return;
+      if (!win.confirm('Удалить все данные Rinlo? Это действие нельзя отменить.')) return;
 
       if (api.enabled && typeof api.getSession === 'function' && api.getSession()) {
         try {
           await api.deleteAccount();
         } catch (error) {
-          console.warn('Healthy Action account deletion failed', error);
+          console.warn('Rinlo account deletion failed', error);
           const localOnly = win.confirm('Не удалось подтвердить удаление данных с сервера. Удалить только данные на этом устройстве?');
           if (!localOnly) return;
         }
       }
 
-      clearLocalHealthyActionData();
+      clearLocalRinloData();
       win.location.reload();
     };
   }
