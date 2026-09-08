@@ -1,21 +1,21 @@
 {
   "id": "/healthy-action-prototype/pwa.html",
-  "name": "Healthy Action",
-  "short_name": "Healthy",
-  "description": "Action-first прототип приложения для здорового образа жизни",
+  "name": "Rinlo",
+  "short_name": "Rinlo",
+  "description": "Спокойный AI-помощник для небольших и реалистичных шагов к более здоровой жизни",
   "lang": "ru",
   "start_url": "/healthy-action-prototype/pwa.html",
   "scope": "/healthy-action-prototype/",
   "display": "standalone",
-  "background_color": "#f5f7f5",
-  "theme_color": "#239a55",
+  "background_color": "#f3f6f4",
+  "theme_color": "#f3f6f4",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
