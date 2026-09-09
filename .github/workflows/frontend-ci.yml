@@ -16,6 +16,7 @@ on:
       - 'rinlo-wordmark.js'
       - 'rinlo-logo.svg'
       - 'rinlo-scale-pass-v1.js'
+      - 'rinlo-functional-v1.js'
       - 'rinlo-polish-v03.js'
       - 'rinlo-onboarding-v01.js'
       - 'rinlo-plan-v01.js'
@@ -42,6 +43,7 @@ on:
       - 'rinlo-wordmark.js'
       - 'rinlo-logo.svg'
       - 'rinlo-scale-pass-v1.js'
+      - 'rinlo-functional-v1.js'
       - 'rinlo-polish-v03.js'
       - 'rinlo-onboarding-v01.js'
       - 'rinlo-plan-v01.js'
@@ -75,6 +77,7 @@ jobs:
           node --check ui-polish.js
           node --check rinlo-wordmark.js
           node --check rinlo-scale-pass-v1.js
+          node --check rinlo-functional-v1.js
           node --check rinlo-polish-v03.js
           node --check rinlo-onboarding-v01.js
           node --check rinlo-plan-v01.js
@@ -94,21 +97,25 @@ jobs:
           grep -q 'rinlo-system-v01.js?rev=24' pwa.html
           grep -q 'rinlo-core-ui-v1.js?rev=25' pwa.html
           grep -q 'rinlo-scale-pass-v1.js?rev=29' pwa.html
-          grep -q 'rinlo-wordmark.js?rev=29' pwa.html
-          grep -q 'rinlo-logo.svg?rev=29' pwa.html
-          grep -q 'icon.svg?rev=29' pwa.html
-          grep -q 'service-worker.js?rev=29' pwa.html
-          grep -q "rinlo-pwa-v29" service-worker.js
+          grep -q 'rinlo-functional-v1.js?rev=30' pwa.html
+          grep -q 'rinlo-wordmark.js?rev=30' pwa.html
+          grep -q 'rinlo-logo.svg?rev=30' pwa.html
+          grep -q 'icon.svg?rev=30' pwa.html
+          grep -q 'service-worker.js?rev=30' pwa.html
+          grep -q "rinlo-pwa-v30" service-worker.js
           grep -q "./rinlo-core-ui-v1.js?rev=25" service-worker.js
           grep -q "./rinlo-scale-pass-v1.js?rev=29" service-worker.js
-          grep -q "./rinlo-wordmark.js?rev=29" service-worker.js
-          grep -q "./rinlo-logo.svg?rev=29" service-worker.js
-          grep -q "./icon.svg?rev=29" service-worker.js
+          grep -q "./rinlo-functional-v1.js?rev=30" service-worker.js
+          grep -q "./rinlo-wordmark.js?rev=30" service-worker.js
+          grep -q "./rinlo-logo.svg?rev=30" service-worker.js
+          grep -q "./icon.svg?rev=30" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
           grep -q 'linearGradient id="top"' rinlo-logo.svg
           grep -q 'linearGradient id="bottom"' rinlo-logo.svg
           core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
           scale_line=$(grep -n 'rinlo-scale-pass-v1.js?rev=29' pwa.html | cut -d: -f1)
-          brand_line=$(grep -n 'rinlo-wordmark.js?rev=29' pwa.html | cut -d: -f1)
+          functional_line=$(grep -n 'rinlo-functional-v1.js?rev=30' pwa.html | cut -d: -f1)
+          brand_line=$(grep -n 'rinlo-wordmark.js?rev=30' pwa.html | cut -d: -f1)
           test "$core_line" -lt "$scale_line"
-          test "$scale_line" -lt "$brand_line"
+          test "$scale_line" -lt "$functional_line"
+          test "$functional_line" -lt "$brand_line"
