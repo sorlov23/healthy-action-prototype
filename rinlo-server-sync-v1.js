@@ -77,6 +77,10 @@
     let updated = false;
     for (const item of items) {
       if (item.localEventId === target && ['food-create', 'weight-create'].includes(item.kind)) {
+        // Once a create request is in flight its payload is already fixed. Do not
+        // pretend a localStorage rewrite can change that request; queue a dependent
+        // update instead so the edit is applied after the create receives serverId.
+        if (item.id === inflightId) continue;
         item.payload = payload;
         item.updatedAt = nowIso();
         updated = true;
@@ -84,6 +88,13 @@
     }
     if (updated) writeOutbox(items);
     return updated;
+  }
+
+  function hasPendingCreate(localEventId) {
+    const target = String(localEventId);
+    return readOutbox().some((item) =>
+      item.localEventId === target && ['food-create', 'weight-create'].includes(item.kind)
+    );
   }
 
   function cancelPendingCreate(localEventId) {
@@ -463,8 +474,17 @@
         updateLocalEvent(day, id, { clientEventId: after.clientEventId });
         const payload = after.type === 'food' ? foodPayload(after) : after.type === 'weight' ? weightPayload(after) : null;
         if (!payload) return result;
+        const pendingCreate = hasPendingCreate(id);
         if (updateQueuedCreate(id, payload)) { scheduleDrain(20); return result; }
-        if (after.serverId) enqueue({ kind: after.type === 'food' ? 'food-update' : 'weight-update', day, localEventId: String(id), serverId: after.serverId, payload }, { replaceKey: `update:${after.type}:${id}` });
+        if (after.serverId || pendingCreate) {
+          enqueue({
+            kind: after.type === 'food' ? 'food-update' : 'weight-update',
+            day,
+            localEventId: String(id),
+            serverId: after.serverId || null,
+            payload,
+          }, { replaceKey: `update:${after.type}:${id}` });
+        }
         return result;
       };
     }
