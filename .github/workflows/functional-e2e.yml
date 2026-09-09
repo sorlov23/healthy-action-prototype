@@ -30,14 +30,14 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install --no-save --no-audit --no-fund playwright@1.55.0
           for attempt in 1 2 3; do
-            if npx playwright install --with-deps chromium; then
+            if npx playwright install chromium; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
-              echo "Playwright browser installation failed after 3 attempts"
+              echo "Playwright Chromium installation failed after 3 attempts"
               exit 1
             fi
-            echo "Playwright browser installation failed (attempt $attempt/3); retrying..."
+            echo "Playwright Chromium installation failed (attempt $attempt/3); retrying..."
             sleep $((attempt * 5))
           done
       - name: Start static server
