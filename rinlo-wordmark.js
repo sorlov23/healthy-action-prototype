@@ -2,7 +2,7 @@
   const frame = document.getElementById('app');
   if (!frame) return;
 
-  const LOGO_SRC = './rinlo-logo.svg?rev=28';
+  const LOGO_SRC = './rinlo-logo.svg?rev=29';
   const SELECTOR = '.rinlo-wordmark,.rc-wordmark,.ro-wordmark';
   let observer = null;
 
@@ -52,9 +52,9 @@
 
       #today.rinlo-core-today .rinlo-brand-wordmark,
       #today.rinlo-core-today .rc-wordmark.rinlo-brand-wordmark {
-        width: 104px !important;
-        min-width: 104px !important;
-        height: 37px !important;
+        width: 100px !important;
+        min-width: 100px !important;
+        height: 36px !important;
       }
 
       .rinlo-brand-wordmark > img {
