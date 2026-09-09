@@ -255,7 +255,8 @@
     ensureStyles(doc);
     build(doc);
     const win = doc.defaultView;
-    if (win && typeof win.renderProgress === 'function') win.renderProgress();
+    const db = win ? readDb(win) : {};
+    if (win && db.profile && typeof win.renderProgress === 'function') win.renderProgress();
     syncDerived(doc);
     observe(doc);
   }
