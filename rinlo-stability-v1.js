@@ -41,6 +41,36 @@
     return icons.focus;
   }
 
+  function stabilizeSheet(doc) {
+    const body = doc.getElementById('sheetBody');
+    if (!body || body.dataset.rinloStableSheet === '1') return;
+
+    /* rinlo-system-v01 attached a characterData observer to this node and
+       rewrote every text node even when the copy was already unchanged.
+       Once a sheet opened that produced an endless MutationObserver microtask
+       loop, making taps appear frozen. Replacing the empty observer target
+       detaches that legacy observer without changing the public sheet API. */
+    const replacement = body.cloneNode(true);
+    replacement.dataset.rinloStableSheet = '1';
+    body.replaceWith(replacement);
+
+    const safeObserver = new MutationObserver(() => {
+      const walker = doc.createTreeWalker(replacement, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const before = node.nodeValue || '';
+        const after = before
+          .replace(/Healthy Action/g, 'Rinlo')
+          .replace(/AI Coach/g, 'Rinlo')
+          .replace(/✦\s*Coach/g, 'Rinlo')
+          .replace(/Coach/g, 'Rinlo');
+        if (after !== before) node.nodeValue = after;
+      }
+    });
+    safeObserver.observe(replacement, { childList: true, subtree: true, characterData: true });
+    doc.__rinloStableSheetObserver = safeObserver;
+  }
+
   function polishPlan(doc) {
     const root = doc.getElementById('actions');
     if (!root?.classList.contains('rinlo-plan-v01')) return;
@@ -97,6 +127,8 @@
   }
 
   function install(doc, win) {
+    stabilizeSheet(doc);
+
     const stopLegacyObserver = () => {
       if (doc.__rinloPlanObserver?.disconnect) doc.__rinloPlanObserver.disconnect();
       doc.__rinloPlanObserver = { disconnect() {} };
@@ -109,6 +141,7 @@
       win.render = function(...args) {
         const result = original(...args);
         stopLegacyObserver();
+        stabilizeSheet(doc);
         polishPlan(doc);
         queueMicrotask(() => polishPlan(doc));
         return result;
