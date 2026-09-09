@@ -18,6 +18,7 @@ async function appFrame() {
     && window.__rinloFunctionalMvp === 'v1'
     && window.__rinloStability === 'v1'
   ), null, { timeout: 10000 });
+  await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
 }
 
