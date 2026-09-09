@@ -2,7 +2,7 @@
   const frame = document.getElementById('app');
   if (!frame) return;
 
-  const LOGO_SRC = './rinlo-logo.svg?rev=27';
+  const LOGO_SRC = './rinlo-logo.svg?rev=28';
   const SELECTOR = '.rinlo-wordmark,.rc-wordmark,.ro-wordmark';
   let observer = null;
 
