@@ -9,6 +9,11 @@ function parseDate(value) {
   return date;
 }
 
+function dateKey(value) {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value ?? '').slice(0, 10);
+}
+
 function mapWeightRow(row, replayed = false) {
   return {
     id: row.id,
@@ -75,7 +80,7 @@ export async function listWeightLogs(userId, limit = 90) {
 function mapDailyMetrics(row) {
   if (!row) return { waterMl: 0, steps: 0, habits: {} };
   return {
-    day: String(row.day),
+    day: dateKey(row.day),
     waterMl: Number(row.water_ml || 0),
     steps: Number(row.steps || 0),
     habits: row.habit_flags || {},
@@ -132,7 +137,7 @@ export async function applyDailyMetricDelta(userId, day, {
       `, [userId, operationId]);
       const row = existing.rows[0];
       if (!row
-        || String(row.day) !== String(day)
+        || dateKey(row.day) !== String(day)
         || Number(row.water_ml_delta) !== water
         || Number(row.steps_delta) !== steps) {
         throw new Error('metric_operation_conflict');
