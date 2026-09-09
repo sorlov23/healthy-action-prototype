@@ -28,8 +28,18 @@ jobs:
       - name: Install Playwright
         run: |
           npm init -y >/dev/null 2>&1
-          npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          for attempt in 1 2 3; do
+            if npx playwright install chromium; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Playwright Chromium installation failed after 3 attempts"
+              exit 1
+            fi
+            echo "Playwright Chromium installation failed (attempt $attempt/3); retrying..."
+            sleep $((attempt * 5))
+          done
       - name: Start static server
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rinlo-http.log 2>&1 &
@@ -41,4 +51,10 @@ jobs:
           cat /tmp/rinlo-http.log
           exit 1
       - name: Run mobile functional smoke test
-        run: node tests/rinlo-functional.mjs
+        run: |
+          if node tests/rinlo-functional.mjs; then
+            exit 0
+          fi
+          echo '--- PWA HTTP server log ---'
+          cat /tmp/rinlo-http.log || true
+          exit 1

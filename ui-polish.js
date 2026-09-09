@@ -409,7 +409,10 @@
 
   function apply() {
     const doc = frame.contentDocument;
-    if (!doc) return;
+    if (!doc?.head || !doc.body) {
+      setTimeout(apply, 0);
+      return;
+    }
     ensureStyles(doc);
     applyRinloToday(doc);
     applyNavigation(doc);

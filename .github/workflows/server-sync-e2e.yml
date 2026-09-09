@@ -1,0 +1,120 @@
+name: rinlo server sync e2e
+
+on:
+  push:
+    paths:
+      - 'rinlo-server-sync-v1.js'
+      - 'rinlo-server-restore-v1.js'
+      - 'rinlo-stability-v1.js'
+      - 'pwa.html'
+      - 'runtime-config.js'
+      - 'backend/**'
+      - 'tests/rinlo-server-sync.mjs'
+      - '.github/workflows/server-sync-e2e.yml'
+  pull_request:
+    paths:
+      - 'rinlo-server-sync-v1.js'
+      - 'rinlo-server-restore-v1.js'
+      - 'rinlo-stability-v1.js'
+      - 'pwa.html'
+      - 'runtime-config.js'
+      - 'backend/**'
+      - 'tests/rinlo-server-sync.mjs'
+      - '.github/workflows/server-sync-e2e.yml'
+
+jobs:
+  persistence-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: healthy_action
+          POSTGRES_USER: healthy_action
+          POSTGRES_PASSWORD: healthy_action
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U healthy_action -d healthy_action"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://healthy_action:healthy_action@127.0.0.1:5432/healthy_action
+      FRONTEND_ORIGINS: http://127.0.0.1:4173
+      SESSION_TTL_DAYS: 30
+      PORT: 8080
+      HOST: 127.0.0.1
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Prepare backend
+        working-directory: backend
+        run: |
+          npm install
+          npm run migrate
+          npm run seed:foods
+
+      - name: Start Fastify API
+        run: |
+          node backend/src/server.js > /tmp/rinlo-api.log 2>&1 &
+          echo $! > /tmp/rinlo-api.pid
+          for i in {1..40}; do
+            curl -fsS http://127.0.0.1:8080/ready >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/rinlo-api.log
+          exit 1
+
+      - name: Enable API in test runtime config
+        run: |
+          cat > runtime-config.js <<'EOF'
+          window.HEALTHY_ACTION_CONFIG = Object.freeze({
+            apiBase: 'http://127.0.0.1:8080',
+            apiTimeoutMs: 5000,
+          });
+          EOF
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          for attempt in 1 2 3; do
+            if npx playwright install chromium; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Playwright Chromium installation failed after 3 attempts"
+              exit 1
+            fi
+            echo "Playwright Chromium installation failed (attempt $attempt/3); retrying..."
+            sleep $((attempt * 5))
+          done
+
+      - name: Start PWA server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rinlo-http.log 2>&1 &
+          echo $! > /tmp/rinlo-http.pid
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4173/pwa.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/rinlo-http.log
+          exit 1
+
+      - name: Run durable server sync lifecycle
+        run: |
+          if node tests/rinlo-server-sync.mjs; then
+            exit 0
+          fi
+          echo '--- Fastify API log ---'
+          cat /tmp/rinlo-api.log || true
+          echo '--- PWA HTTP server log ---'
+          cat /tmp/rinlo-http.log || true
+          exit 1

@@ -146,7 +146,8 @@
       }
       visible++;
       const left = item.querySelector('.left');
-      if (left) left.innerHTML = iconFor(label);
+      const expectedIcon = iconFor(label);
+      if (left && left.innerHTML !== expectedIcon) left.innerHTML = expectedIcon;
 
       if (b && /добрать\s*~?\d+\s*г\s*белка/i.test(label)) b.textContent = 'Белковый приём пищи';
       if (b && /ещё\s*\d+\s*шаг/i.test(label)) b.textContent = 'Небольшая прогулка';
@@ -219,15 +220,23 @@
     const el = doc.getElementById('actions');
     if (!el) return;
     let queued = false;
-    doc.__rinloPlanObserver = new MutationObserver(() => {
-      if (queued) return;
+    let active = true;
+    const observer = new MutationObserver(() => {
+      if (!active || queued) return;
       queued = true;
       (doc.defaultView?.requestAnimationFrame || setTimeout)(() => {
         queued = false;
+        if (!active || doc.__rinloPlanObserver !== observer) return;
         sync(doc);
       });
     });
-    doc.__rinloPlanObserver.observe(el,{subtree:true,childList:true,characterData:true});
+    const nativeDisconnect = observer.disconnect.bind(observer);
+    observer.disconnect = () => {
+      active = false;
+      nativeDisconnect();
+    };
+    doc.__rinloPlanObserver = observer;
+    observer.observe(el,{subtree:true,childList:true,characterData:true});
   }
 
   function apply() {

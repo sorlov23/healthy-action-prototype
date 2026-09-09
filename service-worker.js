@@ -1,4 +1,4 @@
-const CACHE='rinlo-pwa-v31';
+const CACHE='rinlo-pwa-v37';
 const ASSETS=[
   './pwa.html',
   './v07.html?rev=24',
@@ -10,18 +10,21 @@ const ASSETS=[
   './pwa-state-sync.js?rev=24',
   './pwa-profile-sync.js?rev=24',
   './pwa-account-sync.js?rev=24',
-  './ui-polish.js?rev=24',
-  './rinlo-polish-v03.js?rev=24',
+  './ui-polish.js?rev=36',
+  './rinlo-polish-v03.js?rev=36',
   './rinlo-onboarding-v01.js?rev=24',
-  './rinlo-plan-v01.js?rev=24',
+  './rinlo-plan-v01.js?rev=37',
   './rinlo-insights-v01.js?rev=24',
   './rinlo-profile-v01.js?rev=24',
-  './rinlo-system-v01.js?rev=24',
+  './rinlo-system-v01.js?rev=35',
   './rinlo-core-ui-v1.js?rev=25',
   './rinlo-scale-pass-v1.js?rev=29',
   './rinlo-functional-v1.js?rev=30',
-  './rinlo-stability-v1.js?rev=31',
+  './rinlo-stability-v1.js?rev=35',
+  './rinlo-server-sync-v1.js?rev=32',
+  './rinlo-server-restore-v1.js?rev=33',
   './rinlo-wordmark.js?rev=30',
+  './rinlo-settings-bridge-v1.js?rev=34',
   './rinlo-logo.svg?rev=31',
   './manifest.webmanifest',
   './icon.svg?rev=31'

@@ -1,0 +1,53 @@
+name: backend idempotency ci
+
+on:
+  push:
+    paths:
+      - 'backend/src/food-logs.js'
+      - 'backend/src/state.js'
+      - 'backend/migrations/005_idempotent_sync.sql'
+      - 'backend/test/idempotency.test.js'
+      - '.github/workflows/backend-idempotency-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/src/food-logs.js'
+      - 'backend/src/state.js'
+      - 'backend/migrations/005_idempotent_sync.sql'
+      - 'backend/test/idempotency.test.js'
+      - '.github/workflows/backend-idempotency-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: healthy_action
+          POSTGRES_USER: healthy_action
+          POSTGRES_PASSWORD: healthy_action
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U healthy_action -d healthy_action"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgres://healthy_action:healthy_action@127.0.0.1:5432/healthy_action
+      FRONTEND_ORIGINS: https://sorlov23.github.io
+      SESSION_TTL_DAYS: 30
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run migrate
+      - run: node --test test/idempotency.test.js

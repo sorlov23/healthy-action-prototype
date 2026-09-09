@@ -13,7 +13,13 @@ async function appFrame() {
   const handle = await page.locator('#app').elementHandle();
   const frame = await handle.contentFrame();
   if (!frame) throw new Error('Rinlo iframe not available');
-  await frame.waitForFunction(() => window.__rinloFunctionalMvp === 'v1', null, { timeout: 10000 });
+  await frame.waitForFunction(() => (
+    window.__rinloCoreUiV1 === true
+    && window.__rinloFunctionalMvp === 'v1'
+    && window.__rinloStability === 'v1'
+    && window.__rinloSettingsBridge === 'v1'
+  ), null, { timeout: 10000 });
+  await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
 }
 
