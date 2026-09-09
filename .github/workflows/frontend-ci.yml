@@ -106,6 +106,8 @@ jobs:
           grep -q 'pwa-state-sync.js?rev=24' pwa.html
           grep -q 'pwa-profile-sync.js?rev=24' pwa.html
           grep -q 'pwa-account-sync.js?rev=24' pwa.html
+          grep -q 'ui-polish.js?rev=36' pwa.html
+          grep -q 'rinlo-polish-v03.js?rev=36' pwa.html
           grep -q 'rinlo-system-v01.js?rev=35' pwa.html
           grep -q 'rinlo-core-ui-v1.js?rev=25' pwa.html
           grep -q 'rinlo-scale-pass-v1.js?rev=29' pwa.html
@@ -117,8 +119,10 @@ jobs:
           grep -q 'rinlo-settings-bridge-v1.js?rev=34' pwa.html
           grep -q 'rinlo-logo.svg?rev=31' pwa.html
           grep -q 'icon.svg?rev=31' pwa.html
-          grep -q 'service-worker.js?rev=35' pwa.html
-          grep -q "rinlo-pwa-v35" service-worker.js
+          grep -q 'service-worker.js?rev=36' pwa.html
+          grep -q "rinlo-pwa-v36" service-worker.js
+          grep -q "./ui-polish.js?rev=36" service-worker.js
+          grep -q "./rinlo-polish-v03.js?rev=36" service-worker.js
           grep -q "./rinlo-system-v01.js?rev=35" service-worker.js
           grep -q "./rinlo-core-ui-v1.js?rev=25" service-worker.js
           grep -q "./rinlo-scale-pass-v1.js?rev=29" service-worker.js
