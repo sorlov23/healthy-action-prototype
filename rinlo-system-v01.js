@@ -101,13 +101,14 @@
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(node => {
-      const text = node.nodeValue || '';
-      if (!text.trim()) return;
-      node.nodeValue = text
+      const before = node.nodeValue || '';
+      if (!before.trim()) return;
+      const after = before
         .replace(/Healthy Action/g, 'Rinlo')
         .replace(/AI Coach/g, 'Rinlo')
         .replace(/✦\s*Coach/g, 'Rinlo')
         .replace(/Coach/g, 'Rinlo');
+      if (after !== before) node.nodeValue = after;
     });
   }
 
