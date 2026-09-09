@@ -41,6 +41,25 @@ export async function createWeightLog(userId, weightKg, measuredAt, clientEventI
   return mapWeightRow(existing.rows[0], true);
 }
 
+export async function updateWeightLog(userId, logId, weightKg, measuredAt) {
+  const result = await pool.query(`
+    update weight_logs set
+      weight_kg = $3,
+      measured_at = $4
+    where id = $1 and user_id = $2
+    returning id, client_event_id, measured_at, weight_kg, created_at
+  `, [logId, userId, Number(weightKg), parseDate(measuredAt)]);
+  return result.rowCount ? mapWeightRow(result.rows[0]) : null;
+}
+
+export async function deleteWeightLog(userId, logId) {
+  const result = await pool.query(
+    'delete from weight_logs where id = $1 and user_id = $2 returning id',
+    [logId, userId],
+  );
+  return result.rowCount > 0;
+}
+
 export async function listWeightLogs(userId, limit = 90) {
   const safeLimit = Math.min(Math.max(Number(limit) || 90, 1), 365);
   const result = await pool.query(`
@@ -203,6 +222,42 @@ export async function registerStateRoutes(app) {
       if (error.message === 'weight_log_conflict') return reply.code(409).send({ error: 'idempotency_conflict' });
       throw error;
     }
+  });
+
+  app.put('/api/v1/weight/logs/:id', {
+    preHandler: requireAuth,
+    schema: {
+      params: { type: 'object', required: ['id'], properties: { id: { type: 'string', minLength: 1, maxLength: 80 } } },
+      body: {
+        type: 'object',
+        required: ['weightKg'],
+        additionalProperties: false,
+        properties: {
+          weightKg: { type: 'number', minimum: 30, maximum: 300 },
+          measuredAt: { type: 'string', maxLength: 80 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const log = await updateWeightLog(request.auth.userId, request.params.id, request.body.weightKg, request.body.measuredAt);
+      if (!log) return reply.code(404).send({ error: 'not_found' });
+      return log;
+    } catch (error) {
+      if (error.message === 'invalid_date') return reply.code(400).send({ error: 'validation_error', message: 'Некорректная дата веса' });
+      throw error;
+    }
+  });
+
+  app.delete('/api/v1/weight/logs/:id', {
+    preHandler: requireAuth,
+    schema: {
+      params: { type: 'object', required: ['id'], properties: { id: { type: 'string', minLength: 1, maxLength: 80 } } },
+    },
+  }, async (request, reply) => {
+    const deleted = await deleteWeightLog(request.auth.userId, request.params.id);
+    if (!deleted) return reply.code(404).send({ error: 'not_found' });
+    return reply.code(204).send();
   });
 
   app.get('/api/v1/weight/logs', {
