@@ -45,6 +45,28 @@ async function listItemsForLog(client, logId) {
   return result.rows;
 }
 
+async function replaceItems(client, logId, items = []) {
+  await client.query('delete from food_log_items where food_log_id = $1', [logId]);
+  const saved = [];
+  for (const item of items) {
+    const result = await client.query(`
+      insert into food_log_items(food_log_id, food_id, name, grams, kcal, protein_g, confidence)
+      values($1, $2, $3, $4, $5, $6, $7)
+      returning id, food_log_id, food_id, name, grams, kcal, protein_g, confidence
+    `, [
+      logId,
+      item.foodId || null,
+      item.name,
+      Number(item.grams),
+      Number(item.kcal || 0),
+      Number(item.protein || 0),
+      item.confidence == null ? null : Number(item.confidence),
+    ]);
+    saved.push(result.rows[0]);
+  }
+  return saved;
+}
+
 export async function createFoodLog(userId, payload) {
   const client = await pool.connect();
   try {
@@ -85,24 +107,7 @@ export async function createFoodLog(userId, payload) {
     }
 
     const log = logResult.rows[0];
-    const items = [];
-    for (const item of payload.items || []) {
-      const itemResult = await client.query(`
-        insert into food_log_items(food_log_id, food_id, name, grams, kcal, protein_g, confidence)
-        values($1, $2, $3, $4, $5, $6, $7)
-        returning id, food_log_id, food_id, name, grams, kcal, protein_g, confidence
-      `, [
-        log.id,
-        item.foodId || null,
-        item.name,
-        Number(item.grams),
-        Number(item.kcal || 0),
-        Number(item.protein || 0),
-        item.confidence == null ? null : Number(item.confidence),
-      ]);
-      items.push(itemResult.rows[0]);
-    }
-
+    const items = await replaceItems(client, log.id, payload.items || []);
     await client.query('commit');
     return mapLog(log, items, false);
   } catch (error) {
@@ -111,6 +116,51 @@ export async function createFoodLog(userId, payload) {
   } finally {
     client.release();
   }
+}
+
+export async function updateFoodLog(userId, logId, payload) {
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    const result = await client.query(`
+      update food_logs set
+        eaten_at = $3,
+        source = $4,
+        original_text = $5,
+        total_kcal = $6,
+        total_protein_g = $7
+      where id = $1 and user_id = $2
+      returning id, client_event_id, eaten_at, source, original_text, total_kcal, total_protein_g, created_at
+    `, [
+      logId,
+      userId,
+      parseDate(payload.eatenAt),
+      payload.source || 'text',
+      payload.originalText || null,
+      Number(payload.totalKcal || 0),
+      Number(payload.totalProtein || 0),
+    ]);
+    if (!result.rowCount) {
+      await client.query('rollback');
+      return null;
+    }
+    const items = await replaceItems(client, logId, payload.items || []);
+    await client.query('commit');
+    return mapLog(result.rows[0], items, false);
+  } catch (error) {
+    await client.query('rollback');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteFoodLog(userId, logId) {
+  const result = await pool.query(
+    'delete from food_logs where id = $1 and user_id = $2 returning id',
+    [logId, userId],
+  );
+  return result.rowCount > 0;
 }
 
 export async function getFoodLogsForDay(userId, day, timezoneOffsetMinutes = 0) {
@@ -154,41 +204,43 @@ export async function getFoodLogsForDay(userId, day, timezoneOffsetMinutes = 0) 
   };
 }
 
-export async function registerFoodLogRoutes(app) {
-  app.post('/api/v1/food/logs', {
-    preHandler: requireAuth,
-    schema: {
-      body: {
-        type: 'object',
-        required: ['source', 'totalKcal', 'totalProtein'],
-        additionalProperties: false,
-        properties: {
-          clientEventId: { type: 'string', minLength: 1, maxLength: 160 },
-          eatenAt: { type: 'string', maxLength: 80 },
-          source: { type: 'string', enum: ['text', 'photo', 'voice', 'manual'] },
-          originalText: { type: 'string', maxLength: 2000 },
-          totalKcal: { type: 'number', minimum: 0, maximum: 20000 },
-          totalProtein: { type: 'number', minimum: 0, maximum: 2000 },
-          items: {
-            type: 'array',
-            maxItems: 30,
-            items: {
-              type: 'object',
-              required: ['name', 'grams', 'kcal', 'protein'],
-              additionalProperties: false,
-              properties: {
-                foodId: { type: 'string', maxLength: 120 },
-                name: { type: 'string', minLength: 1, maxLength: 300 },
-                grams: { type: 'number', exclusiveMinimum: 0, maximum: 10000 },
-                kcal: { type: 'number', minimum: 0, maximum: 20000 },
-                protein: { type: 'number', minimum: 0, maximum: 2000 },
-                confidence: { type: 'number', minimum: 0, maximum: 1 },
-              },
-            },
+function foodBodySchema({ includeClientEventId = false } = {}) {
+  return {
+    type: 'object',
+    required: ['source', 'totalKcal', 'totalProtein'],
+    additionalProperties: false,
+    properties: {
+      ...(includeClientEventId ? { clientEventId: { type: 'string', minLength: 1, maxLength: 160 } } : {}),
+      eatenAt: { type: 'string', maxLength: 80 },
+      source: { type: 'string', enum: ['text', 'photo', 'voice', 'manual'] },
+      originalText: { type: 'string', maxLength: 2000 },
+      totalKcal: { type: 'number', minimum: 0, maximum: 20000 },
+      totalProtein: { type: 'number', minimum: 0, maximum: 2000 },
+      items: {
+        type: 'array',
+        maxItems: 30,
+        items: {
+          type: 'object',
+          required: ['name', 'grams', 'kcal', 'protein'],
+          additionalProperties: false,
+          properties: {
+            foodId: { type: 'string', maxLength: 120 },
+            name: { type: 'string', minLength: 1, maxLength: 300 },
+            grams: { type: 'number', exclusiveMinimum: 0, maximum: 10000 },
+            kcal: { type: 'number', minimum: 0, maximum: 20000 },
+            protein: { type: 'number', minimum: 0, maximum: 2000 },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
           },
         },
       },
     },
+  };
+}
+
+export async function registerFoodLogRoutes(app) {
+  app.post('/api/v1/food/logs', {
+    preHandler: requireAuth,
+    schema: { body: foodBodySchema({ includeClientEventId: true }) },
   }, async (request, reply) => {
     try {
       const log = await createFoodLog(request.auth.userId, request.body);
@@ -202,6 +254,36 @@ export async function registerFoodLogRoutes(app) {
       }
       throw error;
     }
+  });
+
+  app.put('/api/v1/food/logs/:id', {
+    preHandler: requireAuth,
+    schema: {
+      params: { type: 'object', required: ['id'], properties: { id: { type: 'string', minLength: 1, maxLength: 80 } } },
+      body: foodBodySchema(),
+    },
+  }, async (request, reply) => {
+    try {
+      const log = await updateFoodLog(request.auth.userId, request.params.id, request.body);
+      if (!log) return reply.code(404).send({ error: 'not_found' });
+      return log;
+    } catch (error) {
+      if (error.message === 'invalid_eaten_at') {
+        return reply.code(400).send({ error: 'validation_error', message: 'Некорректная дата приёма пищи' });
+      }
+      throw error;
+    }
+  });
+
+  app.delete('/api/v1/food/logs/:id', {
+    preHandler: requireAuth,
+    schema: {
+      params: { type: 'object', required: ['id'], properties: { id: { type: 'string', minLength: 1, maxLength: 80 } } },
+    },
+  }, async (request, reply) => {
+    const deleted = await deleteFoodLog(request.auth.userId, request.params.id);
+    if (!deleted) return reply.code(404).send({ error: 'not_found' });
+    return reply.code(204).send();
   });
 
   app.get('/api/v1/food/logs', {
