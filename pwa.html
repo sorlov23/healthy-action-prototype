@@ -10,17 +10,17 @@
 <meta name="apple-mobile-web-app-title" content="Rinlo">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="apple-touch-icon" href="./icon.svg?rev=28">
+<link rel="apple-touch-icon" href="./icon.svg?rev=29">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
 #app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#f3f6f4}
 .loading{position:fixed;inset:0;display:grid;place-items:center;background:#f3f6f4;z-index:2}
-.loadingBrand{width:138px;line-height:0}
+.loadingBrand{width:132px;line-height:0}
 .loadingBrand img{display:block;width:100%;height:auto}
 </style>
 </head>
 <body>
-<div id="loading" class="loading"><div class="loadingBrand"><img src="./rinlo-logo.svg?rev=28" alt="Rinlo" draggable="false"></div></div>
+<div id="loading" class="loading"><div class="loadingBrand"><img src="./rinlo-logo.svg?rev=29" alt="Rinlo" draggable="false"></div></div>
 <iframe id="app" src="./v07.html?rev=24" title="Rinlo"></iframe>
 <script src="./runtime-config.js?rev=24"></script>
 <script src="./food-catalog.js?rev=24"></script>
@@ -38,10 +38,11 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <script src="./rinlo-profile-v01.js?rev=24"></script>
 <script src="./rinlo-system-v01.js?rev=24"></script>
 <script src="./rinlo-core-ui-v1.js?rev=25"></script>
-<script src="./rinlo-wordmark.js?rev=28"></script>
+<script src="./rinlo-scale-pass-v1.js?rev=29"></script>
+<script src="./rinlo-wordmark.js?rev=29"></script>
 <script>
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=28',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=29',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
