@@ -90,18 +90,18 @@ jobs:
           grep -q 'pwa-account-sync.js?rev=24' pwa.html
           grep -q 'rinlo-system-v01.js?rev=24' pwa.html
           grep -q 'rinlo-core-ui-v1.js?rev=25' pwa.html
-          grep -q 'rinlo-wordmark.js?rev=27' pwa.html
-          grep -q 'rinlo-logo.svg?rev=27' pwa.html
-          grep -q 'icon.svg?rev=27' pwa.html
-          grep -q 'service-worker.js?rev=27' pwa.html
-          grep -q "rinlo-pwa-v27" service-worker.js
+          grep -q 'rinlo-wordmark.js?rev=28' pwa.html
+          grep -q 'rinlo-logo.svg?rev=28' pwa.html
+          grep -q 'icon.svg?rev=28' pwa.html
+          grep -q 'service-worker.js?rev=28' pwa.html
+          grep -q "rinlo-pwa-v28" service-worker.js
           grep -q "./rinlo-core-ui-v1.js?rev=25" service-worker.js
-          grep -q "./rinlo-wordmark.js?rev=27" service-worker.js
-          grep -q "./rinlo-logo.svg?rev=27" service-worker.js
-          grep -q "./icon.svg?rev=27" service-worker.js
+          grep -q "./rinlo-wordmark.js?rev=28" service-worker.js
+          grep -q "./rinlo-logo.svg?rev=28" service-worker.js
+          grep -q "./icon.svg?rev=28" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
-          grep -q 'linearGradient id="rinloLeafTop"' rinlo-logo.svg
-          grep -q 'linearGradient id="rinloLeafBottom"' rinlo-logo.svg
+          grep -q 'linearGradient id="top"' rinlo-logo.svg
+          grep -q 'linearGradient id="bottom"' rinlo-logo.svg
           core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
-          brand_line=$(grep -n 'rinlo-wordmark.js?rev=27' pwa.html | cut -d: -f1)
+          brand_line=$(grep -n 'rinlo-wordmark.js?rev=28' pwa.html | cut -d: -f1)
           test "$core_line" -lt "$brand_line"
