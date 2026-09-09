@@ -44,9 +44,10 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <script src="./rinlo-server-sync-v1.js?rev=32"></script>
 <script src="./rinlo-server-restore-v1.js?rev=33"></script>
 <script src="./rinlo-wordmark.js?rev=30"></script>
+<script src="./rinlo-settings-bridge-v1.js?rev=34"></script>
 <script>
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=33',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=34',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
