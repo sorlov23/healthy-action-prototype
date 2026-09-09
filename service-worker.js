@@ -1,4 +1,4 @@
-const CACHE='rinlo-pwa-v29';
+const CACHE='rinlo-pwa-v31';
 const ASSETS=[
   './pwa.html',
   './v07.html?rev=24',
@@ -19,10 +19,12 @@ const ASSETS=[
   './rinlo-system-v01.js?rev=24',
   './rinlo-core-ui-v1.js?rev=25',
   './rinlo-scale-pass-v1.js?rev=29',
-  './rinlo-wordmark.js?rev=29',
-  './rinlo-logo.svg?rev=29',
+  './rinlo-functional-v1.js?rev=30',
+  './rinlo-stability-v1.js?rev=31',
+  './rinlo-wordmark.js?rev=30',
+  './rinlo-logo.svg?rev=31',
   './manifest.webmanifest',
-  './icon.svg?rev=29'
+  './icon.svg?rev=31'
 ];
 
 self.addEventListener('install',event=>event.waitUntil(
