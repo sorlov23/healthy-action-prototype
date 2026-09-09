@@ -19,6 +19,7 @@ on:
       - 'rinlo-functional-v1.js'
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
+      - 'rinlo-server-restore-v1.js'
       - 'rinlo-polish-v03.js'
       - 'rinlo-onboarding-v01.js'
       - 'rinlo-plan-v01.js'
@@ -48,6 +49,7 @@ on:
       - 'rinlo-functional-v1.js'
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
+      - 'rinlo-server-restore-v1.js'
       - 'rinlo-polish-v03.js'
       - 'rinlo-onboarding-v01.js'
       - 'rinlo-plan-v01.js'
@@ -84,6 +86,7 @@ jobs:
           node --check rinlo-functional-v1.js
           node --check rinlo-stability-v1.js
           node --check rinlo-server-sync-v1.js
+          node --check rinlo-server-restore-v1.js
           node --check rinlo-polish-v03.js
           node --check rinlo-onboarding-v01.js
           node --check rinlo-plan-v01.js
@@ -106,16 +109,18 @@ jobs:
           grep -q 'rinlo-functional-v1.js?rev=30' pwa.html
           grep -q 'rinlo-stability-v1.js?rev=31' pwa.html
           grep -q 'rinlo-server-sync-v1.js?rev=32' pwa.html
+          grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
           grep -q 'rinlo-wordmark.js?rev=30' pwa.html
           grep -q 'rinlo-logo.svg?rev=31' pwa.html
           grep -q 'icon.svg?rev=31' pwa.html
-          grep -q 'service-worker.js?rev=32' pwa.html
-          grep -q "rinlo-pwa-v32" service-worker.js
+          grep -q 'service-worker.js?rev=33' pwa.html
+          grep -q "rinlo-pwa-v33" service-worker.js
           grep -q "./rinlo-core-ui-v1.js?rev=25" service-worker.js
           grep -q "./rinlo-scale-pass-v1.js?rev=29" service-worker.js
           grep -q "./rinlo-functional-v1.js?rev=30" service-worker.js
           grep -q "./rinlo-stability-v1.js?rev=31" service-worker.js
           grep -q "./rinlo-server-sync-v1.js?rev=32" service-worker.js
+          grep -q "./rinlo-server-restore-v1.js?rev=33" service-worker.js
           grep -q "./rinlo-wordmark.js?rev=30" service-worker.js
           grep -q "./rinlo-logo.svg?rev=31" service-worker.js
           grep -q "./icon.svg?rev=31" service-worker.js
@@ -127,9 +132,11 @@ jobs:
           functional_line=$(grep -n 'rinlo-functional-v1.js?rev=30' pwa.html | cut -d: -f1)
           stability_line=$(grep -n 'rinlo-stability-v1.js?rev=31' pwa.html | cut -d: -f1)
           sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=32' pwa.html | cut -d: -f1)
+          restore_line=$(grep -n 'rinlo-server-restore-v1.js?rev=33' pwa.html | cut -d: -f1)
           brand_line=$(grep -n 'rinlo-wordmark.js?rev=30' pwa.html | cut -d: -f1)
           test "$core_line" -lt "$scale_line"
           test "$scale_line" -lt "$functional_line"
           test "$functional_line" -lt "$stability_line"
           test "$stability_line" -lt "$sync_line"
-          test "$sync_line" -lt "$brand_line"
+          test "$sync_line" -lt "$restore_line"
+          test "$restore_line" -lt "$brand_line"
