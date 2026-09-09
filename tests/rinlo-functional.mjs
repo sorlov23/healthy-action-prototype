@@ -5,7 +5,7 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
 const page = await context.newPage();
 const runtimeErrors = [];
-page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
+page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.stack || error.message}`));
 page.on('console', (msg) => { if (msg.type() === 'error') runtimeErrors.push(`console: ${msg.text()}`); });
 
 async function appFrame() {
