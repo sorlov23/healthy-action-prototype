@@ -2,7 +2,7 @@
   const frame = document.getElementById('app');
   if (!frame) return;
 
-  const LOGO_SRC = './rinlo-logo.svg?rev=26';
+  const LOGO_SRC = './rinlo-logo.svg?rev=27';
   const SELECTOR = '.rinlo-wordmark,.rc-wordmark,.ro-wordmark';
   let observer = null;
 
@@ -18,8 +18,8 @@
 
     style.textContent = `
       :root {
-        --rinlo-brand-wordmark-width: 86px;
-        --rinlo-brand-wordmark-width-large: 102px;
+        --rinlo-brand-wordmark-width: 98px;
+        --rinlo-brand-wordmark-width-large: 116px;
       }
 
       .rinlo-brand-wordmark,
@@ -30,7 +30,7 @@
         align-items: center !important;
         justify-content: flex-start !important;
         width: var(--rinlo-brand-wordmark-width) !important;
-        height: 30px !important;
+        height: 35px !important;
         min-width: var(--rinlo-brand-wordmark-width) !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -47,14 +47,14 @@
       #onboarding .ro-wordmark.rinlo-brand-wordmark {
         width: var(--rinlo-brand-wordmark-width-large) !important;
         min-width: var(--rinlo-brand-wordmark-width-large) !important;
-        height: 35px !important;
+        height: 42px !important;
       }
 
       #today.rinlo-core-today .rinlo-brand-wordmark,
       #today.rinlo-core-today .rc-wordmark.rinlo-brand-wordmark {
-        width: 92px !important;
-        min-width: 92px !important;
-        height: 32px !important;
+        width: 104px !important;
+        min-width: 104px !important;
+        height: 37px !important;
       }
 
       .rinlo-brand-wordmark > img {
