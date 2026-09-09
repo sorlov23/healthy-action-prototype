@@ -1,0 +1,118 @@
+name: rinlo supabase schema ci
+
+on:
+  push:
+    paths:
+      - 'supabase/schema/**'
+      - '.github/workflows/supabase-schema-ci.yml'
+  pull_request:
+    paths:
+      - 'supabase/schema/**'
+      - '.github/workflows/supabase-schema-ci.yml'
+
+jobs:
+  foundation-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: rinlo_schema_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rinlo_schema_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: rinlo_schema_ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Supabase auth/role stubs
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create schema extensions;
+          create table auth.users (id uuid primary key);
+          create function auth.uid() returns uuid
+          language sql stable
+          as $$ select null::uuid $$;
+          SQL
+
+      - name: Apply Rinlo foundation schema
+        run: psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_foundation.sql
+
+      - name: Verify security invariants
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            table_count integer;
+            rls_count integer;
+            anon_grants integer;
+            dangerous_authenticated_grants integer;
+          begin
+            select count(*) into table_count
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public' and c.relkind = 'r';
+            if table_count <> 11 then
+              raise exception 'expected 11 public tables, got %', table_count;
+            end if;
+
+            select count(*) into rls_count
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity;
+            if rls_count <> 11 then
+              raise exception 'expected RLS on 11 public tables, got %', rls_count;
+            end if;
+
+            if to_regclass('public.app_users') is not null or to_regclass('public.auth_sessions') is not null then
+              raise exception 'legacy app_users/auth_sessions must not exist in Supabase foundation';
+            end if;
+
+            select count(*) into anon_grants
+            from information_schema.role_table_grants
+            where table_schema = 'public' and grantee = 'anon';
+            if anon_grants <> 0 then
+              raise exception 'anon unexpectedly has % public table grants', anon_grants;
+            end if;
+
+            select count(*) into dangerous_authenticated_grants
+            from information_schema.role_table_grants
+            where table_schema = 'public'
+              and grantee = 'authenticated'
+              and privilege_type in ('TRUNCATE','TRIGGER','REFERENCES');
+            if dangerous_authenticated_grants <> 0 then
+              raise exception 'authenticated has % dangerous grants', dangerous_authenticated_grants;
+            end if;
+          end $$;
+          SQL
+
+      - name: Verify catalogue is read-only to authenticated clients
+        run: |
+          psql -At -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'food_aliases:SELECT|foods:SELECT'
+          select string_agg(table_name || ':' || privileges, '|' order by table_name)
+          from (
+            select table_name, string_agg(privilege_type, ',' order by privilege_type) as privileges
+            from information_schema.role_table_grants
+            where table_schema='public'
+              and grantee='authenticated'
+              and table_name in ('foods','food_aliases')
+            group by table_name
+          ) grants;
+          SQL
