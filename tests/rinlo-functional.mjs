@@ -73,12 +73,9 @@ try {
   await app.locator('#profile').waitFor({ state: 'visible' });
   await app.getByRole('button', { name: /Изменить параметры/ }).waitFor({ state: 'visible' });
 
-  // Persistence is checked from a normal saved state. Editing onboarding is a separate
-  // transient UI mode and should not be used as the reload precondition.
+  // Persistence is checked independently of which tab the browser restores after reload.
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
-  await app.locator('#today').waitFor({ state: 'visible' });
-  await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
   const persisted = await app.evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
@@ -90,6 +87,12 @@ try {
     };
   });
   assert(persisted.profile && persisted.water && persisted.food, 'Saved Rinlo state did not survive reload');
+
+  // Whatever tab the browser restores, the saved profile must keep navigation usable.
+  await app.locator('.nav').waitFor({ state: 'visible' });
+  await app.locator('.nav button').nth(0).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
+  await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
   // Profile editing still opens the goal-first onboarding from step one.
   await app.locator('.nav button').nth(3).click();
