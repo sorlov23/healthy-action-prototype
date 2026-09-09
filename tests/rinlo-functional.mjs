@@ -71,13 +71,30 @@ try {
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Изменить параметры/ }).click();
-  await app.getByRole('heading', { name: 'Что сейчас хочется улучшить?' }).waitFor();
+  await app.getByRole('button', { name: /Изменить параметры/ }).waitFor({ state: 'visible' });
 
+  // Persistence is checked from a normal saved state. Editing onboarding is a separate
+  // transient UI mode and should not be used as the reload precondition.
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
+
+  const persisted = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const days = Object.values(db.days || {});
+    return {
+      profile: Boolean(db.profile),
+      water: days.some((day) => Number(day?.water || 0) >= 250),
+      food: days.some((day) => (day?.events || []).some((event) => event.type === 'food' && event.text === 'омлет из двух яиц и кофе')),
+    };
+  });
+  assert(persisted.profile && persisted.water && persisted.food, 'Saved Rinlo state did not survive reload');
+
+  // Profile editing still opens the goal-first onboarding from step one.
+  await app.locator('.nav button').nth(3).click();
+  await app.getByRole('button', { name: /Изменить параметры/ }).click();
+  await app.getByRole('heading', { name: 'Что сейчас хочется улучшить?' }).waitFor();
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
   console.log('Rinlo functional MVP smoke test passed');
