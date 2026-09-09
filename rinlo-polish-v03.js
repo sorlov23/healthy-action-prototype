@@ -4,7 +4,10 @@
 
   function apply() {
     const doc = frame.contentDocument;
-    if (!doc) return;
+    if (!doc?.head) {
+      setTimeout(apply, 0);
+      return;
+    }
 
     doc.getElementById('rinlo-polish-v03')?.remove();
     const style = doc.createElement('style');
@@ -158,8 +161,7 @@
   }
 
   frame.addEventListener('load', () => {
-    try { setTimeout(apply, 0); }
-    catch (e) { console.error('Rinlo polish v0.3', e); }
+    setTimeout(apply, 0);
   });
 
   try {
