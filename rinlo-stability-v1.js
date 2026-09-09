@@ -3,6 +3,8 @@
   if (!frame) return;
 
   const KEY = 'healthy-action-v07';
+  const SESSION_KEY = 'ha_api_session_v1';
+  const OUTBOX_KEY = 'rinlo-sync-outbox-v1';
   const icons = {
     meal: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v6m3-6v6M5 7h7m-3 3v10M16 4v7c0 1.5.8 2.4 2 2.4h1V20m0-16v9.4"/></svg>`,
     steps: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 4.5c1.5 0 2.4 1.5 2 3.1l-.8 3.3c-.3 1.3-1.6 2-2.8 1.5l-.8-.3c-1.4-.5-2-2.2-1.4-3.5l1.7-3.2c.4-.6 1.1-.9 2.1-.9Zm7.8 7.1c1.4-.2 2.7.9 2.8 2.4l.2 3.6c.1 1.5-1.2 2.7-2.7 2.6l-.9-.1c-1.3-.1-2.2-1.2-2-2.5l.5-3.4c.2-1.4.9-2.4 2.1-2.6Z"/></svg>`,
@@ -29,6 +31,41 @@
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
+
+  function hasLocalProfile() {
+    try { return Boolean(JSON.parse(localStorage.getItem(KEY) || '{}').profile); }
+    catch { return false; }
+  }
+
+  function hasExistingSession() {
+    try {
+      const session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+      if (!session?.token || !session?.expiresAt) return false;
+      return new Date(session.expiresAt).getTime() > Date.now() + 60_000;
+    } catch { return false; }
+  }
+
+  function hasPendingSync() {
+    try {
+      const outbox = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]');
+      return Array.isArray(outbox) && outbox.length > 0;
+    } catch { return false; }
+  }
+
+  function installSessionGuard() {
+    const api = window.HealthyActionAPI;
+    if (!api || api.__rinloFreshSessionGuard || typeof api.ensureSession !== 'function') return;
+    const originalEnsureSession = api.ensureSession.bind(api);
+    api.ensureSession = async function() {
+      /* A completely fresh install has no server identity to restore. Creating a
+         guest session before onboarding lets an empty bootstrap race with the
+         goal-first UI. Wait until there is a local profile, an existing session,
+         or durable work queued for the server. */
+      if (!hasLocalProfile() && !hasExistingSession() && !hasPendingSync()) return null;
+      return originalEnsureSession();
+    };
+    api.__rinloFreshSessionGuard = true;
+  }
 
   function setText(el, text) {
     if (el && el.textContent !== text) el.textContent = text;
@@ -159,10 +196,16 @@
     install(doc, win);
   }
 
+  /* Install the session guard synchronously. Earlier bridge scripts defer their
+     iframe patching with timers, so this prevents a fresh guest session before
+     those timers get a chance to run. */
+  installSessionGuard();
+  mount();
+
   frame.addEventListener('load', () => {
+    setTimeout(mount, 0);
     setTimeout(mount, 80);
-    setTimeout(mount, 220);
   });
-  setTimeout(mount, 80);
-  setTimeout(mount, 220);
+  setTimeout(mount, 0);
+  setTimeout(mount, 120);
 })();
