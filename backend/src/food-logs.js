@@ -8,16 +8,57 @@ function parseDate(value) {
   return date;
 }
 
+function mapItem(item) {
+  return {
+    id: item.id,
+    foodId: item.food_id,
+    name: item.name,
+    grams: Number(item.grams),
+    kcal: Number(item.kcal),
+    protein: Number(item.protein_g),
+    confidence: item.confidence == null ? null : Number(item.confidence),
+  };
+}
+
+function mapLog(log, items = [], replayed = false) {
+  return {
+    id: log.id,
+    clientEventId: log.client_event_id || null,
+    eatenAt: log.eaten_at,
+    source: log.source,
+    originalText: log.original_text,
+    totalKcal: Number(log.total_kcal),
+    totalProtein: Number(log.total_protein_g),
+    createdAt: log.created_at,
+    replayed,
+    items: items.map(mapItem),
+  };
+}
+
+async function listItemsForLog(client, logId) {
+  const result = await client.query(`
+    select id, food_log_id, food_id, name, grams, kcal, protein_g, confidence
+    from food_log_items
+    where food_log_id = $1
+    order by created_at asc
+  `, [logId]);
+  return result.rows;
+}
+
 export async function createFoodLog(userId, payload) {
   const client = await pool.connect();
   try {
     await client.query('begin');
 
     const eatenAt = parseDate(payload.eatenAt);
+    const clientEventId = payload.clientEventId || null;
     const logResult = await client.query(`
-      insert into food_logs(user_id, eaten_at, source, original_text, total_kcal, total_protein_g)
-      values($1, $2, $3, $4, $5, $6)
-      returning id, eaten_at, source, original_text, total_kcal, total_protein_g, created_at
+      insert into food_logs(
+        user_id, eaten_at, source, original_text, total_kcal, total_protein_g, client_event_id
+      )
+      values($1, $2, $3, $4, $5, $6, $7)
+      on conflict do nothing
+      returning id, client_event_id, eaten_at, source, original_text, total_kcal, total_protein_g, created_at
     `, [
       userId,
       eatenAt,
@@ -25,7 +66,23 @@ export async function createFoodLog(userId, payload) {
       payload.originalText || null,
       Number(payload.totalKcal || 0),
       Number(payload.totalProtein || 0),
+      clientEventId,
     ]);
+
+    if (!logResult.rowCount) {
+      if (!clientEventId) throw new Error('food_log_conflict');
+      const existingResult = await client.query(`
+        select id, client_event_id, eaten_at, source, original_text, total_kcal, total_protein_g, created_at
+        from food_logs
+        where user_id = $1 and client_event_id = $2
+        limit 1
+      `, [userId, clientEventId]);
+      if (!existingResult.rowCount) throw new Error('food_log_conflict');
+      const existing = existingResult.rows[0];
+      const existingItems = await listItemsForLog(client, existing.id);
+      await client.query('commit');
+      return mapLog(existing, existingItems, true);
+    }
 
     const log = logResult.rows[0];
     const items = [];
@@ -33,7 +90,7 @@ export async function createFoodLog(userId, payload) {
       const itemResult = await client.query(`
         insert into food_log_items(food_log_id, food_id, name, grams, kcal, protein_g, confidence)
         values($1, $2, $3, $4, $5, $6, $7)
-        returning id, food_id, name, grams, kcal, protein_g, confidence
+        returning id, food_log_id, food_id, name, grams, kcal, protein_g, confidence
       `, [
         log.id,
         item.foodId || null,
@@ -47,24 +104,7 @@ export async function createFoodLog(userId, payload) {
     }
 
     await client.query('commit');
-    return {
-      id: log.id,
-      eatenAt: log.eaten_at,
-      source: log.source,
-      originalText: log.original_text,
-      totalKcal: Number(log.total_kcal),
-      totalProtein: Number(log.total_protein_g),
-      createdAt: log.created_at,
-      items: items.map((item) => ({
-        id: item.id,
-        foodId: item.food_id,
-        name: item.name,
-        grams: Number(item.grams),
-        kcal: Number(item.kcal),
-        protein: Number(item.protein_g),
-        confidence: item.confidence == null ? null : Number(item.confidence),
-      })),
-    };
+    return mapLog(log, items, false);
   } catch (error) {
     await client.query('rollback');
     throw error;
@@ -75,7 +115,7 @@ export async function createFoodLog(userId, payload) {
 
 export async function getFoodLogsForDay(userId, day, timezoneOffsetMinutes = 0) {
   const logsResult = await pool.query(`
-    select id, eaten_at, source, original_text, total_kcal, total_protein_g, created_at
+    select id, client_event_id, eaten_at, source, original_text, total_kcal, total_protein_g, created_at
     from food_logs
     where user_id = $1
       and (eaten_at - ($3 * interval '1 minute'))::date = $2::date
@@ -98,27 +138,10 @@ export async function getFoodLogsForDay(userId, day, timezoneOffsetMinutes = 0) 
   const byLog = new Map();
   for (const item of itemsResult.rows) {
     if (!byLog.has(item.food_log_id)) byLog.set(item.food_log_id, []);
-    byLog.get(item.food_log_id).push({
-      id: item.id,
-      foodId: item.food_id,
-      name: item.name,
-      grams: Number(item.grams),
-      kcal: Number(item.kcal),
-      protein: Number(item.protein_g),
-      confidence: item.confidence == null ? null : Number(item.confidence),
-    });
+    byLog.get(item.food_log_id).push(item);
   }
 
-  const mapped = logs.map((log) => ({
-    id: log.id,
-    eatenAt: log.eaten_at,
-    source: log.source,
-    originalText: log.original_text,
-    totalKcal: Number(log.total_kcal),
-    totalProtein: Number(log.total_protein_g),
-    createdAt: log.created_at,
-    items: byLog.get(log.id) || [],
-  }));
+  const mapped = logs.map((log) => mapLog(log, byLog.get(log.id) || []));
 
   return {
     day,
@@ -140,6 +163,7 @@ export async function registerFoodLogRoutes(app) {
         required: ['source', 'totalKcal', 'totalProtein'],
         additionalProperties: false,
         properties: {
+          clientEventId: { type: 'string', minLength: 1, maxLength: 160 },
           eatenAt: { type: 'string', maxLength: 80 },
           source: { type: 'string', enum: ['text', 'photo', 'voice', 'manual'] },
           originalText: { type: 'string', maxLength: 2000 },
@@ -168,10 +192,13 @@ export async function registerFoodLogRoutes(app) {
   }, async (request, reply) => {
     try {
       const log = await createFoodLog(request.auth.userId, request.body);
-      return reply.code(201).send(log);
+      return reply.code(log.replayed ? 200 : 201).send(log);
     } catch (error) {
       if (error.message === 'invalid_eaten_at') {
         return reply.code(400).send({ error: 'validation_error', message: 'Некорректная дата приёма пищи' });
+      }
+      if (error.message === 'food_log_conflict') {
+        return reply.code(409).send({ error: 'idempotency_conflict' });
       }
       throw error;
     }
