@@ -22,6 +22,10 @@
     catch { return {}; }
   }
   function writeDb(win, db) { win.localStorage.setItem(KEY, JSON.stringify(db)); }
+  function syncBase(win) {
+    try { win.eval('db = load()'); }
+    catch (error) { console.warn('Rinlo legacy state sync skipped', error); }
+  }
   function currentKey(win) { return win.__haViewDay || localDayKey(); }
   function currentDay(win) {
     const db = readDb(win);
@@ -31,8 +35,10 @@
     return { db, day: db.days[key], key };
   }
   function refresh(win) {
-    try { win.render?.(); }
-    catch (error) { console.warn('Rinlo functional refresh', error); }
+    try {
+      syncBase(win);
+      win.render?.();
+    } catch (error) { console.warn('Rinlo functional refresh', error); }
   }
 
   function ensureStyles(doc) {
@@ -59,9 +65,21 @@
     if (originalRestart && !win.__rinloFunctionalRestartWrapped) {
       win.__rinloFunctionalRestartWrapped = true;
       win.restartOnboarding = () => {
+        syncBase(win);
         originalRestart();
         for (let i = 0; i < 4; i++) win.rinloCoreOnboardingBack?.();
         doc.querySelector('#onboarding')?.scrollTo?.({ top: 0, behavior: 'instant' });
+      };
+    }
+
+    const originalLoadDemo = typeof win.loadDemo === 'function' ? win.loadDemo.bind(win) : null;
+    if (originalLoadDemo && !win.__rinloFunctionalDemoWrapped) {
+      win.__rinloFunctionalDemoWrapped = true;
+      win.loadDemo = (...args) => {
+        syncBase(win);
+        const result = originalLoadDemo(...args);
+        syncBase(win);
+        return result;
       };
     }
 
@@ -126,6 +144,16 @@
       win.toast?.('Вес сохранён');
     };
 
+    win.addWater = (value = 250) => {
+      const v = Math.max(0, Math.round(Number(value || 0)));
+      if (!v) return;
+      const state = currentDay(win);
+      state.day.water = Math.max(0, Number(state.day.water || 0) + v);
+      writeDb(win, state.db);
+      refresh(win);
+      win.toast?.(`+${v} мл воды`);
+    };
+
     win.rinloOpenSteps = () => {
       win.openSheet?.(`
         <h2>Добавить шаги</h2>
@@ -145,12 +173,24 @@
       refresh(win);
       win.toast?.(`+${value.toLocaleString('ru-RU')} шагов`);
     };
+    win.addSteps = (value = 1000) => win.rinloSaveSteps(Math.round(Number(value || 0)));
 
-    const baseAddSteps = typeof win.addSteps === 'function' ? win.addSteps.bind(win) : null;
-    if (baseAddSteps) win.addSteps = (value) => {
-      const v = Math.round(Number(value || 0));
-      if (v === 1000) return win.rinloSaveSteps(1000);
-      return baseAddSteps(v);
+    win.toggleHabit = (habit) => {
+      const state = currentDay(win);
+      state.day.habits ||= {};
+      state.day.habits[habit] = !state.day.habits[habit];
+      writeDb(win, state.db);
+      refresh(win);
+    };
+
+    win.delEvent = (id) => {
+      const state = currentDay(win);
+      const before = (state.day.events || []).length;
+      state.day.events = (state.day.events || []).filter((event) => String(event.id) !== String(id));
+      if (state.day.events.length === before) return;
+      writeDb(win, state.db);
+      refresh(win);
+      win.toast?.('Запись удалена');
     };
 
     win.rinloEditEvent = (id) => {
@@ -274,12 +314,14 @@
     const win = frame.contentWindow;
     if (!doc?.head || !win) return;
     ensureStyles(doc);
+    syncBase(win);
     installCoreFlows(win, doc);
 
     if (!win.__rinloFunctionalRenderWrapped && typeof win.render === 'function') {
       win.__rinloFunctionalRenderWrapped = true;
       const originalRender = win.render.bind(win);
       win.render = function(...args) {
+        syncBase(win);
         const result = originalRender(...args);
         queueMicrotask(() => enhanceRenderedUi(win, doc));
         return result;
