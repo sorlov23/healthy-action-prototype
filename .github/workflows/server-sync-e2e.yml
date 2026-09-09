@@ -84,8 +84,18 @@ jobs:
       - name: Install Playwright
         run: |
           npm init -y >/dev/null 2>&1
-          npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          for attempt in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Playwright browser installation failed after 3 attempts"
+              exit 1
+            fi
+            echo "Playwright browser installation failed (attempt $attempt/3); retrying..."
+            sleep $((attempt * 5))
+          done
 
       - name: Start PWA server
         run: |
@@ -99,4 +109,12 @@ jobs:
           exit 1
 
       - name: Run durable server sync lifecycle
-        run: node tests/rinlo-server-sync.mjs
+        run: |
+          if node tests/rinlo-server-sync.mjs; then
+            exit 0
+          fi
+          echo '--- Fastify API log ---'
+          cat /tmp/rinlo-api.log || true
+          echo '--- PWA HTTP server log ---'
+          cat /tmp/rinlo-http.log || true
+          exit 1
