@@ -1,0 +1,44 @@
+name: rinlo functional e2e
+
+on:
+  push:
+    paths:
+      - 'pwa.html'
+      - 'v07.html'
+      - 'rinlo-*.js'
+      - 'tests/rinlo-functional.mjs'
+      - '.github/workflows/functional-e2e.yml'
+  pull_request:
+    paths:
+      - 'pwa.html'
+      - 'v07.html'
+      - 'rinlo-*.js'
+      - 'tests/rinlo-functional.mjs'
+      - '.github/workflows/functional-e2e.yml'
+
+jobs:
+  mobile-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rinlo-http.log 2>&1 &
+          echo $! > /tmp/rinlo-http.pid
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4173/pwa.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/rinlo-http.log
+          exit 1
+      - name: Run mobile functional smoke test
+        run: node tests/rinlo-functional.mjs
