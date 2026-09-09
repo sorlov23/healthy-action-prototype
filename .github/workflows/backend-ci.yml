@@ -87,6 +87,7 @@ jobs:
             targetWeightKg: 75,
             heightCm: 176,
             ageYears: 37,
+            sex: 'male',
             activity: 'low',
             focuses: ['vape', 'fastfood'],
             primaryGoal: 'weight_loss',
@@ -97,7 +98,7 @@ jobs:
             stepTarget: 8000,
           });
           const profile = await getProfile(session.userId);
-          if (!profile || profile.startWeightKg !== 85 || profile.targetWeightKg !== 75 || profile.focuses.join(',') !== 'vape,fastfood' || profile.primaryGoal !== 'weight_loss') {
+          if (!profile || profile.startWeightKg !== 85 || profile.targetWeightKg !== 75 || profile.sex !== 'male' || profile.focuses.join(',') !== 'vape,fastfood' || profile.primaryGoal !== 'weight_loss') {
             throw new Error(`profile persistence mismatch: ${JSON.stringify(profile)}`);
           }
 
@@ -170,7 +171,7 @@ jobs:
           }
 
           const bootstrap = await buildBootstrap(session.userId, '2026-09-07', 0);
-          if (bootstrap.profile?.targetWeightKg !== 75 || bootstrap.day.metrics.waterMl !== 500 || bootstrap.weights.length !== 1 || bootstrap.checkin?.wellbeing !== 'poor' || bootstrap.actions.length !== 2) {
+          if (bootstrap.profile?.targetWeightKg !== 75 || bootstrap.profile?.sex !== 'male' || bootstrap.day.metrics.waterMl !== 500 || bootstrap.weights.length !== 1 || bootstrap.checkin?.wellbeing !== 'poor' || bootstrap.actions.length !== 2) {
             throw new Error(`bootstrap mismatch: ${JSON.stringify(bootstrap)}`);
           }
 

@@ -1,5 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="120" fill="#0F1720"/>
-  <path fill="#FFFFFF" fill-rule="evenodd" d="M146 370V142h112c70 0 112 35 112 96 0 43-22 73-60 88l67 44h-72l-58-39h-43v39h-58Zm58-181v96h50c38 0 58-16 58-48s-20-48-58-48h-50Z"/>
-  <circle cx="390" cy="168" r="18" fill="#2E7D64"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Rinlo">
+  <defs>
+    <linearGradient id="top" x1="45" y1="29" x2="165" y2="135" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A9CABB"/><stop offset="1" stop-color="#6FA98E"/>
+    </linearGradient>
+    <linearGradient id="bottom" x1="44" y1="68" x2="176" y2="215" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4E8C70"/><stop offset="1" stop-color="#2E7D64"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="#FAFBF8"/>
+  <g transform="translate(43 17) scale(2.35)">
+    <path d="M 46 31 L 46 35 L 66 73 L 75 86 L 86 97 L 97 105 L 107 110 L 129 117 L 146 125 L 161 136 L 165 134 L 164 101 L 158 77 L 147 57 L 135 45 L 122 37 L 102 31 L 92 30 L 48 30 Z" fill="url(#top)"/>
+    <path d="M 45 69 L 42 74 L 42 111 L 44 132 L 52 158 L 65 178 L 82 193 L 98 201 L 117 206 L 157 210 L 177 216 L 179 214 L 179 204 L 175 185 L 168 170 L 161 160 L 148 147 L 138 140 L 121 132 L 99 125 L 80 113 L 62 94 L 49 71 Z" fill="url(#bottom)"/>
+  </g>
 </svg>
