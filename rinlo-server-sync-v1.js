@@ -11,6 +11,12 @@
   let inflightId = null;
   let retryTimer = null;
 
+  const transport = () => window.RinloSupabaseTransport;
+  const syncEnabled = () => Boolean(api.enabled || transport()?.enabled);
+  const shouldAutoSync = () => Boolean(
+    api.enabled || (transport()?.enabled && transport()?.shouldAutoSync?.())
+  );
+
   const nowIso = () => new Date().toISOString();
   const uid = (prefix = 'op') => `${prefix}:${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
   const localDayKey = (date = new Date()) => {
@@ -107,6 +113,8 @@
   }
 
   async function request(path, options = {}, retry = true) {
+    const activeTransport = transport();
+    if (activeTransport?.enabled) return activeTransport.request(path, options);
     if (!api.enabled || !api.base || typeof api.ensureSession !== 'function') throw new Error('api_disabled');
     const session = await api.ensureSession();
     if (!session?.token) throw new Error('no_session');
@@ -258,12 +266,12 @@
   }
 
   async function drain() {
-    if (draining || !api.enabled) return false;
+    if (draining || !syncEnabled()) return false;
     draining = true;
     clearTimeout(retryTimer);
     retryTimer = null;
     try {
-      while (api.enabled) {
+      while (syncEnabled()) {
         const item = readOutbox()[0];
         if (!item) {
           api.lastSyncAt = Date.now();
@@ -287,7 +295,7 @@
   }
 
   function scheduleDrain(delay = 0) {
-    if (!api.enabled) return;
+    if (!syncEnabled()) return;
     clearTimeout(retryTimer);
     retryTimer = setTimeout(() => drain().catch((error) => {
       api.lastSyncError = String(error?.message || error);
@@ -380,7 +388,7 @@
   }
 
   async function pull(day = localDayKey()) {
-    if (!api.enabled) return null;
+    if (!syncEnabled()) return null;
     const data = await request(`/api/v1/bootstrap?day=${encodeURIComponent(day)}&timezoneOffsetMinutes=${encodeURIComponent(new Date().getTimezoneOffset())}`);
     mergeBootstrap(data, day);
     api.lastSyncAt = Date.now();
@@ -388,8 +396,9 @@
     return data;
   }
   async function syncNow({ pullAfter = true } = {}) {
-    if (!api.enabled) return false;
-    await api.ensureSession();
+    if (!syncEnabled()) return false;
+    if (transport()?.enabled) await transport().ensureSession();
+    else await api.ensureSession();
     const drained = await drain();
     if (pullAfter && drained) await pull(currentDayKey());
     return drained;
@@ -551,7 +560,7 @@
       clearLocalAppStateForTest() { localStorage.removeItem(APP_KEY); },
     };
     mounted = true;
-    if (api.enabled) syncNow().catch((error) => {
+    if (shouldAutoSync()) syncNow().catch((error) => {
       api.lastSyncError = String(error?.message || error);
       console.warn('Rinlo initial server sync deferred', error);
     });
