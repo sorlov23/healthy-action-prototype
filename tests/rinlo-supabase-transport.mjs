@@ -5,6 +5,24 @@ import vm from 'node:vm';
 const source = fs.readFileSync(new URL('../rinlo-supabase-transport-v1.js', import.meta.url), 'utf8');
 const calls = [];
 const userId = '11111111-1111-4111-8111-111111111111';
+const profileRow = {
+  user_id: userId,
+  start_weight_kg: 85,
+  target_weight_kg: 70,
+  height_cm: 176,
+  age_years: 37,
+  sex: 'male',
+  activity: 'low',
+  focuses: ['water'],
+  primary_goal: 'weight_loss',
+  secondary_goals: ['movement'],
+  calorie_tracking_enabled: true,
+  calorie_target: 1900,
+  protein_target_g: 120,
+  step_target: 8000,
+  created_at: '2026-09-10T10:00:00.000Z',
+  updated_at: '2026-09-10T10:00:00.000Z',
+};
 
 function response(status, data) {
   return {
@@ -21,11 +39,10 @@ async function fetchMock(url, options = {}) {
 
   if (path === '/rest/v1/profiles' && options.method === 'POST') {
     const body = JSON.parse(options.body);
-    return response(201, [{
-      ...body,
-      created_at: '2026-09-10T10:00:00.000Z',
-      updated_at: '2026-09-10T10:00:00.000Z',
-    }]);
+    return response(201, [{ ...profileRow, ...body }]);
+  }
+  if (path === '/rest/v1/profiles' && options.method === 'GET') {
+    return response(200, [profileRow]);
   }
   if (path === '/rest/v1/rpc/rinlo_apply_metric_operation') {
     const body = JSON.parse(options.body);
@@ -52,12 +69,11 @@ async function fetchMock(url, options = {}) {
     }]);
   }
   if (path === '/rest/v1/weight_logs') {
-    const isDayQuery = parsed.searchParams.has('measured_at');
     const rows = [{
       id: 'weight-1', client_event_id: 'weight:1', measured_at: '2026-09-10T07:00:00.000Z',
       weight_kg: 82.4, created_at: '2026-09-10T07:00:00.000Z',
     }];
-    return response(200, isDayQuery ? rows : rows);
+    return response(200, rows);
   }
   if (path === '/rest/v1/daily_checkins') {
     return response(200, [{
@@ -130,7 +146,7 @@ const profileResult = await transport.request('/api/v1/profile', {
 });
 assert.equal(profileResult.profile.userId, userId);
 assert.equal(profileResult.profile.startWeightKg, 85);
-const profileCall = calls.find((call) => call.url.includes('/rest/v1/profiles'));
+const profileCall = calls.find((call) => call.url.includes('/rest/v1/profiles') && call.options.method === 'POST');
 assert.ok(profileCall.url.includes('on_conflict=user_id'));
 assert.equal(profileCall.options.headers.apikey, 'sb_publishable_test');
 assert.equal(profileCall.options.headers.Authorization, 'Bearer access-token');
