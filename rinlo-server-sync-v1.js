@@ -199,6 +199,78 @@
     };
   }
 
+  function hasSupabaseSession() {
+    return Boolean(window.RinloSupabaseAuth?.getSession?.());
+  }
+
+  function prepareSupabaseIdentitySeed(win = frame.contentWindow) {
+    if (!transport()?.enabled || hasSupabaseSession()) return false;
+
+    // No Supabase session means the next ensureSession() will create a brand-new,
+    // empty anonymous identity. Rebase any legacy/stale outbox onto the current
+    // local snapshot so old Fastify serverIds cannot leak into the new identity.
+    const db = readDb();
+    const items = [];
+    const seededAt = nowIso();
+    const add = (item) => items.push({
+      id: item.id || uid('seed'),
+      createdAt: seededAt,
+      attempts: 0,
+      ...item,
+    });
+
+    const profile = profilePayload(win);
+    if (profile) add({ kind: 'profile-upsert', payload: profile, replaceKey: 'profile' });
+
+    const allowedHabits = new Set(['vape', 'fastfood', 'water']);
+    for (const day of Object.keys(db.days || {}).sort()) {
+      const snapshot = db.days?.[day] || {};
+      const checkin = checkinPayload(snapshot.rinloCheckin);
+      if (checkin) add({ kind: 'checkin-upsert', day, payload: checkin, replaceKey: `checkin:${day}` });
+
+      const waterMl = Math.max(0, Math.round(Number(snapshot.water || 0)));
+      const steps = Math.max(0, Math.round(Number(snapshot.steps || 0)));
+      if (waterMl || steps) {
+        add({
+          kind: 'metric-delta',
+          day,
+          operationId: `supabase-seed-v1:${day}:metrics`,
+          waterMlDelta: waterMl,
+          stepsDelta: steps,
+        });
+      }
+
+      for (const [habit, done] of Object.entries(snapshot.habits || {})) {
+        if (!allowedHabits.has(habit) || typeof done !== 'boolean') continue;
+        add({
+          kind: 'habit-set',
+          day,
+          habit,
+          done,
+          replaceKey: `habit:${day}:${habit}`,
+        });
+      }
+
+      for (const event of snapshot.events || []) {
+        if (!['food', 'weight'].includes(event.type)) continue;
+        event.clientEventId ||= uid(event.type);
+        // A serverId from the prototype Fastify backend (or a lost anonymous
+        // Supabase identity) is not valid for the new Supabase user.
+        delete event.serverId;
+        add({
+          kind: event.type === 'food' ? 'food-create' : 'weight-create',
+          day,
+          localEventId: String(event.id),
+          payload: event.type === 'food' ? foodPayload(event) : weightPayload(event),
+        });
+      }
+    }
+
+    writeDb(db);
+    writeOutbox(items);
+    return items.length > 0;
+  }
+
   function patchDependentItems(localEventId, serverId) {
     const target = String(localEventId);
     const items = readOutbox();
@@ -270,6 +342,7 @@
 
   async function drain() {
     if (draining || !syncEnabled()) return false;
+    if (transport()?.enabled && !hasSupabaseSession()) prepareSupabaseIdentitySeed(frame.contentWindow);
     draining = true;
     clearTimeout(retryTimer);
     retryTimer = null;
@@ -400,8 +473,12 @@
   }
   async function syncNow({ pullAfter = true } = {}) {
     if (!syncEnabled()) return false;
-    if (transport()?.enabled) await transport().ensureSession();
-    else await api.ensureSession();
+    if (transport()?.enabled) {
+      prepareSupabaseIdentitySeed(frame.contentWindow);
+      await transport().ensureSession();
+    } else {
+      await api.ensureSession();
+    }
     const drained = await drain();
     if (pullAfter && drained) await pull(currentDayKey());
     return drained;
