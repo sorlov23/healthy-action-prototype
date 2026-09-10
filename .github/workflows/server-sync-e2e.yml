@@ -12,6 +12,7 @@ on:
       - 'backend/**'
       - 'tests/rinlo-server-sync.mjs'
       - 'tests/rinlo-outbox-uncertain-create.mjs'
+      - 'tests/rinlo-supabase-first-sync-seed.mjs'
       - '.github/workflows/server-sync-e2e.yml'
   pull_request:
     paths:
@@ -24,6 +25,7 @@ on:
       - 'backend/**'
       - 'tests/rinlo-server-sync.mjs'
       - 'tests/rinlo-outbox-uncertain-create.mjs'
+      - 'tests/rinlo-supabase-first-sync-seed.mjs'
       - '.github/workflows/server-sync-e2e.yml'
 
 jobs:
@@ -58,8 +60,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test uncertain create outbox semantics
-        run: node tests/rinlo-outbox-uncertain-create.mjs
+      - name: Test durable outbox invariants
+        run: |
+          node tests/rinlo-outbox-uncertain-create.mjs
+          node tests/rinlo-supabase-first-sync-seed.mjs
 
       - name: Prepare backend
         working-directory: backend
