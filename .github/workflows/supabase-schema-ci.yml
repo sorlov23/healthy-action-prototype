@@ -122,7 +122,7 @@ jobs:
 
       - name: Verify RPC exposure is authenticated-only
         run: |
-          psql -At -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 't|t|f|f'
+          psql -At -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'true|true|false|false'
           select
             has_function_privilege('authenticated', 'public.rinlo_apply_metric_operation(text,date,integer,integer)', 'EXECUTE') || '|' ||
             has_function_privilege('authenticated', 'public.rinlo_set_daily_habit(date,text,boolean)', 'EXECUTE') || '|' ||
