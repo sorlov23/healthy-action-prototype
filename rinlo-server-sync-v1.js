@@ -266,6 +266,12 @@
       }
     }
 
+    try {
+      window.RinloServerSyncExtensions?.seedSupabaseIdentity?.({ db, add, uid, nowIso });
+    } catch (error) {
+      console.warn('Rinlo sync extension seed skipped', error);
+    }
+
     writeDb(db);
     writeOutbox(items);
     return items.length > 0;
@@ -325,6 +331,13 @@
       const base = item.kind === 'food-delete' ? '/api/v1/food/logs/' : '/api/v1/weight/logs/';
       try { return await request(`${base}${encodeURIComponent(item.serverId)}`, { method: 'DELETE' }); }
       catch (error) { if (error.status === 404) return { ok: true, alreadyDeleted: true }; throw error; }
+    }
+    const extension = window.RinloServerSyncExtensions;
+    if (typeof extension?.processItem === 'function') {
+      const result = await extension.processItem(item, {
+        request, readOutbox, writeOutbox, readDb, writeDb, refreshFrame,
+      });
+      if (result?.handled) return result.value;
     }
     throw new Error(`unknown_outbox_kind:${item.kind}`);
   }
@@ -636,6 +649,7 @@
     win.__rinloServerSync = 'v1';
     window.RinloServerSync = {
       drain, pull, syncNow,
+      enqueue: (item, options = {}) => enqueue(item, options),
       pending: () => readOutbox().map((item) => ({ ...item })),
       clearLocalAppStateForTest() { localStorage.removeItem(APP_KEY); },
     };
