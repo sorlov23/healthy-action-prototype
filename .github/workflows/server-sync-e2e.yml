@@ -11,6 +11,7 @@ on:
       - 'runtime-config.js'
       - 'backend/**'
       - 'tests/rinlo-server-sync.mjs'
+      - 'tests/rinlo-outbox-uncertain-create.mjs'
       - '.github/workflows/server-sync-e2e.yml'
   pull_request:
     paths:
@@ -22,6 +23,7 @@ on:
       - 'runtime-config.js'
       - 'backend/**'
       - 'tests/rinlo-server-sync.mjs'
+      - 'tests/rinlo-outbox-uncertain-create.mjs'
       - '.github/workflows/server-sync-e2e.yml'
 
 jobs:
@@ -55,6 +57,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Test uncertain create outbox semantics
+        run: node tests/rinlo-outbox-uncertain-create.mjs
 
       - name: Prepare backend
         working-directory: backend
