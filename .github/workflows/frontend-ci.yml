@@ -143,14 +143,14 @@ jobs:
           grep -q 'rinlo-scale-pass-v1.js?rev=29' pwa.html
           grep -q 'rinlo-functional-v1.js?rev=30' pwa.html
           grep -q 'rinlo-stability-v1.js?rev=35' pwa.html
-          grep -q 'rinlo-server-sync-v1.js?rev=40' pwa.html
+          grep -q 'rinlo-server-sync-v1.js?rev=41' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
           grep -q 'rinlo-wordmark.js?rev=30' pwa.html
           grep -q 'rinlo-settings-bridge-v1.js?rev=34' pwa.html
           grep -q 'rinlo-logo.svg?rev=31' pwa.html
           grep -q 'icon.svg?rev=31' pwa.html
-          grep -q 'service-worker.js?rev=40' pwa.html
-          grep -q "rinlo-pwa-v40" service-worker.js
+          grep -q 'service-worker.js?rev=41' pwa.html
+          grep -q "rinlo-pwa-v41" service-worker.js
           grep -q "./runtime-config.js?rev=39" service-worker.js
           grep -q "./rinlo-supabase-auth-v1.js?rev=38" service-worker.js
           grep -q "./rinlo-supabase-transport-v1.js?rev=39" service-worker.js
@@ -162,7 +162,7 @@ jobs:
           grep -q "./rinlo-scale-pass-v1.js?rev=29" service-worker.js
           grep -q "./rinlo-functional-v1.js?rev=30" service-worker.js
           grep -q "./rinlo-stability-v1.js?rev=35" service-worker.js
-          grep -q "./rinlo-server-sync-v1.js?rev=40" service-worker.js
+          grep -q "./rinlo-server-sync-v1.js?rev=41" service-worker.js
           grep -q "./rinlo-server-restore-v1.js?rev=33" service-worker.js
           grep -q "./rinlo-wordmark.js?rev=30" service-worker.js
           grep -q "./rinlo-settings-bridge-v1.js?rev=34" service-worker.js
@@ -178,7 +178,7 @@ jobs:
           scale_line=$(grep -n 'rinlo-scale-pass-v1.js?rev=29' pwa.html | cut -d: -f1)
           functional_line=$(grep -n 'rinlo-functional-v1.js?rev=30' pwa.html | cut -d: -f1)
           stability_line=$(grep -n 'rinlo-stability-v1.js?rev=35' pwa.html | cut -d: -f1)
-          sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=40' pwa.html | cut -d: -f1)
+          sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=41' pwa.html | cut -d: -f1)
           restore_line=$(grep -n 'rinlo-server-restore-v1.js?rev=33' pwa.html | cut -d: -f1)
           brand_line=$(grep -n 'rinlo-wordmark.js?rev=30' pwa.html | cut -d: -f1)
           settings_line=$(grep -n 'rinlo-settings-bridge-v1.js?rev=34' pwa.html | cut -d: -f1)
