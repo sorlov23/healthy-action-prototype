@@ -115,10 +115,9 @@ vm.runInContext(source, context, { filename: 'rinlo-supabase-transport-v1.js' })
 
 const transport = window.RinloSupabaseTransport;
 assert.equal(transport.enabled, true);
-assert.deepEqual(
-  transport.localDayUtcRange('2026-09-10', -180),
-  { start: '2026-09-09T21:00:00.000Z', end: '2026-09-10T21:00:00.000Z' },
-);
+const utcRange = transport.localDayUtcRange('2026-09-10', -180);
+assert.equal(utcRange.start, '2026-09-09T21:00:00.000Z');
+assert.equal(utcRange.end, '2026-09-10T21:00:00.000Z');
 
 const profileResult = await transport.request('/api/v1/profile', {
   method: 'PUT',
