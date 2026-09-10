@@ -199,6 +199,17 @@
     if (!['accepted','completed','replaced','dismissed','feedback'].includes(eventType)) return false;
     const localActionId = String(action.id);
     if (!action.serverId) queueActionCreate(day, action);
+    const normalizedPayload = payload || {};
+    const pending = sync.pending?.() || [];
+    const samePending = pending.find((item) =>
+      item.kind === 'action-event'
+      && String(item.localActionId) === localActionId
+      && item.eventType === eventType
+      && (item.reasonCode ?? null) === (reasonCode ?? null)
+      && JSON.stringify(item.payload || {}) === JSON.stringify(normalizedPayload)
+    );
+    if (samePending) return samePending.operationId || samePending.id;
+
     const operationId = uid('action-event');
     const replaceKey = eventType === 'feedback'
       ? `action:${day}:${localActionId}:feedback`
@@ -211,7 +222,7 @@
       operationId,
       eventType,
       reasonCode: reasonCode ?? null,
-      payload: payload || {},
+      payload: normalizedPayload,
     }, { replaceKey });
     return operationId;
   }
@@ -219,7 +230,9 @@
   function backfillUnsyncedActions() {
     const db = readDb();
     for (const day of Object.keys(db.days || {}).sort()) {
-      for (const action of db.days?.[day]?.rinloActions || []) {
+      const actions = [...(db.days?.[day]?.rinloActions || [])]
+        .sort((a, b) => String(a.suggestedAt || '').localeCompare(String(b.suggestedAt || '')));
+      for (const action of actions) {
         if (action.serverId) continue;
         queueActionCreate(day, action);
         if (['accepted','completed','replaced','dismissed'].includes(action.status)) {
