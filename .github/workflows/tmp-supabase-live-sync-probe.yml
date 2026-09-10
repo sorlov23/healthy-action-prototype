@@ -1,0 +1,56 @@
+name: temporary rinlo live supabase sync probe
+
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp-supabase-live-sync-probe.yml'
+      - 'tests/tmp-rinlo-supabase-live-browser.mjs'
+
+jobs:
+  live-browser-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Read public Supabase config
+        run: |
+          node - <<'NODE' >> "$GITHUB_ENV"
+          const fs = require('fs');
+          const vm = require('vm');
+          const window = {};
+          vm.runInNewContext(fs.readFileSync('runtime-config.js', 'utf8'), { window });
+          const cfg = window.HEALTHY_ACTION_CONFIG;
+          if (!cfg?.supabaseUrl || !cfg?.supabasePublishableKey) throw new Error('Supabase public config missing');
+          console.log(`SUPABASE_URL=${cfg.supabaseUrl}`);
+          console.log(`SUPABASE_PUBLISHABLE_KEY=${cfg.supabasePublishableKey}`);
+          NODE
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start PWA server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rinlo-live-http.log 2>&1 &
+          echo $! > /tmp/rinlo-live-http.pid
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4173/pwa.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/rinlo-live-http.log
+          exit 1
+
+      - name: Run real browser outbox through Supabase
+        run: |
+          if node tests/tmp-rinlo-supabase-live-browser.mjs; then
+            exit 0
+          fi
+          echo '--- PWA HTTP server log ---'
+          cat /tmp/rinlo-live-http.log || true
+          exit 1
