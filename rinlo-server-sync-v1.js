@@ -83,10 +83,10 @@
     let updated = false;
     for (const item of items) {
       if (item.localEventId === target && ['food-create', 'weight-create'].includes(item.kind)) {
-        // Once a create request is in flight its payload is already fixed. Do not
-        // pretend a localStorage rewrite can change that request; queue a dependent
-        // update instead so the edit is applied after the create receives serverId.
-        if (item.id === inflightId) continue;
+        // A create that is in flight or has already been attempted is uncertain:
+        // the server may have committed it even if the client never saw a response.
+        // Preserve that original create payload and queue a dependent update instead.
+        if (item.id === inflightId || Number(item.attempts || 0) > 0) continue;
         item.payload = payload;
         item.updatedAt = nowIso();
         updated = true;
@@ -107,7 +107,10 @@
     const target = String(localEventId);
     const items = readOutbox();
     const create = items.find((item) => item.localEventId === target && ['food-create', 'weight-create'].includes(item.kind));
-    if (!create || create.id === inflightId) return false;
+    // Only a never-attempted create is safe to cancel locally. After any attempt
+    // the server may already own a row, so keep the create and queue a dependent
+    // delete that receives serverId when the create/replay completes.
+    if (!create || create.id === inflightId || Number(create.attempts || 0) > 0) return false;
     writeOutbox(items.filter((item) => item.localEventId !== target));
     return true;
   }
