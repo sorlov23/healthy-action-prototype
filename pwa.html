@@ -22,8 +22,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <body>
 <div id="loading" class="loading"><div class="loadingBrand"><img src="./rinlo-logo.svg?rev=31" alt="Rinlo" draggable="false"></div></div>
 <iframe id="app" src="./v07.html?rev=24" title="Rinlo"></iframe>
-<script src="./runtime-config.js?rev=38"></script>
+<script src="./runtime-config.js?rev=39"></script>
 <script src="./rinlo-supabase-auth-v1.js?rev=38"></script>
+<script src="./rinlo-supabase-transport-v1.js?rev=39"></script>
 <script src="./food-catalog.js?rev=24"></script>
 <script src="./pwa-enhancements.js?rev=24"></script>
 <script src="./pwa-api.js?rev=24"></script>
@@ -42,13 +43,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <script src="./rinlo-scale-pass-v1.js?rev=29"></script>
 <script src="./rinlo-functional-v1.js?rev=30"></script>
 <script src="./rinlo-stability-v1.js?rev=35"></script>
-<script src="./rinlo-server-sync-v1.js?rev=32"></script>
+<script src="./rinlo-server-sync-v1.js?rev=39"></script>
 <script src="./rinlo-server-restore-v1.js?rev=33"></script>
 <script src="./rinlo-wordmark.js?rev=30"></script>
 <script src="./rinlo-settings-bridge-v1.js?rev=34"></script>
 <script>
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=38',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=39',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
