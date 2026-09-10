@@ -1,8 +1,9 @@
-const CACHE='rinlo-pwa-v37';
+const CACHE='rinlo-pwa-v38';
 const ASSETS=[
   './pwa.html',
   './v07.html?rev=24',
-  './runtime-config.js?rev=24',
+  './runtime-config.js?rev=38',
+  './rinlo-supabase-auth-v1.js?rev=38',
   './food-catalog.js?rev=24',
   './pwa-enhancements.js?rev=24',
   './pwa-api.js?rev=24',
