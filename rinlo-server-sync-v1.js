@@ -11,6 +11,12 @@
   let inflightId = null;
   let retryTimer = null;
 
+  const transport = () => window.RinloSupabaseTransport;
+  const syncEnabled = () => Boolean(api.enabled || transport()?.enabled);
+  const shouldAutoSync = () => Boolean(
+    api.enabled || (transport()?.enabled && transport()?.shouldAutoSync?.())
+  );
+
   const nowIso = () => new Date().toISOString();
   const uid = (prefix = 'op') => `${prefix}:${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
   const localDayKey = (date = new Date()) => {
@@ -77,10 +83,10 @@
     let updated = false;
     for (const item of items) {
       if (item.localEventId === target && ['food-create', 'weight-create'].includes(item.kind)) {
-        // Once a create request is in flight its payload is already fixed. Do not
-        // pretend a localStorage rewrite can change that request; queue a dependent
-        // update instead so the edit is applied after the create receives serverId.
-        if (item.id === inflightId) continue;
+        // A create that is in flight or has already been attempted is uncertain:
+        // the server may have committed it even if the client never saw a response.
+        // Preserve that original create payload and queue a dependent update instead.
+        if (item.id === inflightId || Number(item.attempts || 0) > 0) continue;
         item.payload = payload;
         item.updatedAt = nowIso();
         updated = true;
@@ -101,12 +107,17 @@
     const target = String(localEventId);
     const items = readOutbox();
     const create = items.find((item) => item.localEventId === target && ['food-create', 'weight-create'].includes(item.kind));
-    if (!create || create.id === inflightId) return false;
+    // Only a never-attempted create is safe to cancel locally. After any attempt
+    // the server may already own a row, so keep the create and queue a dependent
+    // delete that receives serverId when the create/replay completes.
+    if (!create || create.id === inflightId || Number(create.attempts || 0) > 0) return false;
     writeOutbox(items.filter((item) => item.localEventId !== target));
     return true;
   }
 
   async function request(path, options = {}, retry = true) {
+    const activeTransport = transport();
+    if (activeTransport?.enabled) return activeTransport.request(path, options);
     if (!api.enabled || !api.base || typeof api.ensureSession !== 'function') throw new Error('api_disabled');
     const session = await api.ensureSession();
     if (!session?.token) throw new Error('no_session');
@@ -188,6 +199,78 @@
     };
   }
 
+  function hasSupabaseSession() {
+    return Boolean(window.RinloSupabaseAuth?.getSession?.());
+  }
+
+  function prepareSupabaseIdentitySeed(win = frame.contentWindow) {
+    if (!transport()?.enabled || hasSupabaseSession()) return false;
+
+    // No Supabase session means the next ensureSession() will create a brand-new,
+    // empty anonymous identity. Rebase any legacy/stale outbox onto the current
+    // local snapshot so old Fastify serverIds cannot leak into the new identity.
+    const db = readDb();
+    const items = [];
+    const seededAt = nowIso();
+    const add = (item) => items.push({
+      id: item.id || uid('seed'),
+      createdAt: seededAt,
+      attempts: 0,
+      ...item,
+    });
+
+    const profile = profilePayload(win);
+    if (profile) add({ kind: 'profile-upsert', payload: profile, replaceKey: 'profile' });
+
+    const allowedHabits = new Set(['vape', 'fastfood', 'water']);
+    for (const day of Object.keys(db.days || {}).sort()) {
+      const snapshot = db.days?.[day] || {};
+      const checkin = checkinPayload(snapshot.rinloCheckin);
+      if (checkin) add({ kind: 'checkin-upsert', day, payload: checkin, replaceKey: `checkin:${day}` });
+
+      const waterMl = Math.max(0, Math.round(Number(snapshot.water || 0)));
+      const steps = Math.max(0, Math.round(Number(snapshot.steps || 0)));
+      if (waterMl || steps) {
+        add({
+          kind: 'metric-delta',
+          day,
+          operationId: `supabase-seed-v1:${day}:metrics`,
+          waterMlDelta: waterMl,
+          stepsDelta: steps,
+        });
+      }
+
+      for (const [habit, done] of Object.entries(snapshot.habits || {})) {
+        if (!allowedHabits.has(habit) || typeof done !== 'boolean') continue;
+        add({
+          kind: 'habit-set',
+          day,
+          habit,
+          done,
+          replaceKey: `habit:${day}:${habit}`,
+        });
+      }
+
+      for (const event of snapshot.events || []) {
+        if (!['food', 'weight'].includes(event.type)) continue;
+        event.clientEventId ||= uid(event.type);
+        // A serverId from the prototype Fastify backend (or a lost anonymous
+        // Supabase identity) is not valid for the new Supabase user.
+        delete event.serverId;
+        add({
+          kind: event.type === 'food' ? 'food-create' : 'weight-create',
+          day,
+          localEventId: String(event.id),
+          payload: event.type === 'food' ? foodPayload(event) : weightPayload(event),
+        });
+      }
+    }
+
+    writeDb(db);
+    writeOutbox(items);
+    return items.length > 0;
+  }
+
   function patchDependentItems(localEventId, serverId) {
     const target = String(localEventId);
     const items = readOutbox();
@@ -258,12 +341,13 @@
   }
 
   async function drain() {
-    if (draining || !api.enabled) return false;
+    if (draining || !syncEnabled()) return false;
+    if (transport()?.enabled && !hasSupabaseSession()) prepareSupabaseIdentitySeed(frame.contentWindow);
     draining = true;
     clearTimeout(retryTimer);
     retryTimer = null;
     try {
-      while (api.enabled) {
+      while (syncEnabled()) {
         const item = readOutbox()[0];
         if (!item) {
           api.lastSyncAt = Date.now();
@@ -287,7 +371,7 @@
   }
 
   function scheduleDrain(delay = 0) {
-    if (!api.enabled) return;
+    if (!syncEnabled()) return;
     clearTimeout(retryTimer);
     retryTimer = setTimeout(() => drain().catch((error) => {
       api.lastSyncError = String(error?.message || error);
@@ -380,7 +464,7 @@
   }
 
   async function pull(day = localDayKey()) {
-    if (!api.enabled) return null;
+    if (!syncEnabled()) return null;
     const data = await request(`/api/v1/bootstrap?day=${encodeURIComponent(day)}&timezoneOffsetMinutes=${encodeURIComponent(new Date().getTimezoneOffset())}`);
     mergeBootstrap(data, day);
     api.lastSyncAt = Date.now();
@@ -388,8 +472,13 @@
     return data;
   }
   async function syncNow({ pullAfter = true } = {}) {
-    if (!api.enabled) return false;
-    await api.ensureSession();
+    if (!syncEnabled()) return false;
+    if (transport()?.enabled) {
+      prepareSupabaseIdentitySeed(frame.contentWindow);
+      await transport().ensureSession();
+    } else {
+      await api.ensureSession();
+    }
     const drained = await drain();
     if (pullAfter && drained) await pull(currentDayKey());
     return drained;
@@ -551,7 +640,7 @@
       clearLocalAppStateForTest() { localStorage.removeItem(APP_KEY); },
     };
     mounted = true;
-    if (api.enabled) syncNow().catch((error) => {
+    if (shouldAutoSync()) syncNow().catch((error) => {
       api.lastSyncError = String(error?.message || error);
       console.warn('Rinlo initial server sync deferred', error);
     });

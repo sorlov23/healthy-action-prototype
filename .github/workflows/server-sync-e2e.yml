@@ -5,21 +5,27 @@ on:
     paths:
       - 'rinlo-server-sync-v1.js'
       - 'rinlo-server-restore-v1.js'
+      - 'rinlo-supabase-transport-v1.js'
       - 'rinlo-stability-v1.js'
       - 'pwa.html'
       - 'runtime-config.js'
       - 'backend/**'
       - 'tests/rinlo-server-sync.mjs'
+      - 'tests/rinlo-outbox-uncertain-create.mjs'
+      - 'tests/rinlo-supabase-first-sync-seed.mjs'
       - '.github/workflows/server-sync-e2e.yml'
   pull_request:
     paths:
       - 'rinlo-server-sync-v1.js'
       - 'rinlo-server-restore-v1.js'
+      - 'rinlo-supabase-transport-v1.js'
       - 'rinlo-stability-v1.js'
       - 'pwa.html'
       - 'runtime-config.js'
       - 'backend/**'
       - 'tests/rinlo-server-sync.mjs'
+      - 'tests/rinlo-outbox-uncertain-create.mjs'
+      - 'tests/rinlo-supabase-first-sync-seed.mjs'
       - '.github/workflows/server-sync-e2e.yml'
 
 jobs:
@@ -53,6 +59,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Test durable outbox invariants
+        run: |
+          node tests/rinlo-outbox-uncertain-create.mjs
+          node tests/rinlo-supabase-first-sync-seed.mjs
 
       - name: Prepare backend
         working-directory: backend
