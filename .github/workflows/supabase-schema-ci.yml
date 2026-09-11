@@ -63,6 +63,9 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_action_sync.sql
           psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_action_backfill_order.sql
 
+      - name: Apply Rinlo evening review persistence
+        run: psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_evening_review.sql
+
       - name: Verify security invariants
         run: |
           psql -v ON_ERROR_STOP=1 <<'SQL'
@@ -76,12 +79,12 @@ jobs:
             select count(*) into table_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r';
-            if table_count <> 11 then raise exception 'expected 11 public tables, got %', table_count; end if;
+            if table_count <> 12 then raise exception 'expected 12 public tables, got %', table_count; end if;
 
             select count(*) into rls_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity;
-            if rls_count <> 11 then raise exception 'expected RLS on 11 public tables, got %', rls_count; end if;
+            if rls_count <> 12 then raise exception 'expected RLS on 12 public tables, got %', rls_count; end if;
 
             if to_regclass('public.app_users') is not null or to_regclass('public.auth_sessions') is not null then
               raise exception 'legacy auth tables must not exist';
@@ -194,6 +197,63 @@ jobs:
             if total_actions <> 2 or active_actions <> 1 or completed_history <> 1 then
               raise exception 'bad action history totals: %, %, %', total_actions, active_actions, completed_history;
             end if;
+          end $$;
+          rollback;
+          SQL
+
+      - name: Verify evening review ownership and upsert shape
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          insert into auth.users(id) values
+            ('33333333-3333-4333-8333-333333333333'),
+            ('44444444-4444-4444-8444-444444444444');
+
+          set local "request.jwt.claim.sub" = '33333333-3333-4333-8333-333333333333';
+          select public.rinlo_import_action('review-a','2026-09-11','movement','Прогулка','Проверка',10,'{}'::jsonb,'2026-09-11T12:00:00Z');
+          set local "request.jwt.claim.sub" = '44444444-4444-4444-8444-444444444444';
+          select public.rinlo_import_action('review-b','2026-09-11','movement','Чужая прогулка','Проверка',10,'{}'::jsonb,'2026-09-11T13:00:00Z');
+
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = '33333333-3333-4333-8333-333333333333';
+
+          insert into public.daily_evening_reviews(user_id, day, plan_fit, action_useful, main_action_id)
+          select auth.uid(), '2026-09-11', 'right', 'yes', id
+          from public.rinlo_actions where user_id=auth.uid() and client_action_id='review-a';
+
+          insert into public.daily_evening_reviews(user_id, day, plan_fit, action_useful)
+          values(auth.uid(), '2026-09-11', 'easy', 'yes')
+          on conflict(user_id, day) do update set plan_fit=excluded.plan_fit, updated_at=now();
+
+          do $$
+          declare
+            row_count integer;
+            fit text;
+            cross_user_blocked boolean := false;
+            foreign_action_blocked boolean := false;
+            foreign_action uuid;
+          begin
+            select count(*), max(plan_fit) into row_count, fit
+            from public.daily_evening_reviews where user_id=auth.uid() and day='2026-09-11';
+            if row_count <> 1 or fit <> 'easy' then raise exception 'evening review upsert failed'; end if;
+
+            begin
+              insert into public.daily_evening_reviews(user_id, day, plan_fit, action_useful)
+              values('44444444-4444-4444-8444-444444444444','2026-09-12','right','yes');
+            exception when insufficient_privilege then cross_user_blocked := true;
+            end;
+            if not cross_user_blocked then raise exception 'cross-user evening review write was not blocked'; end if;
+
+            reset role;
+            select id into foreign_action from public.rinlo_actions
+              where user_id='44444444-4444-4444-8444-444444444444' and client_action_id='review-b';
+            set local role authenticated;
+            begin
+              update public.daily_evening_reviews set main_action_id=foreign_action
+              where user_id=auth.uid() and day='2026-09-11';
+            exception when foreign_key_violation then foreign_action_blocked := true;
+            end;
+            if not foreign_action_blocked then raise exception 'cross-user main action link was not blocked'; end if;
           end $$;
           rollback;
           SQL
