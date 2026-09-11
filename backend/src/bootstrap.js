@@ -3,14 +3,16 @@ import { getProfile } from './profile.js';
 import { getDayOverview, listWeightLogs } from './state.js';
 import { getDailyCheckin } from './checkins.js';
 import { listActionsForDay } from './actions.js';
+import { getEveningReview } from './evening-reviews.js';
 
 export async function buildBootstrap(userId, day, timezoneOffsetMinutes = 0) {
-  const [profile, currentDay, weights, checkin, actions] = await Promise.all([
+  const [profile, currentDay, weights, checkin, actions, eveningReview] = await Promise.all([
     getProfile(userId),
     getDayOverview(userId, day, timezoneOffsetMinutes),
     listWeightLogs(userId, 30),
     getDailyCheckin(userId, day),
     listActionsForDay(userId, day),
+    getEveningReview(userId, day),
   ]);
 
   const currentAction = actions.find((action) => ['suggested','accepted'].includes(action.status)) || null;
@@ -22,6 +24,7 @@ export async function buildBootstrap(userId, day, timezoneOffsetMinutes = 0) {
     checkin,
     actions,
     currentAction,
+    eveningReview,
     serverTime: new Date().toISOString(),
   };
 }
