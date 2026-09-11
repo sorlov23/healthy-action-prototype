@@ -20,6 +20,7 @@ async function appFrame() {
     && window.__rinloSettingsBridge === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
+  await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
 }
 
