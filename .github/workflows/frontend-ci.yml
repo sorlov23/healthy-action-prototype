@@ -148,7 +148,7 @@ jobs:
           grep -q 'runtime-config.js?rev=39' pwa.html
           grep -q 'rinlo-supabase-auth-v1.js?rev=38' pwa.html
           grep -q 'rinlo-supabase-transport-v1.js?rev=39' pwa.html
-          grep -q 'rinlo-supabase-action-transport-v1.js?rev=42' pwa.html
+          grep -q 'rinlo-supabase-action-transport-v1.js?rev=43' pwa.html
           grep -q 'pwa-api.js?rev=24' pwa.html
           grep -q 'pwa-sync.js?rev=24' pwa.html
           grep -q 'pwa-state-sync.js?rev=24' pwa.html
@@ -165,14 +165,14 @@ jobs:
           grep -q 'rinlo-server-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=42' pwa.html
-          grep -q "rinlo-pwa-v42" service-worker.js
-          grep -q "./rinlo-supabase-action-transport-v1.js?rev=42" service-worker.js
+          grep -q 'service-worker.js?rev=43' pwa.html
+          grep -q "rinlo-pwa-v43" service-worker.js
+          grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
           grep -q "./rinlo-server-sync-v1.js?rev=42" service-worker.js
           grep -q "./rinlo-action-sync-v1.js?rev=42" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
           transport_line=$(grep -n 'rinlo-supabase-transport-v1.js?rev=39' pwa.html | cut -d: -f1)
-          action_transport_line=$(grep -n 'rinlo-supabase-action-transport-v1.js?rev=42' pwa.html | cut -d: -f1)
+          action_transport_line=$(grep -n 'rinlo-supabase-action-transport-v1.js?rev=43' pwa.html | cut -d: -f1)
           core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
           sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
           action_sync_line=$(grep -n 'rinlo-action-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
