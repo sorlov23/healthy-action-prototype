@@ -50,8 +50,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <script src="./rinlo-wordmark.js?rev=30"></script>
 <script src="./rinlo-settings-bridge-v1.js?rev=34"></script>
 <script>
+const rinloFrame=document.getElementById('app');
+const rinloLoading=document.getElementById('loading');
+const revealRinlo=()=>{if(rinloLoading) rinloLoading.style.display='none';};
+rinloFrame?.addEventListener('load',revealRinlo);
+try{if(rinloFrame?.contentDocument?.readyState==='complete') revealRinlo();}catch{}
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=43',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=44',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
