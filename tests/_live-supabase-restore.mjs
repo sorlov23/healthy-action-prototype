@@ -41,8 +41,15 @@ async function appFrame({ requireGoal = true } = {}) {
 }
 
 async function syncNow() {
-  const result = await page.evaluate(() => window.RinloServerSync.syncNow({ pullAfter: true }));
-  assert(result === true, 'Live Supabase outbox did not drain');
+  let result = await page.evaluate(() => window.RinloServerSync.syncNow({ pullAfter: true }));
+  if (result !== true) {
+    // A mutation schedules its own auto-drain. syncNow() intentionally returns
+    // false when that drain is already in progress, so wait for it to finish and
+    // run once more to guarantee the post-drain bootstrap pull.
+    await page.waitForFunction(() => window.RinloServerSync.pending().length === 0, null, { timeout: 15000 });
+    result = await page.evaluate(() => window.RinloServerSync.syncNow({ pullAfter: true }));
+  }
+  assert(result === true, 'Live Supabase sync did not complete');
   await page.waitForFunction(() => window.RinloServerSync.pending().length === 0, null, { timeout: 15000 });
 }
 
