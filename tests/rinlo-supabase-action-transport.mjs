@@ -11,7 +11,8 @@ function response(status, data) {
 
 async function fetchMock(url, options = {}) {
   calls.push({ url: String(url), options });
-  const path = new URL(String(url)).pathname;
+  const parsed = new URL(String(url));
+  const path = parsed.pathname;
   const body = options.body ? JSON.parse(options.body) : {};
   if (path === '/rest/v1/rpc/rinlo_import_action') {
     return response(200, {
@@ -45,6 +46,15 @@ async function fetchMock(url, options = {}) {
       operationId: body.p_operation_id,
     });
   }
+  if (path === '/rest/v1/rinlo_action_events') {
+    assert.equal(parsed.searchParams.get('event_type'), 'eq.feedback');
+    assert.match(parsed.searchParams.get('action_id') || '', /^in\.\(/);
+    return response(200, [{
+      action_id: 'server-completed',
+      payload: { useful: true },
+      created_at: '2026-09-11T10:10:00.000Z',
+    }]);
+  }
   throw new Error(`Unexpected fetch ${options.method || 'GET'} ${url}`);
 }
 
@@ -55,8 +65,11 @@ const originalTransport = {
     fallbackCalls.push({ path, options });
     if (path.startsWith('/api/v1/bootstrap')) {
       return {
-        actions: [{ id: 'server-1', status: 'suggested' }],
-        currentAction: { id: 'server-1', status: 'suggested' },
+        actions: [
+          { id: 'server-active', status: 'suggested' },
+          { id: 'server-completed', status: 'completed' },
+        ],
+        currentAction: { id: 'server-active', status: 'suggested' },
       };
     }
     return { fallback: true };
@@ -76,7 +89,7 @@ const window = {
 
 vm.runInContext(source, vm.createContext({
   window, fetch: fetchMock, URL, JSON, String, Boolean, Number, Date,
-  RegExp, Error, encodeURIComponent, decodeURIComponent,
+  RegExp, Error, Map, Set, encodeURIComponent, decodeURIComponent,
 }), { filename: 'rinlo-supabase-action-transport-v1.js' });
 
 const transport = window.RinloSupabaseTransport;
@@ -113,8 +126,11 @@ assert.equal(eventBody.p_action_id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
 assert.equal(eventBody.p_event_type, 'completed');
 
 const bootstrap = await transport.request('/api/v1/bootstrap?day=2026-09-11');
-assert.equal(bootstrap.actions[0].serverId, 'server-1');
-assert.equal(bootstrap.currentAction.serverId, 'server-1');
+assert.equal(bootstrap.actions[0].serverId, 'server-active');
+assert.equal(bootstrap.actions[1].serverId, 'server-completed');
+assert.equal(bootstrap.actions[1].feedback.useful, true);
+assert.equal(bootstrap.actions[1].feedback.at, '2026-09-11T10:10:00.000Z');
+assert.equal(bootstrap.currentAction.serverId, 'server-active');
 assert.equal(fallbackCalls.length, 1);
 
 console.log('Supabase action transport contract passed');
