@@ -157,6 +157,15 @@
     `;
   }
 
+  function profileMarkupIntact(doc) {
+    const el = doc.getElementById('profile');
+    return Boolean(
+      el?.dataset.rinloProfile === 'v01'
+      && el.querySelector('.rpf-actions')
+      && [...el.querySelectorAll('.rpf-action b')].some(node => node.textContent?.includes('Изменить параметры'))
+    );
+  }
+
   function syncExtra(doc) {
     const win = doc.defaultView;
     const db = readDb(win);
@@ -192,7 +201,17 @@
       win.__rinloProfileWrapped = true;
       const original = win.renderProfile.bind(win);
       win.renderProfile = function () {
-        const result = original();
+        let result = original();
+        if (!profileMarkupIntact(doc)) {
+          ensureStyles(doc);
+          build(doc);
+          // The legacy renderer fills pGoal/pTargets. Run it once more against
+          // the repaired v0.1 markup so visual values stay current as well.
+          result = original();
+          // Some legacy renderers may rewrite the section themselves. In that
+          // case restore the skin one final time and keep the local context data.
+          if (!profileMarkupIntact(doc)) build(doc);
+        }
         syncExtra(doc);
         return result;
       };
@@ -217,9 +236,11 @@
     const doc = frame.contentDocument;
     if (!doc) return;
     const el = doc.getElementById('profile');
-    if (!el || el.dataset.rinloProfile === 'v01') return;
-    ensureStyles(doc);
-    build(doc);
+    if (!el) return;
+    if (!profileMarkupIntact(doc)) {
+      ensureStyles(doc);
+      build(doc);
+    }
     wire(doc);
   }
 
