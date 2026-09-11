@@ -165,8 +165,10 @@ jobs:
           grep -q 'rinlo-server-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=43' pwa.html
-          grep -q "rinlo-pwa-v43" service-worker.js
+          grep -q 'service-worker.js?rev=44' pwa.html
+          grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
+          grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
+          grep -q "rinlo-pwa-v44" service-worker.js
           grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
           grep -q "./rinlo-server-sync-v1.js?rev=42" service-worker.js
           grep -q "./rinlo-action-sync-v1.js?rev=42" service-worker.js
