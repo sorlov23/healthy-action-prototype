@@ -88,7 +88,7 @@ try {
     }
   }
 
-  await app.getByRole('button', { name: /Подвести итог дня/ }).click();
+  await app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true }).click();
   await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
