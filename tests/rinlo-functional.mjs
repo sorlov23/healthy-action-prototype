@@ -69,10 +69,21 @@ try {
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
   const proteinRow = app.locator('#actionsList .item').filter({ hasText: 'Белковый приём пищи' }).first();
-  if (await proteinRow.count()) {
-    await proteinRow.click();
-    await app.getByRole('heading', { name: 'Добавить приём пищи' }).waitFor();
-    await app.evaluate(() => window.closeSheet?.());
+  if (await proteinRow.isVisible().catch(() => false)) {
+    let clicked = false;
+    try {
+      // Plan can legitimately rerender while recommendations refresh. If this
+      // optional row disappears during that rerender, treat it like the already
+      // supported "row absent" case rather than waiting on a detached node.
+      await proteinRow.click({ timeout: 1500 });
+      clicked = true;
+    } catch (error) {
+      if (await proteinRow.isVisible().catch(() => false)) throw error;
+    }
+    if (clicked) {
+      await app.getByRole('heading', { name: 'Добавить приём пищи' }).waitFor();
+      await app.evaluate(() => window.closeSheet?.());
+    }
   }
 
   await app.locator('.nav button').nth(3).click();
@@ -100,9 +111,16 @@ try {
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Profile editing still opens the goal-first onboarding from step one.
+  // Profile editing must open the goal-first onboarding from step one. Wait for
+  // each state boundary explicitly so reactive profile/onboarding rerenders do
+  // not turn a correct transition into a stale-node timing failure.
   await app.locator('.nav button').nth(3).click();
-  await app.getByRole('button', { name: /Изменить параметры/ }).click();
+  await app.locator('#profile').waitFor({ state: 'visible' });
+  const editProfile = app.getByRole('button', { name: /Изменить параметры/ });
+  await editProfile.waitFor({ state: 'visible' });
+  await editProfile.click();
+  await app.locator('#onboarding').waitFor({ state: 'visible' });
+  await app.waitForFunction(() => document.querySelector('.ro-screen[data-ro-step="1"]')?.classList.contains('on'), null, { timeout: 10000 });
   await app.getByRole('heading', { name: 'Что сейчас хочется улучшить?' }).waitFor();
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
