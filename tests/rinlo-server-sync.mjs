@@ -22,8 +22,13 @@ async function appFrame() {
     && window.__rinloFunctionalMvp === 'v1'
     && window.__rinloStability === 'v1'
     && window.__rinloServerSync === 'v1'
+    && window.__rinloEveningReview === 'v1'
   ), null, { timeout: 15000 });
-  await page.waitForFunction(() => window.RinloServerSync && window.HealthyActionAPI?.enabled === true, null, { timeout: 15000 });
+  await page.waitForFunction(() => (
+    window.RinloServerSync
+    && window.RinloEveningReview?.version === 'v1'
+    && window.HealthyActionAPI?.enabled === true
+  ), null, { timeout: 15000 });
   await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
 }
@@ -116,6 +121,14 @@ try {
   await app.locator('#rfWeight').fill('84.6');
   await app.getByRole('button', { name: 'Сохранить' }).click();
 
+  await app.locator('.nav button').nth(1).click();
+  await app.locator('#actions').waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Подвести итог дня/ }).click();
+  await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
+  await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
+  await app.getByRole('button', { name: 'Да', exact: true }).click();
+  await app.getByRole('button', { name: 'Сохранить итог', exact: true }).click();
+
   await syncNow();
   await syncNow();
 
@@ -125,6 +138,9 @@ try {
   assert(state.profile?.weight === 85, 'Local profile missing before restore');
   assert(day?.water === 250, `Unexpected water before restore: ${day?.water}`);
   assert(day?.steps === 1000, `Unexpected steps before restore: ${day?.steps}`);
+  assert(day?.rinloEveningReview?.planFit === 'right', `Evening review plan fit missing before restore: ${JSON.stringify(day?.rinloEveningReview)}`);
+  assert(day?.rinloEveningReview?.actionUseful === 'yes', 'Evening review usefulness missing before restore');
+  assert(day?.closed === true, 'Day was not closed by evening review');
   food = (day?.events || []).find((event) => event.type === 'food');
   const weight = (day?.events || []).find((event) => event.type === 'weight');
   assert(food?.serverId && food?.clientEventId, 'Food did not receive server identity');
@@ -144,6 +160,13 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
   await app.locator('#today').waitFor({ state: 'visible', timeout: 15000 });
+  await app.waitForFunction(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    return Object.values(db.days || {}).some((value) =>
+      value?.rinloEveningReview?.planFit === 'right'
+      && value?.rinloEveningReview?.actionUseful === 'yes'
+    );
+  }, null, { timeout: 15000 });
 
   state = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}'));
   const restoredDayKey = Object.keys(state.days || {}).sort().at(-1);
@@ -152,6 +175,9 @@ try {
   assert(restored?.water === 250, `Water duplicated or missing after restore: ${restored?.water}`);
   assert(restored?.steps === 1000, `Steps duplicated or missing after restore: ${restored?.steps}`);
   assert(restored?.rinloCheckin?.wellbeing === 'okay', `Check-in was not restored: ${JSON.stringify(restored?.rinloCheckin)}`);
+  assert(restored?.rinloEveningReview?.planFit === 'right', `Evening review did not restore: ${JSON.stringify(restored?.rinloEveningReview)}`);
+  assert(restored?.rinloEveningReview?.actionUseful === 'yes', 'Restored evening review usefulness changed');
+  assert(restored?.closed === true, 'Restored evening review did not keep day closed');
   const restoredFood = (restored?.events || []).find((event) => event.type === 'food');
   const restoredWeight = (restored?.events || []).find((event) => event.type === 'weight');
   assert(restoredFood?.text === 'омлет, кофе и йогурт', `Food edit did not survive server restore: ${JSON.stringify(restoredFood)}`);
