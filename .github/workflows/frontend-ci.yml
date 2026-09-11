@@ -157,6 +157,7 @@ jobs:
           grep -q 'ui-polish.js?rev=36' pwa.html
           grep -q 'rinlo-polish-v03.js?rev=36' pwa.html
           grep -q 'rinlo-plan-v01.js?rev=37' pwa.html
+          grep -q 'rinlo-profile-v01.js?rev=45' pwa.html
           grep -q 'rinlo-system-v01.js?rev=35' pwa.html
           grep -q 'rinlo-core-ui-v1.js?rev=25' pwa.html
           grep -q 'rinlo-scale-pass-v1.js?rev=29' pwa.html
@@ -165,11 +166,12 @@ jobs:
           grep -q 'rinlo-server-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=44' pwa.html
+          grep -q 'service-worker.js?rev=45' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v44" service-worker.js
+          grep -q "rinlo-pwa-v45" service-worker.js
           grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
+          grep -q "./rinlo-profile-v01.js?rev=45" service-worker.js
           grep -q "./rinlo-server-sync-v1.js?rev=42" service-worker.js
           grep -q "./rinlo-action-sync-v1.js?rev=42" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
