@@ -1,6 +1,7 @@
 (() => {
   const frame = document.getElementById('app');
   const APP_KEY = 'healthy-action-v07';
+  const FASTIFY_SESSION_KEY = 'ha_api_session_v1';
   if (!frame) return;
 
   const localDayKey = (date = new Date()) => {
@@ -34,6 +35,59 @@
   }
   function syncEnabled() {
     return Boolean(window.HealthyActionAPI?.enabled || window.RinloSupabaseTransport?.enabled);
+  }
+  function hasExistingIdentity() {
+    return Boolean(
+      window.RinloSupabaseAuth?.getSession?.()
+      || localStorage.getItem(FASTIFY_SESSION_KEY)
+    );
+  }
+
+  function mergeReview(day, review, { refresh = true } = {}) {
+    if (!review?.planFit || !review?.actionUseful) return false;
+    const pending = window.RinloServerSync?.pending?.() || [];
+    if (pending.some((item) => item.kind === 'evening-review-upsert' && item.day === day)) return false;
+    const db = readDb();
+    const dayState = ensureDay(db, day);
+    dayState.closed = true;
+    dayState.rinloEveningReview = review;
+    writeDb(db);
+    if (refresh) {
+      const win = frame.contentWindow;
+      try { win?.eval('db = load()'); win?.render?.(); } catch {}
+    }
+    return true;
+  }
+
+  async function requestRemoteReview(day) {
+    const transport = window.RinloSupabaseTransport;
+    if (transport?.enabled && window.RinloSupabaseAuth?.getSession?.()) {
+      return transport.request(`/api/v1/evening-reviews/${encodeURIComponent(day)}`, { method: 'GET' });
+    }
+
+    const api = window.HealthyActionAPI;
+    if (!api?.enabled || !api.base || !localStorage.getItem(FASTIFY_SESSION_KEY) || typeof api.ensureSession !== 'function') return null;
+    const session = await api.ensureSession();
+    if (!session?.token) return null;
+    const response = await fetch(`${api.base}/api/v1/evening-reviews/${encodeURIComponent(day)}`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', Authorization: `Bearer ${session.token}` },
+    });
+    if (!response.ok) throw new Error(`evening_review_restore_${response.status}`);
+    return response.json();
+  }
+
+  async function restoreRemoteReview(day = localDayKey()) {
+    if (!syncEnabled() || !hasExistingIdentity()) return null;
+    try {
+      const result = await requestRemoteReview(day);
+      if (result?.eveningReview) mergeReview(day, result.eveningReview);
+      return result?.eveningReview || null;
+    } catch (error) {
+      console.warn('Rinlo evening review restore deferred', error);
+      return null;
+    }
   }
 
   function storeReview(day, planFit, actionUseful) {
@@ -206,11 +260,20 @@
     window.RinloEveningReview = {
       version: 'v1',
       save: storeReview,
+      restore: restoreRemoteReview,
       get(day = localDayKey()) { return readDb().days?.[day]?.rinloEveningReview || null; },
     };
+
+    if (hasExistingIdentity()) {
+      setTimeout(() => restoreRemoteReview(win.__haViewDay || localDayKey()), 60);
+      setTimeout(() => restoreRemoteReview(win.__haViewDay || localDayKey()), 900);
+    }
   }
 
   frame.addEventListener('load', () => setTimeout(() => install(), 0));
+  window.addEventListener('online', () => {
+    if (hasExistingIdentity()) restoreRemoteReview(frame.contentWindow?.__haViewDay || localDayKey());
+  });
   setTimeout(() => install(), 0);
   setTimeout(() => install(), 300);
 })();
