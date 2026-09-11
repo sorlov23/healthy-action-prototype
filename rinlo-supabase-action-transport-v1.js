@@ -22,24 +22,54 @@
     return error;
   }
 
-  async function rpc(name, body) {
+  async function authorizedRequest(path, options = {}) {
     if (!transport.enabled || !base || !publishableKey) throw new Error('supabase_action_transport_disabled');
     const session = await auth.ensureSession();
     if (!session?.access_token) throw new Error('no_supabase_session');
-    const response = await fetch(`${base}/rest/v1/rpc/${name}`, {
-      method: 'POST',
+    const response = await fetch(`${base}${path}`, {
+      ...options,
       cache: 'no-store',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
         apikey: publishableKey,
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify(body || {}),
     });
-    const data = await response.json().catch(() => null);
+    const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) throw errorFromResponse(response, data || {});
     return data;
+  }
+
+  async function rpc(name, body) {
+    return authorizedRequest(`/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      body: JSON.stringify(body || {}),
+    });
+  }
+
+  async function feedbackByAction(actions) {
+    const ids = [...new Set((actions || [])
+      .filter((action) => action?.status === 'completed')
+      .map((action) => action.serverId || action.id)
+      .filter(Boolean))];
+    if (!ids.length) return new Map();
+
+    const filter = encodeURIComponent(`in.(${ids.join(',')})`);
+    const rows = await authorizedRequest(
+      `/rest/v1/rinlo_action_events?select=action_id,payload,created_at&event_type=eq.feedback&action_id=${filter}&order=created_at.desc`,
+      { method: 'GET' },
+    );
+    const latest = new Map();
+    for (const row of Array.isArray(rows) ? rows : []) {
+      if (!row?.action_id || latest.has(String(row.action_id))) continue;
+      latest.set(String(row.action_id), {
+        useful: Boolean(row.payload?.useful),
+        at: row.created_at || null,
+      });
+    }
+    return latest;
   }
 
   transport.request = async (path, options = {}) => {
@@ -73,10 +103,23 @@
 
     const result = await originalRequest(path, options);
     if (url.pathname === '/api/v1/bootstrap' && method === 'GET' && result) {
-      if (Array.isArray(result.actions)) {
-        result.actions = result.actions.map((action) => ({ ...action, serverId: action.serverId || action.id }));
+      const actions = Array.isArray(result.actions)
+        ? result.actions.map((action) => ({ ...action, serverId: action.serverId || action.id }))
+        : [];
+      const feedback = await feedbackByAction(actions);
+      result.actions = actions.map((action) => {
+        const saved = feedback.get(String(action.serverId || action.id));
+        return saved ? { ...action, feedback: saved } : action;
+      });
+      if (result.currentAction) {
+        const serverId = result.currentAction.serverId || result.currentAction.id;
+        const saved = feedback.get(String(serverId));
+        result.currentAction = {
+          ...result.currentAction,
+          serverId,
+          ...(saved ? { feedback: saved } : {}),
+        };
       }
-      if (result.currentAction) result.currentAction = { ...result.currentAction, serverId: result.currentAction.serverId || result.currentAction.id };
     }
     return result;
   };
