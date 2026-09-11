@@ -50,6 +50,8 @@ jobs:
           create function auth.uid() returns uuid
           language sql stable
           as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          grant usage on schema auth to authenticated;
+          grant execute on function auth.uid() to authenticated;
           SQL
 
       - name: Apply Rinlo foundation schema
@@ -214,15 +216,32 @@ jobs:
           set local "request.jwt.claim.sub" = '44444444-4444-4444-8444-444444444444';
           select public.rinlo_import_action('review-b','2026-09-11','movement','Чужая прогулка','Проверка',10,'{}'::jsonb,'2026-09-11T13:00:00Z');
 
+          -- The owner-aware composite FK must reject linking user A's review to user B's action.
+          do $$
+          declare
+            foreign_action uuid;
+            foreign_action_blocked boolean := false;
+          begin
+            select id into foreign_action from public.rinlo_actions
+              where user_id='44444444-4444-4444-8444-444444444444' and client_action_id='review-b';
+            begin
+              insert into public.daily_evening_reviews(user_id, day, plan_fit, action_useful, main_action_id)
+              values('33333333-3333-4333-8333-333333333333','2026-09-10','right','yes',foreign_action);
+            exception when foreign_key_violation then foreign_action_blocked := true;
+            end;
+            if not foreign_action_blocked then raise exception 'cross-user main action link was not blocked'; end if;
+          end $$;
+
           set local role authenticated;
           set local "request.jwt.claim.sub" = '33333333-3333-4333-8333-333333333333';
 
           insert into public.daily_evening_reviews(user_id, day, plan_fit, action_useful, main_action_id)
-          select auth.uid(), '2026-09-11', 'right', 'yes', id
-          from public.rinlo_actions where user_id=auth.uid() and client_action_id='review-a';
+          select '33333333-3333-4333-8333-333333333333', '2026-09-11', 'right', 'yes', id
+          from public.rinlo_actions
+          where user_id='33333333-3333-4333-8333-333333333333' and client_action_id='review-a';
 
           insert into public.daily_evening_reviews(user_id, day, plan_fit, action_useful)
-          values(auth.uid(), '2026-09-11', 'easy', 'yes')
+          values('33333333-3333-4333-8333-333333333333', '2026-09-11', 'easy', 'yes')
           on conflict(user_id, day) do update set plan_fit=excluded.plan_fit, updated_at=now();
 
           do $$
@@ -230,11 +249,10 @@ jobs:
             row_count integer;
             fit text;
             cross_user_blocked boolean := false;
-            foreign_action_blocked boolean := false;
-            foreign_action uuid;
           begin
             select count(*), max(plan_fit) into row_count, fit
-            from public.daily_evening_reviews where user_id=auth.uid() and day='2026-09-11';
+            from public.daily_evening_reviews
+            where user_id='33333333-3333-4333-8333-333333333333' and day='2026-09-11';
             if row_count <> 1 or fit <> 'easy' then raise exception 'evening review upsert failed'; end if;
 
             begin
@@ -243,17 +261,6 @@ jobs:
             exception when insufficient_privilege then cross_user_blocked := true;
             end;
             if not cross_user_blocked then raise exception 'cross-user evening review write was not blocked'; end if;
-
-            reset role;
-            select id into foreign_action from public.rinlo_actions
-              where user_id='44444444-4444-4444-8444-444444444444' and client_action_id='review-b';
-            set local role authenticated;
-            begin
-              update public.daily_evening_reviews set main_action_id=foreign_action
-              where user_id=auth.uid() and day='2026-09-11';
-            exception when foreign_key_violation then foreign_action_blocked := true;
-            end;
-            if not foreign_action_blocked then raise exception 'cross-user main action link was not blocked'; end if;
           end $$;
           rollback;
           SQL
