@@ -24,6 +24,7 @@ async function appFrame() {
     && window.__rinloServerSync === 'v1'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => window.RinloServerSync && window.HealthyActionAPI?.enabled === true, null, { timeout: 15000 });
+  await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
 }
 
