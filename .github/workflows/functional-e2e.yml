@@ -25,6 +25,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Keep functional browser test offline from live backends
+        run: |
+          cat > runtime-config.js <<'EOF'
+          window.HEALTHY_ACTION_CONFIG = Object.freeze({
+            apiBase: '',
+            apiTimeoutMs: 5000,
+            supabaseUrl: '',
+            supabasePublishableKey: '',
+            supabaseAuthEnabled: false,
+            supabaseDataEnabled: false,
+          });
+          EOF
+
       - name: Install Playwright
         run: |
           npm init -y >/dev/null 2>&1
@@ -40,6 +54,7 @@ jobs:
             echo "Playwright Chromium installation failed (attempt $attempt/3); retrying..."
             sleep $((attempt * 5))
           done
+
       - name: Start static server
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rinlo-http.log 2>&1 &
@@ -50,6 +65,7 @@ jobs:
           done
           cat /tmp/rinlo-http.log
           exit 1
+
       - name: Run mobile functional smoke test
         run: |
           if node tests/rinlo-functional.mjs; then
