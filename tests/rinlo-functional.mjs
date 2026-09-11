@@ -111,16 +111,15 @@ try {
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Profile editing must open the goal-first onboarding from step one. Wait for
-  // each state boundary explicitly so reactive profile/onboarding rerenders do
-  // not turn a correct transition into a stale-node timing failure.
+  // Profile editing must open the goal-first onboarding from step one. Assert
+  // the user-visible step contract rather than a skin-specific CSS prefix.
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
   const editProfile = app.getByRole('button', { name: /Изменить параметры/ });
   await editProfile.waitFor({ state: 'visible' });
   await editProfile.click();
   await app.locator('#onboarding').waitFor({ state: 'visible' });
-  await app.waitForFunction(() => document.querySelector('.ro-screen[data-ro-step="1"]')?.classList.contains('on'), null, { timeout: 10000 });
+  await app.locator('#rcOnStep').filter({ hasText: '1 из 4' }).waitFor({ state: 'visible' });
   await app.getByRole('heading', { name: 'Что сейчас хочется улучшить?' }).waitFor();
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
