@@ -38,7 +38,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <script src="./rinlo-onboarding-v01.js?rev=24"></script>
 <script src="./rinlo-plan-v01.js?rev=37"></script>
 <script src="./rinlo-insights-v01.js?rev=24"></script>
-<script src="./rinlo-profile-v01.js?rev=24"></script>
+<script src="./rinlo-profile-v01.js?rev=45"></script>
 <script src="./rinlo-system-v01.js?rev=35"></script>
 <script src="./rinlo-core-ui-v1.js?rev=25"></script>
 <script src="./rinlo-scale-pass-v1.js?rev=29"></script>
@@ -56,7 +56,7 @@ const revealRinlo=()=>{if(rinloLoading) rinloLoading.style.display='none';};
 rinloFrame?.addEventListener('load',revealRinlo);
 try{if(rinloFrame?.contentDocument?.readyState==='complete') revealRinlo();}catch{}
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=44',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=45',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
