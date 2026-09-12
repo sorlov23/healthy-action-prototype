@@ -42,6 +42,7 @@ on:
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
       - 'tests/rinlo-adaptive-learning.mjs'
+      - 'tests/rinlo-fastify-lazy-session.mjs'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'service-worker.js'
@@ -87,6 +88,7 @@ on:
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
       - 'tests/rinlo-adaptive-learning.mjs'
+      - 'tests/rinlo-fastify-lazy-session.mjs'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'service-worker.js'
@@ -139,6 +141,7 @@ jobs:
           node --check tests/rinlo-action-sync.mjs
           node --check tests/rinlo-evening-review.mjs
           node --check tests/rinlo-adaptive-learning.mjs
+          node --check tests/rinlo-fastify-lazy-session.mjs
           node --check service-worker.js
 
       - name: Test Supabase auth lifecycle
@@ -162,6 +165,9 @@ jobs:
       - name: Test adaptive learning contract
         run: node tests/rinlo-adaptive-learning.mjs
 
+      - name: Test lazy Fastify guest session
+        run: node tests/rinlo-fastify-lazy-session.mjs
+
       - name: Check public Supabase config safety
         run: |
           grep -q "supabaseAuthEnabled: true" runtime-config.js
@@ -178,7 +184,7 @@ jobs:
           grep -q 'rinlo-supabase-action-transport-v1.js?rev=43' pwa.html
           grep -q 'rinlo-supabase-evening-review-transport-v1.js?rev=46' pwa.html
           grep -q 'pwa-api.js?rev=24' pwa.html
-          grep -q 'pwa-sync.js?rev=24' pwa.html
+          grep -q 'pwa-sync.js?rev=51' pwa.html
           grep -q 'pwa-state-sync.js?rev=24' pwa.html
           grep -q 'pwa-profile-sync.js?rev=24' pwa.html
           grep -q 'pwa-account-sync.js?rev=24' pwa.html
@@ -196,10 +202,11 @@ jobs:
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-evening-review-v1.js?rev=46' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=50' pwa.html
+          grep -q 'service-worker.js?rev=51' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v50" service-worker.js
+          grep -q "rinlo-pwa-v51" service-worker.js
+          grep -q "./pwa-sync.js?rev=51" service-worker.js
           grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
           grep -q "./rinlo-supabase-evening-review-transport-v1.js?rev=46" service-worker.js
           grep -q "./rinlo-profile-v01.js?rev=45" service-worker.js
