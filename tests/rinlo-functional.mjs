@@ -18,6 +18,7 @@ async function appFrame() {
     && window.__rinloFunctionalMvp === 'v1'
     && window.__rinloStability === 'v1'
     && window.__rinloSettingsBridge === 'v1'
+    && window.__rinloEveningReview === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
@@ -67,6 +68,30 @@ try {
   await app.getByRole('button', { name: 'Добавить в дневник' }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
+  // Evening Review is a standalone Plan flow. Verify it before the older,
+  // optional action-row regression so one scenario cannot leave transient UI
+  // state that affects the other.
+  await app.locator('.nav button').nth(1).click();
+  await app.locator('#actions').waitFor({ state: 'visible' });
+  const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
+  await finishDay.waitFor({ state: 'visible' });
+  await finishDay.click();
+  await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
+  await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
+  await app.getByRole('button', { name: 'Да', exact: true }).click();
+  await app.getByRole('button', { name: 'Сохранить итог', exact: true }).click();
+  const eveningReview = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = Object.keys(db.days || {}).sort().at(-1);
+    return { review: db.days?.[key]?.rinloEveningReview || null, closed: db.days?.[key]?.closed === true };
+  });
+  assert(eveningReview.closed, 'Evening review did not close the local day');
+  assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
+  assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
+
+  // Keep the older optional Plan-row regression independently covered.
+  await app.locator('.nav button').nth(0).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
   const proteinRow = app.locator('#actionsList .item').filter({ hasText: 'Белковый приём пищи' }).first();
@@ -102,9 +127,10 @@ try {
       profile: Boolean(db.profile),
       water: days.some((day) => Number(day?.water || 0) >= 250),
       food: days.some((day) => (day?.events || []).some((event) => event.type === 'food' && event.text === 'омлет из двух яиц и кофе')),
+      eveningReview: days.some((day) => day?.rinloEveningReview?.planFit === 'right' && day?.rinloEveningReview?.actionUseful === 'yes'),
     };
   });
-  assert(persisted.profile && persisted.water && persisted.food, 'Saved Rinlo state did not survive reload');
+  assert(persisted.profile && persisted.water && persisted.food && persisted.eveningReview, 'Saved Rinlo state did not survive reload');
 
   // Whatever tab the browser restores, the saved profile must keep navigation usable.
   await app.locator('.nav').waitFor({ state: 'visible' });

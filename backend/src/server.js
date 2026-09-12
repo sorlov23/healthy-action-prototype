@@ -12,6 +12,7 @@ import { registerBootstrapRoutes } from './bootstrap.js';
 import { registerAccountRoutes } from './account.js';
 import { registerCheckinRoutes } from './checkins.js';
 import { registerActionRoutes } from './actions.js';
+import { registerEveningReviewRoutes } from './evening-reviews.js';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' },
@@ -79,6 +80,7 @@ await registerFoodLogRoutes(app);
 await registerStateRoutes(app);
 await registerCheckinRoutes(app);
 await registerActionRoutes(app);
+await registerEveningReviewRoutes(app);
 await registerBootstrapRoutes(app);
 await registerAccountRoutes(app);
 

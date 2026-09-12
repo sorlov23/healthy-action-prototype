@@ -67,6 +67,75 @@
     api.__rinloFreshSessionGuard = true;
   }
 
+  function ensureStabilityStyles(doc) {
+    let style = doc.getElementById('rinlo-stability-v1-style');
+    if (!style) {
+      style = doc.createElement('style');
+      style.id = 'rinlo-stability-v1-style';
+      doc.head.appendChild(style);
+    }
+    style.textContent = `
+      html,body,.app{scroll-padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
+      #actions.rinlo-plan-v01 .rp-finish{scroll-margin-bottom:calc(88px + env(safe-area-inset-bottom))!important}
+    `;
+  }
+
+  function installScreenGuard(doc) {
+    if (doc.__rinloScreenGuard) return;
+    const navScreenIds = ['today', 'actions', 'progress', 'profile'];
+    let lastActiveId = doc.querySelector('.screen.on')?.id || null;
+    let restoring = false;
+
+    const navScreen = () => {
+      const buttons = [...doc.querySelectorAll('.nav button')];
+      const index = buttons.findIndex((button) => button.classList.contains('active'));
+      return index >= 0 ? navScreenIds[index] || null : null;
+    };
+
+    const reconcile = () => {
+      if (restoring) return;
+      const onboarding = doc.getElementById('onboarding');
+      if (onboarding?.classList.contains('on')) {
+        lastActiveId = 'onboarding';
+        return;
+      }
+
+      const active = [...doc.querySelectorAll('.screen.on')];
+      const desiredId = navScreen();
+      const desired = desiredId ? doc.getElementById(desiredId) : null;
+
+      /* The bottom nav is the canonical state for primary screens. `tab()`
+         updates screen + nav synchronously, so by the time MutationObserver runs
+         they agree. If an independently mounted skin later replaces className or
+         another stale render revives the wrong primary screen, reconcile it back
+         to the tab the user actually selected. Onboarding remains exempt because
+         it is intentionally opened without a bottom-nav selection change. */
+      if (desired?.classList.contains('screen') && (active.length !== 1 || active[0] !== desired)) {
+        restoring = true;
+        for (const screen of active) screen.classList.remove('on');
+        desired.classList.add('on');
+        lastActiveId = desiredId;
+        queueMicrotask(() => { restoring = false; });
+        return;
+      }
+
+      if (active[0]) {
+        lastActiveId = active[0].id || lastActiveId;
+        return;
+      }
+      if (!lastActiveId) return;
+      const previous = doc.getElementById(lastActiveId);
+      if (!previous?.classList.contains('screen')) return;
+      restoring = true;
+      previous.classList.add('on');
+      queueMicrotask(() => { restoring = false; });
+    };
+
+    const observer = new MutationObserver(reconcile);
+    observer.observe(doc.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    doc.__rinloScreenGuard = observer;
+  }
+
   function setText(el, text) {
     if (el && el.textContent !== text) el.textContent = text;
   }
@@ -164,6 +233,8 @@
   }
 
   function install(doc, win) {
+    ensureStabilityStyles(doc);
+    installScreenGuard(doc);
     stabilizeSheet(doc);
 
     const stopLegacyObserver = () => {
