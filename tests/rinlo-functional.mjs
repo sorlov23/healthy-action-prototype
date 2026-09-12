@@ -29,6 +29,61 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function installNavTrace(app) {
+  await app.evaluate(() => {
+    if (window.__rinloNavTraceInstalled) return;
+    window.__rinloNavTraceInstalled = true;
+    window.__rinloNavTrace = [];
+    const snapshot = () => ({
+      activeScreens: [...document.querySelectorAll('.screen.on')].map((el) => el.id),
+      activeNav: [...document.querySelectorAll('.nav button')].findIndex((el) => el.classList.contains('active')),
+    });
+    const record = (entry) => {
+      window.__rinloNavTrace.push({ at: performance.now(), ...snapshot(), ...entry });
+      if (window.__rinloNavTrace.length > 80) window.__rinloNavTrace.shift();
+    };
+    const originalShow = window.show;
+    if (typeof originalShow === 'function') {
+      window.show = function(id) {
+        record({ kind: 'show', id, stack: new Error('show trace').stack });
+        const result = originalShow.apply(this, arguments);
+        record({ kind: 'show-result', id });
+        return result;
+      };
+    }
+    const originalTab = window.tab;
+    if (typeof originalTab === 'function') {
+      window.tab = function(id) {
+        record({ kind: 'tab', id, stack: new Error('tab trace').stack });
+        const result = originalTab.apply(this, arguments);
+        record({ kind: 'tab-result', id });
+        return result;
+      };
+    }
+    const observer = new MutationObserver((records) => {
+      for (const mutation of records) {
+        const target = mutation.target;
+        if (!(target instanceof Element) || !target.classList.contains('screen')) continue;
+        record({ kind: 'screen-class', id: target.id, className: target.className });
+      }
+    });
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    window.__rinloNavTraceObserver = observer;
+    record({ kind: 'trace-installed' });
+  });
+}
+
+async function navSnapshot(app) {
+  return app.evaluate(() => ({
+    activeScreens: [...document.querySelectorAll('.screen.on')].map((el) => el.id),
+    activeNav: [...document.querySelectorAll('.nav button')].findIndex((el) => el.classList.contains('active')),
+    actionsClass: document.getElementById('actions')?.className || null,
+    todayClass: document.getElementById('today')?.className || null,
+    overlayClass: document.getElementById('overlay')?.className || null,
+    trace: window.__rinloNavTrace || [],
+  }));
+}
+
 try {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   let app = await appFrame();
@@ -68,14 +123,23 @@ try {
   await app.getByRole('button', { name: 'Добавить в дневник' }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
+  // Diagnostic trace for the one remaining offline-only race. Remove once the
+  // source of the late screen transition is fixed.
+  await installNavTrace(app);
+
   // Evening Review is a standalone Plan flow. Verify it before the older,
   // optional action-row regression so one scenario cannot leave transient UI
   // state that affects the other.
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
   const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
-  await finishDay.waitFor({ state: 'visible' });
-  await finishDay.click();
+  try {
+    await finishDay.click({ timeout: 2500 });
+  } catch (error) {
+    const state = await navSnapshot(app);
+    console.error(`RINLO_NAV_TRACE ${JSON.stringify(state)}`);
+    throw error;
+  }
   await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
