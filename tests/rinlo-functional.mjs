@@ -68,6 +68,30 @@ try {
   await app.getByRole('button', { name: 'Добавить в дневник' }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
+  // Evening Review is a standalone Plan flow. Verify it before the older,
+  // optional action-row regression so one scenario cannot leave transient UI
+  // state that affects the other.
+  await app.locator('.nav button').nth(1).click();
+  await app.locator('#actions').waitFor({ state: 'visible' });
+  const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
+  await finishDay.waitFor({ state: 'visible' });
+  await finishDay.click();
+  await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
+  await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
+  await app.getByRole('button', { name: 'Да', exact: true }).click();
+  await app.getByRole('button', { name: 'Сохранить итог', exact: true }).click();
+  const eveningReview = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = Object.keys(db.days || {}).sort().at(-1);
+    return { review: db.days?.[key]?.rinloEveningReview || null, closed: db.days?.[key]?.closed === true };
+  });
+  assert(eveningReview.closed, 'Evening review did not close the local day');
+  assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
+  assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
+
+  // Keep the older optional Plan-row regression independently covered.
+  await app.locator('.nav button').nth(0).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
   const proteinRow = app.locator('#actionsList .item').filter({ hasText: 'Белковый приём пищи' }).first();
@@ -87,30 +111,6 @@ try {
       await app.evaluate(() => window.closeSheet?.());
     }
   }
-
-  // The optional Plan row may trigger a legitimate rerender. Re-enter Plan
-  // through navigation so the evening-review click always targets the current,
-  // visible canonical screen rather than a hidden pre-rerender instance.
-  await app.locator('.nav').waitFor({ state: 'visible' });
-  await app.locator('.nav button').nth(0).click();
-  await app.locator('#today').waitFor({ state: 'visible' });
-  await app.locator('.nav button').nth(1).click();
-  await app.locator('#actions').waitFor({ state: 'visible' });
-  const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
-  await finishDay.waitFor({ state: 'visible' });
-  await finishDay.click();
-  await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
-  await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
-  await app.getByRole('button', { name: 'Да', exact: true }).click();
-  await app.getByRole('button', { name: 'Сохранить итог', exact: true }).click();
-  const eveningReview = await app.evaluate(() => {
-    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
-    const key = Object.keys(db.days || {}).sort().at(-1);
-    return { review: db.days?.[key]?.rinloEveningReview || null, closed: db.days?.[key]?.closed === true };
-  });
-  assert(eveningReview.closed, 'Evening review did not close the local day');
-  assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
-  assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
