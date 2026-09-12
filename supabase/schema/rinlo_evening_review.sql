@@ -19,7 +19,7 @@ create table if not exists public.daily_evening_reviews (
 );
 
 create index if not exists daily_evening_reviews_action_idx
-  on public.daily_evening_reviews(main_action_id)
+  on public.daily_evening_reviews(main_action_id, user_id)
   where main_action_id is not null;
 
 alter table public.daily_evening_reviews enable row level security;
