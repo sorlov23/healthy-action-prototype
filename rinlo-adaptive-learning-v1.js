@@ -6,6 +6,7 @@
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const supabaseBase = String(config.supabaseUrl || '').replace(/\/+$/, '');
   const publishableKey = String(config.supabasePublishableKey || '');
+  const preparedReviews = new Map();
 
   function readDb() {
     try { return JSON.parse(localStorage.getItem(APP_KEY) || '{}'); }
@@ -15,6 +16,13 @@
   function shiftDay(day, amount) {
     const date = new Date(`${day}T12:00:00`);
     date.setDate(date.getDate() + amount);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  function localDayKey() {
+    const date = new Date();
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
@@ -119,7 +127,9 @@
     } catch (error) {
       console.warn('Rinlo adaptive review restore deferred', error);
     }
-    return latestLocalReviewBefore(day);
+    const review = latestLocalReviewBefore(day);
+    if (review) preparedReviews.set(day, review);
+    return review;
   }
 
   function reducedEffortMinutes(value) {
@@ -135,37 +145,23 @@
       : title;
   }
 
-  async function adaptCurrentAction(win, day, previousReview) {
+  function applyReviewToCurrent(win, day, previousReview, { avoidedPreviousKind = false } = {}) {
     if (!previousReview) return null;
-    let db = readDb();
-    let current = activeAction(db.days?.[day]);
+    const db = readDb();
+    const current = activeAction(db.days?.[day]);
     if (!current) return null;
-
-    const previousKind = previousReview.mainActionKind || null;
-    let avoidedPreviousKind = false;
-    if (
-      previousReview.actionUseful === 'no'
-      && previousKind
-      && current.kind === previousKind
-      && typeof win.rinloCoreReplaceAction === 'function'
-    ) {
-      await win.rinloCoreReplaceAction();
-      db = readDb();
-      current = activeAction(db.days?.[day]);
-      avoidedPreviousKind = Boolean(current && current.kind !== previousKind);
-      if (!current) return null;
-    }
 
     const already = current.context?.adaptation;
     if (already?.source === 'evening_review' && already.reviewDay === previousReview.day) return current;
 
+    const previousKind = previousReview.mainActionKind || null;
     const adaptation = {
       source: 'evening_review',
       reviewDay: previousReview.day,
       planFit: previousReview.planFit,
       actionUseful: previousReview.actionUseful,
       previousKind,
-      avoidedPreviousKind,
+      avoidedPreviousKind: Boolean(avoidedPreviousKind),
       effortReduced: false,
     };
 
@@ -188,6 +184,33 @@
     return current;
   }
 
+  async function adaptCurrentAction(win, day, previousReview) {
+    if (!previousReview) return null;
+    let db = readDb();
+    let current = activeAction(db.days?.[day]);
+    if (!current) return null;
+
+    const previousKind = previousReview.mainActionKind || null;
+    if (
+      previousReview.actionUseful === 'no'
+      && previousKind
+      && current.kind === previousKind
+      && typeof win.rinloCoreReplaceAction === 'function'
+    ) {
+      await win.rinloCoreReplaceAction();
+      db = readDb();
+      current = activeAction(db.days?.[day]);
+      if (!current) return null;
+      const already = current.context?.adaptation;
+      if (already?.source === 'evening_review' && already.reviewDay === previousReview.day) return current;
+      return applyReviewToCurrent(win, day, previousReview, {
+        avoidedPreviousKind: current.kind !== previousKind,
+      });
+    }
+
+    return applyReviewToCurrent(win, day, previousReview);
+  }
+
   function install(attempt = 0) {
     const win = frame.contentWindow;
     if (!win || typeof win.rinloCoreCheckin !== 'function' || typeof win.rinloCoreSkipCheckin !== 'function') {
@@ -196,10 +219,10 @@
     }
     if (win.__rinloAdaptiveLearning === 'v1') return;
 
-    const wrap = (name) => {
+    const wrapCheckin = (name) => {
       const original = win[name].bind(win);
       win[name] = async (...args) => {
-        const day = win.__haViewDay || shiftDay(new Date().toISOString().slice(0, 10), 0);
+        const day = win.__haViewDay || localDayKey();
         const previousReview = await preparePreviousReview(day);
         const result = await original(...args);
         if (!window.HealthyActionAPI?.enabled) await adaptCurrentAction(win, day, previousReview);
@@ -207,8 +230,31 @@
       };
     };
 
-    wrap('rinloCoreCheckin');
-    wrap('rinloCoreSkipCheckin');
+    wrapCheckin('rinloCoreCheckin');
+    wrapCheckin('rinloCoreSkipCheckin');
+
+    if (typeof win.rinloCoreReplaceAction === 'function') {
+      const originalReplace = win.rinloCoreReplaceAction.bind(win);
+      win.rinloCoreReplaceAction = async (...args) => {
+        const day = win.__haViewDay || localDayKey();
+        const beforeKind = activeAction(readDb().days?.[day])?.kind || null;
+        const result = await originalReplace(...args);
+        if (!window.HealthyActionAPI?.enabled) {
+          const review = preparedReviews.get(day) || latestLocalReviewBefore(day);
+          const afterKind = activeAction(readDb().days?.[day])?.kind || null;
+          if (review) applyReviewToCurrent(win, day, review, {
+            avoidedPreviousKind: Boolean(
+              review.actionUseful === 'no'
+              && review.mainActionKind
+              && beforeKind === review.mainActionKind
+              && afterKind !== review.mainActionKind
+            ),
+          });
+        }
+        return result;
+      };
+    }
+
     win.__rinloAdaptiveLearning = 'v1';
     window.RinloAdaptiveLearning = {
       version: 'v1',
