@@ -67,6 +67,36 @@
     api.__rinloFreshSessionGuard = true;
   }
 
+  function installScreenGuard(doc) {
+    if (doc.__rinloScreenGuard) return;
+    let lastActiveId = doc.querySelector('.screen.on')?.id || null;
+    let restoring = false;
+
+    const observer = new MutationObserver(() => {
+      if (restoring) return;
+      const active = doc.querySelector('.screen.on');
+      if (active) {
+        lastActiveId = active.id || lastActiveId;
+        return;
+      }
+      if (!lastActiveId) return;
+      const previous = doc.getElementById(lastActiveId);
+      if (!previous?.classList.contains('screen')) return;
+
+      /* Screen skins are mounted independently. A late build used to replace
+         className wholesale (for example `screen on` -> `screen rinlo-plan-v01`),
+         accidentally hiding the tab the user had already opened. Legitimate
+         navigation always leaves another `.screen.on` in the same task, so only
+         restore when a skin rebuild leaves the app with no active screen at all. */
+      restoring = true;
+      previous.classList.add('on');
+      queueMicrotask(() => { restoring = false; });
+    });
+
+    observer.observe(doc.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    doc.__rinloScreenGuard = observer;
+  }
+
   function setText(el, text) {
     if (el && el.textContent !== text) el.textContent = text;
   }
@@ -164,6 +194,7 @@
   }
 
   function install(doc, win) {
+    installScreenGuard(doc);
     stabilizeSheet(doc);
 
     const stopLegacyObserver = () => {
