@@ -88,7 +88,17 @@ try {
     }
   }
 
-  await app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true }).click();
+  // The optional Plan row may trigger a legitimate rerender. Re-enter Plan
+  // through navigation so the evening-review click always targets the current,
+  // visible canonical screen rather than a hidden pre-rerender instance.
+  await app.locator('.nav').waitFor({ state: 'visible' });
+  await app.locator('.nav button').nth(0).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
+  await app.locator('.nav button').nth(1).click();
+  await app.locator('#actions').waitFor({ state: 'visible' });
+  const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
+  await finishDay.waitFor({ state: 'visible' });
+  await finishDay.click();
   await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
