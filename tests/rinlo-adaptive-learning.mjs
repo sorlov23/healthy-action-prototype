@@ -66,7 +66,7 @@ function boot(initial, { replacementKind = 'hydration' } = {}) {
         id: 'replacement-action',
         kind: replacementKind,
         status: 'suggested',
-        title: replacementKind === 'hydration' ? 'Выпейте стакан воды' : 'Другой шаг',
+        title: replacementKind === 'hydration' ? 'Выпейте стакан воды' : 'Другой шаг 10 минут',
         rationale: 'Альтернативная рекомендация.',
         effortMinutes: replacementKind === 'hydration' ? 2 : 10,
         context: { signal: 'alternative' },
@@ -135,6 +135,24 @@ function boot(initial, { replacementKind = 'hydration' } = {}) {
   assert.equal(active.effortMinutes, 5);
   assert.equal(active.title, 'Пройдитесь 5 минут');
   assert.match(active.rationale, /шаг короче/);
+  assert.equal(active.context.adaptation.effortReduced, true);
+}
+
+{
+  const { storage, win } = boot({
+    profile: { primaryGoal: 'weight_loss' },
+    days: {
+      '2026-09-11': previousDay({ planFit: 'too_much', actionUseful: 'no' }),
+      '2026-09-12': currentDay(),
+    },
+  }, { replacementKind: 'recovery' });
+
+  await win.rinloCoreCheckin('okay');
+  const active = storage.read().days['2026-09-12'].rinloActions.find((action) => action.status === 'suggested');
+  assert.equal(active.kind, 'recovery');
+  assert.equal(active.effortMinutes, 5);
+  assert.equal(active.title, 'Другой шаг 5 минут');
+  assert.equal(active.context.adaptation.avoidedPreviousKind, true);
   assert.equal(active.context.adaptation.effortReduced, true);
 }
 
