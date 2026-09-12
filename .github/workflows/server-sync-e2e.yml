@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'rinlo-server-sync-v1.js'
+      - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-action-sync-v1.js'
       - 'rinlo-evening-review-v1.js'
       - 'rinlo-server-restore-v1.js'
@@ -19,10 +20,12 @@ on:
       - 'tests/rinlo-supabase-first-sync-seed.mjs'
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
+      - 'tests/rinlo-adaptive-learning.mjs'
       - '.github/workflows/server-sync-e2e.yml'
   pull_request:
     paths:
       - 'rinlo-server-sync-v1.js'
+      - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-action-sync-v1.js'
       - 'rinlo-evening-review-v1.js'
       - 'rinlo-server-restore-v1.js'
@@ -38,6 +41,7 @@ on:
       - 'tests/rinlo-supabase-first-sync-seed.mjs'
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
+      - 'tests/rinlo-adaptive-learning.mjs'
       - '.github/workflows/server-sync-e2e.yml'
 
 jobs:
@@ -72,12 +76,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test durable outbox invariants
+      - name: Test durable outbox and adaptation invariants
         run: |
           node tests/rinlo-outbox-uncertain-create.mjs
           node tests/rinlo-supabase-first-sync-seed.mjs
           node tests/rinlo-action-sync.mjs
           node tests/rinlo-evening-review.mjs
+          node tests/rinlo-adaptive-learning.mjs
 
       - name: Prepare backend
         working-directory: backend
