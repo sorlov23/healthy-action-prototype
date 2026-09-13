@@ -19,9 +19,9 @@ async function appFrame() {
     && window.__rinloStability === 'v1'
     && window.__rinloSettingsBridge === 'v1'
     && window.__rinloEveningReview === 'v1'
+    && window.__rinloProductReset === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
-  await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
 }
 
@@ -29,28 +29,38 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function finishProductReset(app) {
+  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.locator('[data-primary-goal="weight_loss"]').click();
+  await app.locator('#rprNext').click();
+  await app.getByRole('button', { name: 'Нормально', exact: true }).click();
+  await app.getByRole('button', { name: '15 минут', exact: true }).click();
+  await app.locator('#rprCreate').click();
+  await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
+  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
+}
+
 try {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   let app = await appFrame();
+  await finishProductReset(app);
 
-  await app.locator('[data-primary-goal="weight_loss"]').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#obWeight').fill('85');
-  await app.locator('#obGoal').fill('75');
-  await app.locator('#obHeight').fill('176');
-  await app.locator('#obAge').fill('37');
-  await app.locator('#rcSex').selectOption('male');
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-
-  await app.locator('#today').waitFor({ state: 'visible' });
-  const hasProfile = await app.evaluate(() => Boolean(JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile));
-  assert(hasProfile, 'Onboarding did not persist profile');
-
-  await app.getByRole('button', { name: 'Нормально' }).click();
-  await app.locator('.rc-action').waitFor({ state: 'visible' });
-  assert((await app.locator('.rc-action h2').textContent())?.trim(), 'Rinlo action was not generated');
+  const firstRun = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = Object.keys(db.days || {}).sort().at(-1);
+    const day = db.days?.[key] || {};
+    return {
+      profile: db.profile || null,
+      checkin: day.rinloCheckin || null,
+      action: (day.rinloActions || []).find((item) => ['suggested', 'accepted'].includes(item.status)) || null,
+    };
+  });
+  assert(firstRun.profile?.primaryGoal === 'weight_loss', 'Product Reset did not persist the primary goal');
+  assert(firstRun.profile?.detailsComplete === false, 'Detailed profile unexpectedly became mandatory');
+  assert(firstRun.checkin?.wellbeing === 'okay', 'Product Reset did not persist today context');
+  assert(firstRun.action?.title, 'Product Reset did not create the first action');
 
   await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
   const water = await app.evaluate(() => {
@@ -98,9 +108,6 @@ try {
   if (await proteinRow.isVisible().catch(() => false)) {
     let clicked = false;
     try {
-      // Plan can legitimately rerender while recommendations refresh. If this
-      // optional row disappears during that rerender, treat it like the already
-      // supported "row absent" case rather than waiting on a detached node.
       await proteinRow.click({ timeout: 1500 });
       clicked = true;
     } catch (error) {
@@ -114,9 +121,9 @@ try {
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
+  await app.getByText('Rinlo уже работает без анкеты', { exact: true }).waitFor({ state: 'visible' });
   await app.getByRole('button', { name: /Изменить параметры/ }).waitFor({ state: 'visible' });
 
-  // Persistence is checked independently of which tab the browser restores after reload.
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
 
@@ -125,21 +132,21 @@ try {
     const days = Object.values(db.days || {});
     return {
       profile: Boolean(db.profile),
+      goal: db.profile?.primaryGoal || null,
       water: days.some((day) => Number(day?.water || 0) >= 250),
       food: days.some((day) => (day?.events || []).some((event) => event.type === 'food' && event.text === 'омлет из двух яиц и кофе')),
       eveningReview: days.some((day) => day?.rinloEveningReview?.planFit === 'right' && day?.rinloEveningReview?.actionUseful === 'yes'),
     };
   });
-  assert(persisted.profile && persisted.water && persisted.food && persisted.eveningReview, 'Saved Rinlo state did not survive reload');
+  assert(persisted.profile && persisted.goal === 'weight_loss' && persisted.water && persisted.food && persisted.eveningReview, 'Saved Rinlo state did not survive reload');
 
-  // Whatever tab the browser restores, the saved profile must keep navigation usable.
   await app.locator('.nav').waitFor({ state: 'visible' });
   await app.locator('.nav button').nth(0).click();
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Profile editing must open the goal-first onboarding from step one. Assert
-  // the user-visible step contract rather than a skin-specific CSS prefix.
+  // Detailed parameters are progressive profiling: they are opened only when
+  // the user explicitly asks to make recommendations more precise.
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
   const editProfile = app.getByRole('button', { name: /Изменить параметры/ });
