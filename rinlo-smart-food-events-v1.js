@@ -4,15 +4,33 @@
 
   const VERSION = 'v1';
 
+  function compatibleRow(row) {
+    if (Array.isArray(row)) return [...row];
+    if (!row || typeof row !== 'object') return row;
+    const aliases = Array.isArray(row.aliases)
+      ? row.aliases
+      : String(row.aliases || '').split('|').filter(Boolean);
+    return Object.assign({}, row, {
+      aliases,
+      0: row.id,
+      1: row.name,
+      2: aliases.join('|'),
+      3: row.kcal100,
+      4: row.protein100,
+      5: row.portion ?? row.serving ?? 100,
+      6: row.icon || row.emoji || '🍽️',
+    });
+  }
+
   function install() {
     const win = frame.contentWindow;
     const doc = frame.contentDocument;
     if (!win || !doc?.body || win.__rinloSmartFood !== 'v1') return false;
 
-    if ((!Array.isArray(win.HEALTHY_FOOD_CATALOG) || !win.HEALTHY_FOOD_CATALOG.length)
-      && Array.isArray(window.HEALTHY_FOOD_CATALOG)
-      && window.HEALTHY_FOOD_CATALOG.length) {
-      win.HEALTHY_FOOD_CATALOG = window.HEALTHY_FOOD_CATALOG.map((row) => Array.isArray(row) ? [...row] : row);
+    if (Array.isArray(window.HEALTHY_FOOD_CATALOG) && window.HEALTHY_FOOD_CATALOG.length) {
+      const bridged = window.HEALTHY_FOOD_CATALOG.map(compatibleRow);
+      window.HEALTHY_FOOD_CATALOG = bridged;
+      win.HEALTHY_FOOD_CATALOG = bridged.map(compatibleRow);
     }
 
     if (doc.__rinloSmartFoodEventsV1) {
