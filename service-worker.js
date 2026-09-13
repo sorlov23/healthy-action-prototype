@@ -40,6 +40,7 @@ const ASSETS=[
   './rinlo-copy-pass-v1.js?rev=1',
   './rinlo-today-v2.js?rev=1',
   './rinlo-visual-system-v2.js?rev=1',
+  './rinlo-visual-system-v2-guard.js?rev=1',
   './rinlo-logo.svg?rev=31',
   './manifest.webmanifest',
   './icon.svg?rev=31'
