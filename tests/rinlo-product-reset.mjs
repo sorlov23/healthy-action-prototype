@@ -15,7 +15,7 @@ try {
 
   await app.waitForFunction(() => window.__rinloProductReset === 'v1', null, { timeout: 15000 });
   await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
-  await app.locator('button[onclick="rinloProductStart()"').click();
+  await app.locator('button[onclick="rinloProductStart()"]') .click();
 
   await app.locator('.rpr-goals').waitFor({ state: 'visible' });
   await app.locator('[data-primary-goal="weight_loss"]').click();
@@ -44,7 +44,7 @@ try {
   assert(state.action, 'First action missing from local state');
   assert(Number(state.action.effortMinutes || 0) <= 5, `First action ignored the 5-minute budget: ${JSON.stringify(state.action)}`);
 
-  await app.locator('button[onclick="rinloProductEnterApp()"').click();
+  await app.locator('button[onclick="rinloProductEnterApp()"]') .click();
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.getByText('Один шаг, который лучше всего подходит', { exact: false }).waitFor();
   await app.getByRole('heading', { name: magicTitle, exact: true }).waitFor();
