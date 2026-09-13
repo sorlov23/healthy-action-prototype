@@ -51,7 +51,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f3f6f4;fon
 <script src="./rinlo-product-reset-v1.js?rev=1"></script>
 <script src="./rinlo-product-precision-v1.js?rev=52"></script>
 <script src="./rinlo-smart-food-v1.js?rev=54"></script>
-<script src="./rinlo-smart-food-events-v1.js?rev=55"></script>
+<script src="./rinlo-smart-food-events-v1.js?rev=56"></script>
 <script src="./rinlo-action-sync-v1.js?rev=42"></script>
 <script src="./rinlo-evening-review-v1.js?rev=46"></script>
 <script src="./rinlo-server-restore-v1.js?rev=33"></script>
@@ -64,7 +64,7 @@ const revealRinlo=()=>{if(rinloLoading) rinloLoading.style.display='none';};
 rinloFrame?.addEventListener('load',revealRinlo);
 try{if(rinloFrame?.contentDocument?.readyState==='complete') revealRinlo();}catch{}
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=55',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=56',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
