@@ -25,6 +25,7 @@ async function appFrame() {
     && window.__rinloEveningReview === 'v1'
     && window.__rinloProductReset === 'v1'
     && window.__rinloProductPrecision === 'v1'
+    && window.__rinloSmartFood === 'v1'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
@@ -94,8 +95,6 @@ try {
   const minimalProfile = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
   assert(minimalProfile?.primaryGoal === 'weight_loss' && minimalProfile?.detailsComplete === false, 'Product Reset did not create the minimal local profile');
 
-  // Detailed parameters are progressive profiling: the first recommendation
-  // already exists before the user chooses to add numbers.
   await completeDetailedProfile(app);
 
   await app.getByRole('button', { name: 'Нормально' }).click();
@@ -118,11 +117,13 @@ try {
   });
 
   await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
-  await app.locator('#rfFoodText').fill('омлет из двух яиц и кофе');
-  await app.getByRole('button', { name: 'Получить оценку' }).click();
+  await app.getByRole('heading', { name: 'Что съели?', exact: true }).waitFor({ state: 'visible' });
+  await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
+  await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
+  await app.getByRole('heading', { name: 'Похоже на это', exact: true }).waitFor();
   await app.locator('#rfFoodCal').fill('310');
   await app.locator('#rfFoodProtein').fill('20');
-  await app.getByRole('button', { name: 'Добавить в дневник' }).click();
+  await app.getByRole('button', { name: 'Всё верно — сохранить', exact: true }).click();
 
   await waitFor(foodCreateSeen, 5000, 'Food create request never entered the in-flight state');
   let state = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}'));
@@ -171,7 +172,7 @@ try {
   assert(day?.closed === true, 'Day was not closed by evening review');
   food = (day?.events || []).find((event) => event.type === 'food');
   const weight = (day?.events || []).find((event) => event.type === 'weight');
-  assert(food?.serverId && food?.clientEventId, 'Food did not receive server identity');
+  assert(food?.serverId && food?.clientEventId, 'Smart Food did not receive server identity through durable outbox');
   assert(food?.text === 'омлет, кофе и йогурт' && food?.cal === 420 && food?.protein === 31, 'Local food edit changed while create was in flight');
   assert(weight?.serverId && weight?.clientEventId, 'Weight did not receive server identity');
 
@@ -205,8 +206,8 @@ try {
   assert(restored?.closed === true, 'Restored evening review did not keep day closed');
   const restoredFood = (restored?.events || []).find((event) => event.type === 'food');
   const restoredWeight = (restored?.events || []).find((event) => event.type === 'weight');
-  assert(restoredFood?.text === 'омлет, кофе и йогурт', `Food edit did not survive server restore: ${JSON.stringify(restoredFood)}`);
-  assert(restoredFood?.cal === 420 && restoredFood?.protein === 31, 'Edited food nutrition did not survive restore');
+  assert(restoredFood?.text === 'омлет, кофе и йогурт', `Smart Food edit did not survive server restore: ${JSON.stringify(restoredFood)}`);
+  assert(restoredFood?.cal === 420 && restoredFood?.protein === 31, 'Edited Smart Food nutrition did not survive restore');
   assert(!restoredWeight, `Deleted weight returned from server: ${JSON.stringify(restoredWeight)}`);
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
