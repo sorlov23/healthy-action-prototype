@@ -1,4 +1,4 @@
-const CACHE='rinlo-pwa-v58';
+const CACHE='rinlo-pwa-v59';
 const ASSETS=[
   './pwa.html',
   './v07.html?rev=24',
@@ -37,6 +37,9 @@ const ASSETS=[
   './rinlo-server-restore-v1.js?rev=33',
   './rinlo-wordmark.js?rev=30',
   './rinlo-settings-bridge-v1.js?rev=34',
+  './rinlo-copy-pass-v1.js?rev=1',
+  './rinlo-today-v2.js?rev=1',
+  './rinlo-visual-system-v2.js?rev=1',
   './rinlo-logo.svg?rev=31',
   './manifest.webmanifest',
   './icon.svg?rev=31'
