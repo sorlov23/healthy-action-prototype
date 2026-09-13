@@ -174,9 +174,11 @@
       return;
     }
     panel.innerHTML = `
-      <textarea id="rsfText" class="rsf-input" placeholder="Например: куриная грудка, рис и огурец" oninput="rinloSmartFoodSuggest()"></textarea>
+      <textarea id="rsfText" class="rsf-input" placeholder="Например: куриная грудка, рис и огурец"></textarea>
       <div id="rsfSuggestions" class="rsf-suggestions"></div>
       <button class="rsf-primary" onclick="rinloSmartFoodAnalyze('text')">Распознать описание</button>`;
+    const input = doc.getElementById('rsfText');
+    input?.addEventListener('input', () => renderSuggestions(win, doc));
   }
 
   function renderSuggestions(win, doc) {
@@ -213,8 +215,7 @@
   function install(win, doc) {
     if (!win || !doc?.body) return;
     ensureStyles(doc);
-    const legacySave = typeof win.rinloSaveFood === 'function' ? win.rinloSaveFood.bind(win) : null;
-    if (!legacySave) return;
+    if (typeof win.rinloSaveFood !== 'function') return;
 
     win.openFood = () => shell(win, doc, 'text');
     win.rinloSmartFoodMode = (mode) => renderMode(win, doc, ['photo','text','recent'].includes(mode) ? mode : 'text');
@@ -258,7 +259,7 @@
       };
       reader.readAsDataURL(file);
     };
-    win.rinloSmartFoodSave = () => legacySave();
+    win.rinloSmartFoodSave = () => win.rinloSaveFood?.();
     win.RinloSmartFood = Object.freeze({ version: VERSION, parseText, suggestions });
     win.__rinloSmartFood = VERSION;
   }
