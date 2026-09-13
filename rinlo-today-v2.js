@@ -47,11 +47,12 @@
       #today.rtv2 .rtv2-why-toggle::after{content:'›';font-size:16px;line-height:1;margin-left:4px;transform:rotate(90deg);transition:transform .18s ease}
       #today.rtv2 .rc-action.rtv2-why-open .rtv2-why-toggle::after{transform:rotate(-90deg)}
 
-      #today.rtv2 .rpr-checkin-compact{padding:0!important;border:0!important;background:transparent!important;margin-top:10px!important}
-      #today.rtv2 .rpr-checkin-compact>.rc-checkin-head,#today.rtv2 .rpr-checkin-compact>.rc-moods,#today.rtv2 .rpr-checkin-compact>.rc-checkin-note{display:none!important}
-      #today.rtv2 .rpr-checkin-compact.rtv2-checkin-open>.rc-checkin-head{display:flex!important}
-      #today.rtv2 .rpr-checkin-compact.rtv2-checkin-open>.rc-moods{display:grid!important;margin-top:9px}
-      #today.rtv2 .rpr-checkin-compact.rtv2-checkin-open>.rc-checkin-note{display:block!important}
+      #today.rtv2 #rcCheckin.rpr-checkin-compact{margin-top:10px!important}
+      #today.rtv2 #rcCheckin.rpr-checkin-compact .rc-checkin{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+      #today.rtv2 #rcCheckin.rpr-checkin-compact .rc-checkin>.rc-checkin-head,#today.rtv2 #rcCheckin.rpr-checkin-compact .rc-checkin>.rc-moods,#today.rtv2 #rcCheckin.rpr-checkin-compact .rc-checkin>.rc-checkin-note{display:none!important}
+      #today.rtv2 #rcCheckin.rpr-checkin-compact.rtv2-checkin-open .rc-checkin>.rc-checkin-head{display:flex!important}
+      #today.rtv2 #rcCheckin.rpr-checkin-compact.rtv2-checkin-open .rc-checkin>.rc-moods{display:grid!important;margin-top:9px}
+      #today.rtv2 #rcCheckin.rpr-checkin-compact.rtv2-checkin-open .rc-checkin>.rc-checkin-note{display:block!important}
       #today.rtv2 .rtv2-checkin-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:0 2px;color:#65716d}
       #today.rtv2 .rtv2-checkin-summary span{font-size:11px;line-height:1.35}
       #today.rtv2 .rtv2-checkin-summary b{color:#283b34;font-weight:650}
@@ -136,8 +137,9 @@
   }
 
   function enhanceCheckin(doc, day) {
-    const checkin = doc.querySelector('#rcCheckin .rc-checkin');
-    if (!checkin || !day.rinloCheckin || !checkin.classList.contains('rpr-checkin-compact')) return;
+    const box = doc.getElementById('rcCheckin');
+    const checkin = box?.querySelector('.rc-checkin');
+    if (!box || !checkin || !day.rinloCheckin || !box.classList.contains('rpr-checkin-compact')) return;
     if (checkin.querySelector('.rtv2-checkin-summary')) return;
     const selected = text(checkin.querySelector('.rc-mood.sel')) || 'Отмечено';
     const energy = Number(day.rinloCheckin.energy);
@@ -150,8 +152,8 @@
     summary.className = 'rtv2-checkin-summary';
     summary.innerHTML = `<span>Сегодня: <b>${selected}</b>${detail}</span><button type="button">Изменить</button>`;
     summary.querySelector('button').onclick = () => {
-      checkin.classList.toggle('rtv2-checkin-open');
-      summary.querySelector('button').textContent = checkin.classList.contains('rtv2-checkin-open') ? 'Свернуть' : 'Изменить';
+      box.classList.toggle('rtv2-checkin-open');
+      summary.querySelector('button').textContent = box.classList.contains('rtv2-checkin-open') ? 'Свернуть' : 'Изменить';
     };
     checkin.insertBefore(summary, checkin.firstChild);
   }
