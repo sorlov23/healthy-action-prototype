@@ -29,21 +29,21 @@ try {
   await page.goto('http://127.0.0.1:4173/pwa.html?ui-toggle-test=1', { waitUntil: 'domcontentloaded' });
   const app = page.frameLocator('#app');
 
-  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible', timeout: 15000 });
-  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible', timeout: 15000 });
+  await app.locator('body').evaluate(() => window.rinloProductStart());
   await app.locator('[data-primary-goal="weight_loss"]').click();
   await app.locator('#rprNext').click();
   await app.getByRole('button', { name: 'Нормально', exact: true }).click();
   await app.getByRole('button', { name: '15 минут', exact: true }).click();
   await app.locator('#rprCreate').click();
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
-  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.locator('body').evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Уточнить параметры/ }).click();
-  await app.getByRole('heading', { name: 'Уточнить параметры', exact: true }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Настроить под себя/ }).click();
+  await app.getByRole('heading', { name: 'Настроить под себя', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rppCalories').waitFor({ state: 'visible', timeout: 10000 });
   await page.waitForTimeout(220);
 

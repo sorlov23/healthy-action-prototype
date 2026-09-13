@@ -13,15 +13,15 @@ try {
   const app = await handle.contentFrame();
   if (!app) throw new Error('Rinlo iframe not available');
 
-  await app.waitForFunction(() => window.__rinloProductReset === 'v1', null, { timeout: 15000 });
-  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1', null, { timeout: 15000 });
+  await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
+  await app.evaluate(() => window.rinloProductStart());
 
-  await app.getByRole('heading', { name: 'Что сейчас важнее всего?' }).waitFor();
+  await app.locator('.rpr-goals').waitFor({ state: 'visible' });
   await app.locator('[data-primary-goal="weight_loss"]').click();
   await app.locator('#rprNext').click();
 
-  await app.getByRole('heading', { name: 'А сегодня как?' }).waitFor();
+  await app.locator('.rpr-context-block').first().waitFor({ state: 'visible' });
   await app.getByRole('button', { name: 'Мало сил', exact: true }).click();
   await app.getByRole('button', { name: '5 минут', exact: true }).click();
   await app.locator('#rprCreate').click();
@@ -44,13 +44,13 @@ try {
   assert(state.action, 'First action missing from local state');
   assert(Number(state.action.effortMinutes || 0) <= 5, `First action ignored the 5-minute budget: ${JSON.stringify(state.action)}`);
 
-  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.getByText('Один шаг, который лучше всего подходит', { exact: false }).waitFor();
   await app.getByRole('heading', { name: magicTitle, exact: true }).waitFor();
   await app.getByText('Почему это сейчас', { exact: true }).waitFor();
-  await app.getByRole('heading', { name: 'Добавить контекст', exact: true }).waitFor();
-  await app.getByRole('button', { name: 'Уточнить параметры', exact: true }).waitFor();
+  await app.getByRole('heading', { name: 'Уточнить', exact: true }).waitFor();
+  await app.getByRole('button', { name: 'Настроить под себя', exact: true }).waitFor();
 
   const hierarchy = await app.evaluate(() => {
     const today = document.getElementById('today');

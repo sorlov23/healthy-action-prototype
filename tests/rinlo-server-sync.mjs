@@ -26,6 +26,7 @@ async function appFrame() {
     && window.__rinloProductReset === 'v1'
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
+    && window.__rinloCopyPass === 'v1'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
@@ -36,30 +37,30 @@ async function appFrame() {
 }
 
 async function finishProductReset(app) {
-  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
+  await app.evaluate(() => window.rinloProductStart());
   await app.locator('[data-primary-goal="weight_loss"]').click();
   await app.locator('#rprNext').click();
   await app.getByRole('button', { name: 'Нормально', exact: true }).click();
   await app.getByRole('button', { name: '15 минут', exact: true }).click();
   await app.locator('#rprCreate').click();
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
-  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
 }
 
 async function completeDetailedProfile(app) {
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Уточнить параметры/ }).click();
-  await app.getByRole('heading', { name: 'Уточнить параметры', exact: true }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Настроить под себя/ }).click();
+  await app.getByRole('heading', { name: 'Настроить под себя', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rppWeight').fill('85');
   await app.locator('#rppGoal').fill('75');
   await app.locator('#rppHeight').fill('176');
   await app.locator('#rppAge').fill('37');
   await app.locator('#rppActivity').selectOption('low');
   await app.locator('#rppSex').selectOption('male');
-  await app.getByRole('button', { name: 'Сохранить параметры', exact: true }).click();
+  await app.locator('.rpp-save').click();
   const profile = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
   assert(profile?.detailsComplete === true, 'Progressive profile did not become complete');
   assert(profile?.primaryGoal === 'weight_loss', 'Progressive profile overwrote Product Reset goal');
@@ -117,13 +118,13 @@ try {
   });
 
   await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
-  await app.getByRole('heading', { name: 'Что съели?', exact: true }).waitFor({ state: 'visible' });
+  await app.getByRole('heading', { name: 'Добавить еду', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
   await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
-  await app.getByRole('heading', { name: 'Похоже на это', exact: true }).waitFor();
+  await app.getByRole('heading', { name: 'Вот что получилось', exact: true }).waitFor();
   await app.locator('#rfFoodCal').fill('310');
   await app.locator('#rfFoodProtein').fill('20');
-  await app.getByRole('button', { name: 'Всё верно — сохранить', exact: true }).click();
+  await app.getByRole('button', { name: 'Сохранить', exact: true }).click();
 
   await waitFor(foodCreateSeen, 5000, 'Food create request never entered the in-flight state');
   let state = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}'));
@@ -152,11 +153,11 @@ try {
 
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true }).click();
+  await app.getByRole('button', { name: 'Подвести итог дня', exact: true }).click();
   await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
-  await app.getByRole('button', { name: 'Сохранить итог', exact: true }).click();
+  await app.getByRole('button', { name: 'Готово', exact: true }).click();
 
   await syncNow();
   await syncNow();

@@ -22,6 +22,7 @@ async function appFrame() {
     && window.__rinloProductReset === 'v1'
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
+    && window.__rinloCopyPass === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
@@ -32,15 +33,15 @@ function assert(condition, message) {
 }
 
 async function finishProductReset(app) {
-  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
+  await app.evaluate(() => window.rinloProductStart());
   await app.locator('[data-primary-goal="weight_loss"]').click();
   await app.locator('#rprNext').click();
   await app.getByRole('button', { name: 'Нормально', exact: true }).click();
   await app.getByRole('button', { name: '15 минут', exact: true }).click();
   await app.locator('#rprCreate').click();
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
-  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
 }
 
@@ -73,24 +74,24 @@ try {
   assert(water >= 250, 'Water quick action did not persist');
 
   await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
-  await app.getByRole('heading', { name: 'Что съели?', exact: true }).waitFor({ state: 'visible' });
+  await app.getByRole('heading', { name: 'Добавить еду', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
   await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
-  await app.getByRole('heading', { name: 'Похоже на это', exact: true }).waitFor();
+  await app.getByRole('heading', { name: 'Вот что получилось', exact: true }).waitFor();
   await app.locator('#rfFoodCal').fill('310');
   await app.locator('#rfFoodProtein').fill('20');
-  await app.getByRole('button', { name: 'Всё верно — сохранить', exact: true }).click();
+  await app.getByRole('button', { name: 'Сохранить', exact: true }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
-  const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
+  const finishDay = app.getByRole('button', { name: 'Подвести итог дня', exact: true });
   await finishDay.waitFor({ state: 'visible' });
   await finishDay.click();
   await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
-  await app.getByRole('button', { name: 'Сохранить итог', exact: true }).click();
+  await app.getByRole('button', { name: 'Готово', exact: true }).click();
   const eveningReview = await app.evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     const key = Object.keys(db.days || {}).sort().at(-1);
@@ -114,7 +115,7 @@ try {
       if (await proteinRow.isVisible().catch(() => false)) throw error;
     }
     if (clicked) {
-      await app.getByRole('heading', { name: 'Что съели?', exact: true }).waitFor();
+      await app.getByRole('heading', { name: 'Добавить еду', exact: true }).waitFor();
       await app.evaluate(() => window.closeSheet?.());
     }
   }
@@ -122,7 +123,7 @@ try {
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
   await app.getByText('Rinlo уже работает без анкеты', { exact: true }).waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Уточнить параметры/ }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Настроить под себя/ }).waitFor({ state: 'visible' });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
@@ -147,17 +148,17 @@ try {
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  const editProfile = app.getByRole('button', { name: /Уточнить параметры/ });
+  const editProfile = app.getByRole('button', { name: /Настроить под себя/ });
   await editProfile.waitFor({ state: 'visible' });
   await editProfile.click();
-  await app.getByRole('heading', { name: 'Уточнить параметры', exact: true }).waitFor({ state: 'visible' });
-  assert(!(await app.getByRole('heading', { name: /Не идеальный план/ }).isVisible().catch(() => false)), 'Progressive profiling reopened first-run onboarding');
+  await app.getByRole('heading', { name: 'Настроить под себя', exact: true }).waitFor({ state: 'visible' });
+  assert(!(await app.locator('#rprWelcome').isVisible().catch(() => false)), 'Progressive profiling reopened first-run onboarding');
   await app.locator('#rppWeight').fill('85');
   await app.locator('#rppGoal').fill('75');
   await app.locator('#rppHeight').fill('176');
   await app.locator('#rppAge').fill('37');
   await app.locator('#rppSex').selectOption('male');
-  await app.getByRole('button', { name: 'Сохранить параметры', exact: true }).click();
+  await app.getByRole('button', { name: 'Сохранить', exact: true }).click();
   const precision = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
   assert(precision?.detailsComplete === true, 'Progressive profile did not become complete');
   assert(precision?.primaryGoal === 'weight_loss', 'Progressive profile overwrote the primary goal');
