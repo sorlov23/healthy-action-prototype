@@ -1,4 +1,4 @@
-const CACHE='rinlo-pwa-v59';
+const CACHE='rinlo-pwa-v58';
 const ASSETS=[
   './pwa.html',
   './v07.html?rev=24',
