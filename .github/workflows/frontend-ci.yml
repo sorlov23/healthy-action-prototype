@@ -176,6 +176,13 @@ jobs:
           grep -q "supabasePublishableKey: 'sb_publishable_" runtime-config.js
           ! grep -qiE 'service_role|sb_secret_' runtime-config.js
 
+      - name: Check Core Plan contract
+        run: |
+          grep -q "dataset.rinloPlan = 'core-v1'" rinlo-plan-v01.js
+          grep -q 'data-rinlo-plan-primary' rinlo-plan-v01.js
+          grep -q 'до двух' rinlo-plan-v01.js
+          ! grep -q 'до четырёх действий' rinlo-plan-v01.js
+
       - name: Check PWA asset wiring
         run: |
           grep -q 'runtime-config.js?rev=39' pwa.html
@@ -190,7 +197,7 @@ jobs:
           grep -q 'pwa-account-sync.js?rev=24' pwa.html
           grep -q 'ui-polish.js?rev=36' pwa.html
           grep -q 'rinlo-polish-v03.js?rev=36' pwa.html
-          grep -q 'rinlo-plan-v01.js?rev=37' pwa.html
+          grep -q 'rinlo-plan-v01.js?rev=52' pwa.html
           grep -q 'rinlo-profile-v01.js?rev=45' pwa.html
           grep -q 'rinlo-system-v01.js?rev=35' pwa.html
           grep -q 'rinlo-core-ui-v1.js?rev=25' pwa.html
@@ -202,11 +209,12 @@ jobs:
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-evening-review-v1.js?rev=46' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=51' pwa.html
+          grep -q 'service-worker.js?rev=52' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v51" service-worker.js
+          grep -q "rinlo-pwa-v52" service-worker.js
           grep -q "./pwa-sync.js?rev=51" service-worker.js
+          grep -q "./rinlo-plan-v01.js?rev=52" service-worker.js
           grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
           grep -q "./rinlo-supabase-evening-review-transport-v1.js?rev=46" service-worker.js
           grep -q "./rinlo-profile-v01.js?rev=45" service-worker.js
