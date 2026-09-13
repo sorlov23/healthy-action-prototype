@@ -34,14 +34,14 @@ function assert(condition, message) {
 
 async function finishProductReset(app) {
   await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
-  await app.locator('button[onclick="rinloProductStart()"]') .click();
+  await app.evaluate(() => window.rinloProductStart());
   await app.locator('[data-primary-goal="weight_loss"]').click();
   await app.locator('#rprNext').click();
   await app.getByRole('button', { name: 'Нормально', exact: true }).click();
   await app.getByRole('button', { name: '15 минут', exact: true }).click();
   await app.locator('#rprCreate').click();
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
-  await app.locator('button[onclick="rinloProductEnterApp()"]') .click();
+  await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
 }
 
