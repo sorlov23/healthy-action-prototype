@@ -21,6 +21,7 @@ async function appFrame() {
     && window.__rinloEveningReview === 'v1'
     && window.__rinloProductReset === 'v1'
     && window.__rinloProductPrecision === 'v1'
+    && window.__rinloSmartFood === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
@@ -72,11 +73,13 @@ try {
   assert(water >= 250, 'Water quick action did not persist');
 
   await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
-  await app.locator('#rfFoodText').fill('омлет из двух яиц и кофе');
-  await app.getByRole('button', { name: 'Получить оценку' }).click();
+  await app.getByRole('heading', { name: 'Что съели?', exact: true }).waitFor({ state: 'visible' });
+  await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
+  await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
+  await app.getByRole('heading', { name: 'Похоже на это', exact: true }).waitFor();
   await app.locator('#rfFoodCal').fill('310');
   await app.locator('#rfFoodProtein').fill('20');
-  await app.getByRole('button', { name: 'Добавить в дневник' }).click();
+  await app.getByRole('button', { name: 'Всё верно — сохранить', exact: true }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
   await app.locator('.nav button').nth(1).click();
@@ -111,7 +114,7 @@ try {
       if (await proteinRow.isVisible().catch(() => false)) throw error;
     }
     if (clicked) {
-      await app.getByRole('heading', { name: 'Добавить приём пищи' }).waitFor();
+      await app.getByRole('heading', { name: 'Что съели?', exact: true }).waitFor();
       await app.evaluate(() => window.closeSheet?.());
     }
   }
@@ -142,8 +145,6 @@ try {
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Progressive profiling stays a sheet inside the working app. It must never
-  // send an existing user back through first-run onboarding.
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
   const editProfile = app.getByRole('button', { name: /Уточнить параметры/ });
