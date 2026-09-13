@@ -13,7 +13,7 @@ try {
   const app = await handle.contentFrame();
   if (!app) throw new Error('Rinlo iframe not available');
 
-  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1', null, { timeout: 15000 });
+  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1' && window.__rinloTodayV2 === 'v1', null, { timeout: 15000 });
   await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
   await app.evaluate(() => window.rinloProductStart());
 
@@ -45,25 +45,30 @@ try {
   assert(Number(state.action.effortMinutes || 0) <= 5, `First action ignored the 5-minute budget: ${JSON.stringify(state.action)}`);
 
   await app.evaluate(() => window.rinloProductEnterApp());
-  await app.locator('#today').waitFor({ state: 'visible' });
-  await app.getByText('Один шаг, который лучше всего подходит', { exact: false }).waitFor();
+  await app.locator('#today.rtv2').waitFor({ state: 'visible' });
   await app.getByRole('heading', { name: magicTitle, exact: true }).waitFor();
-  await app.getByText('Почему это сейчас', { exact: true }).waitFor();
-  await app.getByRole('heading', { name: 'Уточнить', exact: true }).waitFor();
-  await app.getByRole('button', { name: 'Настроить под себя', exact: true }).waitFor();
+  await app.getByRole('button', { name: 'Почему этот шаг?', exact: true }).waitFor();
+  await app.getByText('Сегодня:', { exact: false }).waitFor();
+  await app.getByRole('heading', { name: 'Добавить', exact: true }).waitFor();
 
   const hierarchy = await app.evaluate(() => {
     const today = document.getElementById('today');
     const action = document.getElementById('rcAction');
     const checkin = document.getElementById('rcCheckin');
     const metrics = document.getElementById('rcMetrics');
+    const quick = today?.querySelector('.rc-quick');
+    const precision = today?.querySelector('.rpr-precision');
     return {
       actionBeforeCheckin: Boolean(today && action && checkin && (action.compareDocumentPosition(checkin) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      quickBeforeMetrics: Boolean(today && quick && metrics && (quick.compareDocumentPosition(metrics) & Node.DOCUMENT_POSITION_FOLLOWING)),
       metricsDisplay: metrics?.style.display || '',
+      precisionHidden: !precision || getComputedStyle(precision).display === 'none',
     };
   });
   assert(hierarchy.actionBeforeCheckin, 'Today hierarchy did not put the chosen action first after onboarding check-in');
+  assert(hierarchy.quickBeforeMetrics, 'Today v2 did not put quick add actions before detailed metrics');
   assert(hierarchy.metricsDisplay === 'none', 'Numeric metrics are still primary before optional profile details');
+  assert(hierarchy.precisionHidden, 'Today v2 still exposes the recurring precision-profile prompt');
 
   console.log(`RINLO_PRODUCT_RESET_ACTION=${JSON.stringify({ title: magicTitle, effortMinutes: state.action.effortMinutes, kind: state.action.kind })}`);
   console.log('RINLO_PRODUCT_RESET_RESULT=PASS');
