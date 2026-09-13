@@ -41,11 +41,19 @@ try {
     tick();
   }));
 
+  const catalogRealms = await page.evaluate(() => ({
+    outer: Array.isArray(window.HEALTHY_FOOD_CATALOG) ? window.HEALTHY_FOOD_CATALOG.length : -1,
+    iframe: Array.isArray(document.getElementById('app')?.contentWindow?.HEALTHY_FOOD_CATALOG)
+      ? document.getElementById('app').contentWindow.HEALTHY_FOOD_CATALOG.length
+      : -1,
+  }));
+  console.log(`RINLO_SMART_FOOD_CATALOG_REALMS=${JSON.stringify(catalogRealms)}`);
+
   const directSuggestions = await app.locator('body').evaluate(() =>
     window.RinloSmartFood.suggestions('кури').map(item => item.name)
   );
   console.log(`RINLO_SMART_FOOD_DIRECT_SUGGESTIONS=${JSON.stringify(directSuggestions)}`);
-  assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)}`);
+  assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)} realms=${JSON.stringify(catalogRealms)}`);
 
   await app.locator('.rc-quick button').filter({ hasText:'Еда' }).click();
   await app.getByRole('heading', { name:'Что съели?', exact:true }).waitFor({ state:'visible' });
