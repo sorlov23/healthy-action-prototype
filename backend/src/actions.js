@@ -3,6 +3,8 @@ import { requireAuth } from './auth.js';
 import { getProfile } from './profile.js';
 import { getDailyCheckin } from './checkins.js';
 import { getDayOverview } from './state.js';
+import { getLatestEveningReviewBefore } from './evening-reviews.js';
+import { selectAdaptiveCandidate } from './action-adaptation.js';
 
 function mapAction(row) {
   if (!row) return null;
@@ -203,15 +205,19 @@ export async function suggestNextAction(userId, day, { timezoneOffsetMinutes = 0
   const active = existing.find((action) => ['suggested','accepted'].includes(action.status));
   if (active) return { action: active, reused: true };
 
-  const [profile, checkin, overview] = await Promise.all([
+  const [profile, checkin, overview, previousReview] = await Promise.all([
     getProfile(userId),
     getDailyCheckin(userId, day),
     getDayOverview(userId, day, timezoneOffsetMinutes),
+    getLatestEveningReviewBefore(userId, day, 7),
   ]);
 
   const candidates = buildCandidates({ profile, checkin, overview, localHour });
   const lastRejected = existing.find((action) => ['replaced','dismissed'].includes(action.status));
-  const selected = candidates.find((candidate) => candidate.kind !== lastRejected?.kind) || candidates[0];
+  const selected = selectAdaptiveCandidate(candidates, {
+    currentRejectedKind: lastRejected?.kind || null,
+    previousReview,
+  });
   const action = await createAction(userId, day, {
     ...selected,
     source: 'rules',

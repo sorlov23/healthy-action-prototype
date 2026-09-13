@@ -6,6 +6,7 @@
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const timeoutMs = Math.max(500, Number(config.apiTimeoutMs || 2500));
   const SESSION_KEY = 'ha_api_session_v1';
+  const APP_KEY = 'healthy-action-v07';
   const rawCatalog = Array.isArray(window.HEALTHY_FOOD_CATALOG) ? window.HEALTHY_FOOD_CATALOG : [];
 
   function normalizeFood(record) {
@@ -37,6 +38,11 @@
       localStorage.removeItem(SESSION_KEY);
       return null;
     }
+  }
+
+  function hasLocalProfile() {
+    try { return Boolean(JSON.parse(localStorage.getItem(APP_KEY) || '{}').profile); }
+    catch { return false; }
   }
 
   function saveSession(session) {
@@ -82,7 +88,14 @@
 
   async function ensureSession() {
     if (!api.enabled) return null;
-    return readSession() || createSession();
+    const existing = readSession();
+    if (existing) return existing;
+    // A fresh install has no server state to restore. Keep identity lazy until
+    // onboarding has created the local profile; real mutations then create the
+    // guest session on demand. This prevents an empty bootstrap from racing the
+    // goal-first onboarding UI.
+    if (!hasLocalProfile()) return null;
+    return createSession();
   }
 
   async function authorizedJson(path, options = {}, retry = true) {
@@ -176,7 +189,7 @@
       return result;
     };
 
-    if (api.enabled) {
+    if (api.enabled && (readSession() || hasLocalProfile())) {
       ensureSession().catch((error) => console.warn('Healthy Action session bootstrap deferred', error));
     }
   }

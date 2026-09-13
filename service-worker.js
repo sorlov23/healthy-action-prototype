@@ -1,4 +1,4 @@
-const CACHE='rinlo-pwa-v48';
+const CACHE='rinlo-pwa-v51';
 const ASSETS=[
   './pwa.html',
   './v07.html?rev=24',
@@ -10,7 +10,7 @@ const ASSETS=[
   './food-catalog.js?rev=24',
   './pwa-enhancements.js?rev=24',
   './pwa-api.js?rev=24',
-  './pwa-sync.js?rev=24',
+  './pwa-sync.js?rev=51',
   './pwa-state-sync.js?rev=24',
   './pwa-profile-sync.js?rev=24',
   './pwa-account-sync.js?rev=24',
@@ -26,6 +26,7 @@ const ASSETS=[
   './rinlo-functional-v1.js?rev=30',
   './rinlo-stability-v1.js?rev=48',
   './rinlo-server-sync-v1.js?rev=42',
+  './rinlo-adaptive-learning-v1.js?rev=50',
   './rinlo-action-sync-v1.js?rev=42',
   './rinlo-evening-review-v1.js?rev=46',
   './rinlo-server-restore-v1.js?rev=33',

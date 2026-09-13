@@ -19,6 +19,7 @@ on:
       - 'rinlo-functional-v1.js'
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
+      - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-action-sync-v1.js'
       - 'rinlo-evening-review-v1.js'
       - 'rinlo-server-restore-v1.js'
@@ -40,6 +41,8 @@ on:
       - 'tests/rinlo-supabase-evening-review-transport.mjs'
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
+      - 'tests/rinlo-adaptive-learning.mjs'
+      - 'tests/rinlo-fastify-lazy-session.mjs'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'service-worker.js'
@@ -62,6 +65,7 @@ on:
       - 'rinlo-functional-v1.js'
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
+      - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-action-sync-v1.js'
       - 'rinlo-evening-review-v1.js'
       - 'rinlo-server-restore-v1.js'
@@ -83,6 +87,8 @@ on:
       - 'tests/rinlo-supabase-evening-review-transport.mjs'
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
+      - 'tests/rinlo-adaptive-learning.mjs'
+      - 'tests/rinlo-fastify-lazy-session.mjs'
       - 'manifest.webmanifest'
       - 'icon.svg'
       - 'service-worker.js'
@@ -112,6 +118,7 @@ jobs:
           node --check rinlo-functional-v1.js
           node --check rinlo-stability-v1.js
           node --check rinlo-server-sync-v1.js
+          node --check rinlo-adaptive-learning-v1.js
           node --check rinlo-action-sync-v1.js
           node --check rinlo-evening-review-v1.js
           node --check rinlo-server-restore-v1.js
@@ -133,6 +140,8 @@ jobs:
           node --check tests/rinlo-supabase-evening-review-transport.mjs
           node --check tests/rinlo-action-sync.mjs
           node --check tests/rinlo-evening-review.mjs
+          node --check tests/rinlo-adaptive-learning.mjs
+          node --check tests/rinlo-fastify-lazy-session.mjs
           node --check service-worker.js
 
       - name: Test Supabase auth lifecycle
@@ -153,6 +162,12 @@ jobs:
       - name: Test durable evening review sync
         run: node tests/rinlo-evening-review.mjs
 
+      - name: Test adaptive learning contract
+        run: node tests/rinlo-adaptive-learning.mjs
+
+      - name: Test lazy Fastify guest session
+        run: node tests/rinlo-fastify-lazy-session.mjs
+
       - name: Check public Supabase config safety
         run: |
           grep -q "supabaseAuthEnabled: true" runtime-config.js
@@ -169,7 +184,7 @@ jobs:
           grep -q 'rinlo-supabase-action-transport-v1.js?rev=43' pwa.html
           grep -q 'rinlo-supabase-evening-review-transport-v1.js?rev=46' pwa.html
           grep -q 'pwa-api.js?rev=24' pwa.html
-          grep -q 'pwa-sync.js?rev=24' pwa.html
+          grep -q 'pwa-sync.js?rev=51' pwa.html
           grep -q 'pwa-state-sync.js?rev=24' pwa.html
           grep -q 'pwa-profile-sync.js?rev=24' pwa.html
           grep -q 'pwa-account-sync.js?rev=24' pwa.html
@@ -183,18 +198,21 @@ jobs:
           grep -q 'rinlo-functional-v1.js?rev=30' pwa.html
           grep -q 'rinlo-stability-v1.js?rev=48' pwa.html
           grep -q 'rinlo-server-sync-v1.js?rev=42' pwa.html
+          grep -q 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-evening-review-v1.js?rev=46' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=48' pwa.html
+          grep -q 'service-worker.js?rev=51' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v48" service-worker.js
+          grep -q "rinlo-pwa-v51" service-worker.js
+          grep -q "./pwa-sync.js?rev=51" service-worker.js
           grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
           grep -q "./rinlo-supabase-evening-review-transport-v1.js?rev=46" service-worker.js
           grep -q "./rinlo-profile-v01.js?rev=45" service-worker.js
           grep -q "./rinlo-stability-v1.js?rev=48" service-worker.js
           grep -q "./rinlo-server-sync-v1.js?rev=42" service-worker.js
+          grep -q "./rinlo-adaptive-learning-v1.js?rev=50" service-worker.js
           grep -q "./rinlo-action-sync-v1.js?rev=42" service-worker.js
           grep -q "./rinlo-evening-review-v1.js?rev=46" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
@@ -203,6 +221,7 @@ jobs:
           review_transport_line=$(grep -n 'rinlo-supabase-evening-review-transport-v1.js?rev=46' pwa.html | cut -d: -f1)
           core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
           sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
+          adaptive_line=$(grep -n 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html | cut -d: -f1)
           action_sync_line=$(grep -n 'rinlo-action-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
           evening_review_line=$(grep -n 'rinlo-evening-review-v1.js?rev=46' pwa.html | cut -d: -f1)
           restore_line=$(grep -n 'rinlo-server-restore-v1.js?rev=33' pwa.html | cut -d: -f1)
@@ -210,6 +229,7 @@ jobs:
           test "$action_transport_line" -lt "$review_transport_line"
           test "$review_transport_line" -lt "$core_line"
           test "$core_line" -lt "$sync_line"
-          test "$sync_line" -lt "$action_sync_line"
+          test "$sync_line" -lt "$adaptive_line"
+          test "$adaptive_line" -lt "$action_sync_line"
           test "$action_sync_line" -lt "$evening_review_line"
           test "$evening_review_line" -lt "$restore_line"

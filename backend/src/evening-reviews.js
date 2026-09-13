@@ -8,6 +8,7 @@ function mapReview(row) {
     planFit: row.plan_fit,
     actionUseful: row.action_useful,
     mainActionId: row.main_action_id || null,
+    mainActionKind: row.main_action_kind || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -19,6 +20,21 @@ export async function getEveningReview(userId, day) {
     from daily_evening_reviews
     where user_id = $1 and day = $2::date
   `, [userId, day]);
+  return result.rowCount ? mapReview(result.rows[0]) : null;
+}
+
+export async function getLatestEveningReviewBefore(userId, day, maxDays = 7) {
+  const result = await pool.query(`
+    select r.*, a.kind as main_action_kind
+    from daily_evening_reviews r
+    left join rinlo_actions a
+      on a.id = r.main_action_id and a.user_id = r.user_id
+    where r.user_id = $1
+      and r.day < $2::date
+      and r.day >= ($2::date - $3::integer)
+    order by r.day desc
+    limit 1
+  `, [userId, day, maxDays]);
   return result.rowCount ? mapReview(result.rows[0]) : null;
 }
 

@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'pwa.html'
+      - 'pwa-sync.js'
       - 'v07.html'
       - 'rinlo-*.js'
       - 'tests/rinlo-functional.mjs'
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - 'pwa.html'
+      - 'pwa-sync.js'
       - 'v07.html'
       - 'rinlo-*.js'
       - 'tests/rinlo-functional.mjs'
