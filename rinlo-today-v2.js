@@ -274,6 +274,23 @@
     timer = setTimeout(enhanceToday, 70);
   }
 
+  function hookRenders(win) {
+    ['render', 'renderToday'].forEach((name) => {
+      const original = win[name];
+      if (typeof original !== 'function' || original.__rinloTodayV2Wrapped) return;
+      const wrapped = function (...args) {
+        const result = original.apply(this, args);
+        setTimeout(enhanceToday, 0);
+        setTimeout(enhanceToday, 90);
+        return result;
+      };
+      wrapped.__rinloTodayV2Wrapped = true;
+      wrapped.__rinloTodayV2Original = original;
+      win[name] = wrapped;
+    });
+    win.rinloTodayV2Refresh = enhanceToday;
+  }
+
   function install(attempt = 0) {
     const doc = frame.contentDocument;
     const win = frame.contentWindow;
@@ -281,6 +298,7 @@
       if (attempt < 80) setTimeout(() => install(attempt + 1), 75);
       return;
     }
+    hookRenders(win);
     observer?.disconnect();
     observer = new MutationObserver(schedule);
     observer.observe(doc.documentElement, { childList: true, subtree: true });
