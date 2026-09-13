@@ -23,14 +23,45 @@ async function appFrame() {
     && window.__rinloStability === 'v1'
     && window.__rinloServerSync === 'v1'
     && window.__rinloEveningReview === 'v1'
+    && window.__rinloProductReset === 'v1'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
     && window.RinloEveningReview?.version === 'v1'
     && window.HealthyActionAPI?.enabled === true
   ), null, { timeout: 15000 });
-  await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
+}
+
+async function finishProductReset(app) {
+  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.locator('[data-primary-goal="weight_loss"]').click();
+  await app.locator('#rprNext').click();
+  await app.getByRole('button', { name: 'Нормально', exact: true }).click();
+  await app.getByRole('button', { name: '15 минут', exact: true }).click();
+  await app.locator('#rprCreate').click();
+  await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
+  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
+}
+
+async function completeDetailedProfile(app) {
+  await app.locator('.nav button').nth(3).click();
+  await app.locator('#profile').waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Изменить параметры/ }).click();
+  await app.locator('#onboarding').waitFor({ state: 'visible' });
+  await app.locator('[data-primary-goal="weight_loss"]').click();
+  await app.locator('#rcOnNext').click();
+  await app.locator('#obWeight').fill('85');
+  await app.locator('#obGoal').fill('75');
+  await app.locator('#obHeight').fill('176');
+  await app.locator('#obAge').fill('37');
+  await app.locator('#rcSex').selectOption('male');
+  await app.locator('#rcOnNext').click();
+  await app.locator('#rcOnNext').click();
+  await app.locator('#rcOnNext').click();
+  await app.locator('#today').waitFor({ state: 'visible' });
 }
 
 async function syncNow() {
@@ -55,18 +86,14 @@ async function waitFor(promise, timeoutMs, message) {
 try {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   let app = await appFrame();
+  await finishProductReset(app);
 
-  await app.locator('[data-primary-goal="weight_loss"]').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#obWeight').fill('85');
-  await app.locator('#obGoal').fill('75');
-  await app.locator('#obHeight').fill('176');
-  await app.locator('#obAge').fill('37');
-  await app.locator('#rcSex').selectOption('male');
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#today').waitFor({ state: 'visible' });
+  const minimalProfile = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
+  assert(minimalProfile?.primaryGoal === 'weight_loss' && minimalProfile?.detailsComplete === false, 'Product Reset did not create the minimal local profile');
+
+  // Detailed health parameters are progressive profiling. They are only added
+  // after the user has already seen Rinlo's first recommendation.
+  await completeDetailedProfile(app);
 
   await app.getByRole('button', { name: 'Нормально' }).click();
   await app.locator('.rc-action').waitFor({ state: 'visible' });
@@ -135,7 +162,7 @@ try {
   state = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}'));
   dayKey = Object.keys(state.days || {}).sort().at(-1);
   day = state.days?.[dayKey];
-  assert(state.profile?.weight === 85, 'Local profile missing before restore');
+  assert(state.profile?.weight === 85, 'Local detailed profile missing before restore');
   assert(day?.water === 250, `Unexpected water before restore: ${day?.water}`);
   assert(day?.steps === 1000, `Unexpected steps before restore: ${day?.steps}`);
   assert(day?.rinloEveningReview?.planFit === 'right', `Evening review plan fit missing before restore: ${JSON.stringify(day?.rinloEveningReview)}`);
@@ -150,9 +177,6 @@ try {
   await app.evaluate((id) => window.delEvent(id), weight.id);
   await syncNow();
 
-  // Simulate loss of the local application payload while keeping the current
-  // guest session identity. Full localStorage.clear() cannot restore an anonymous
-  // user because the session token itself is stored locally.
   await page.evaluate(() => {
     localStorage.removeItem('healthy-action-v07');
     localStorage.removeItem('rinlo-sync-outbox-v1');
