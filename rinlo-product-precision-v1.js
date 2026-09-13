@@ -24,7 +24,7 @@
     style.textContent = `
       .rpp-head{padding:2px 0 5px}.rpp-kicker{font-size:10.5px;font-weight:650;color:#2E8F68;margin-bottom:6px}.rpp-head h2{margin:0!important;font-size:23px!important;line-height:1.08!important;letter-spacing:-.035em!important}.rpp-head p{margin:7px 0 0;font-size:11px;line-height:1.43;color:#788480}
       .rpp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}.rpp-field{min-width:0}.rpp-field.full{grid-column:1/-1}.rpp-field label{display:block;margin:0 0 6px;font-size:10px;font-weight:650;color:#7D8884}.rpp-field input,.rpp-field select{box-sizing:border-box;width:100%;height:49px;border:1px solid #E1E8E4;border-radius:14px;background:#FBFCFC;padding:0 12px;color:#111B18;font-size:14px;outline:none}.rpp-field input:focus,.rpp-field select:focus{border-color:#8BC8AE;box-shadow:0 0 0 3px rgba(36,151,101,.07)}
-      .rpp-calories{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding:12px 13px;border-radius:15px;background:#F3FAF6}.rpp-calories b{display:block;font-size:11.5px}.rpp-calories span{display:block;margin-top:3px;font-size:9.5px;line-height:1.35;color:#7D8884}.rpp-check{width:46px;height:28px;flex:0 0 46px;box-sizing:border-box;border:0;border-radius:99px;padding:2px;background:#CDD7D2}.rpp-check i{display:block;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .16s ease}.rpp-check.on{background:#249765}.rpp-check.on i{transform:translateX(18px)}
+      .rpp-calories{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding:12px 13px;border-radius:15px;background:#F3FAF6}.rpp-calories b{display:block;font-size:11.5px}.rpp-calories span{display:block;margin-top:3px;font-size:9.5px;line-height:1.35;color:#7D8884}.rpp-check{width:50px;height:30px;flex:0 0 50px;box-sizing:border-box;border:0;border-radius:99px;padding:2px;background:#CDD7D2}.rpp-check i{display:block;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .16s ease}.rpp-check.on{background:#249765}.rpp-check.on i{transform:translateX(20px)}
       .rpp-save{width:100%;min-height:50px;margin-top:15px;border:0;border-radius:15px;background:#101A18;color:#fff;font-weight:650}.rpp-note{margin-top:9px;font-size:9.5px;line-height:1.4;color:#87918E;text-align:center}
     `;
     doc.head.appendChild(style);
@@ -74,8 +74,6 @@
     ensureStyles(doc);
 
     win.rinloProductOpenPrecision = () => renderSheet(win, doc);
-    // Legacy profile markup resolves this global at click time. Keeping the
-    // function name lets old UI layers coexist while changing the product flow.
     win.restartOnboarding = () => renderSheet(win, doc);
     win.rinloProductPrecisionToggle = () => {
       const button = doc.getElementById('rppCalories');
