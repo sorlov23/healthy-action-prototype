@@ -56,7 +56,7 @@ try {
   assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)}`);
 
   await app.locator('.rc-quick button').filter({ hasText:'Еда' }).click();
-  await app.getByRole('heading', { name:'Что съели?', exact:true }).waitFor({ state:'visible' });
+  await app.getByRole('heading', { name:'Добавить еду', exact:true }).waitFor({ state:'visible' });
   await app.getByRole('button', { name:/Фото/ }).waitFor();
   await app.getByRole('button', { name:/Написать/ }).waitFor();
   await app.getByRole('button', { name:/Недавнее/ }).waitFor();
@@ -68,7 +68,7 @@ try {
 
   await input.fill('куриная грудка, рис и огурец');
   await app.getByRole('button', { name:'Распознать описание', exact:true }).click();
-  await app.getByRole('heading', { name:'Похоже на это', exact:true }).waitFor();
+  await app.getByRole('heading', { name:'Вот что получилось', exact:true }).waitFor();
   const chips = await app.locator('.rsf-chip').allInnerTexts();
   assert(chips.some(v => v.includes('Куриная грудка')), `chicken not parsed: ${JSON.stringify(chips)}`);
   assert(chips.some(v => v.includes('Рис белый')), `rice not parsed: ${JSON.stringify(chips)}`);
@@ -82,7 +82,7 @@ try {
   const largeCal = Number(await app.locator('#rfFoodCal').inputValue());
   assert(largeCal > mediumCal, `large portion did not increase calories: ${mediumCal} -> ${largeCal}`);
 
-  await app.getByRole('button', { name:'Всё верно — сохранить', exact:true }).click();
+  await app.getByRole('button', { name:'Сохранить', exact:true }).click();
   await app.locator('#rcTimeline').getByText('куриная грудка, рис и огурец').waitFor({ state:'visible' });
   const saved = await app.locator('body').evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
@@ -96,7 +96,7 @@ try {
   await app.getByRole('button', { name:/Недавнее/ }).click();
   await app.getByRole('button', { name:/куриная грудка, рис и огурец/ }).waitFor({ state:'visible' });
   await app.getByRole('button', { name:/куриная грудка, рис и огурец/ }).click();
-  await app.getByRole('heading', { name:'Похоже на это', exact:true }).waitFor();
+  await app.getByRole('heading', { name:'Вот что получилось', exact:true }).waitFor();
   assert(Number(await app.locator('#rfFoodCal').inputValue()) === largeCal, 'recent calories changed');
   await app.getByRole('button', { name:'← Назад', exact:true }).click();
 
