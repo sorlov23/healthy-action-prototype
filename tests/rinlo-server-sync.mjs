@@ -27,6 +27,7 @@ async function appFrame() {
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
     && window.__rinloCopyPass === 'v1'
+    && window.__rinloTodayV2 === 'v1'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
@@ -98,7 +99,7 @@ try {
 
   await completeDetailedProfile(app);
 
-  await app.getByRole('button', { name: 'Нормально' }).click();
+  await app.evaluate(() => window.rinloCoreCheckin?.('okay'));
   await app.locator('.rc-action').waitFor({ state: 'visible' });
 
   await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
