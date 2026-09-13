@@ -24,6 +24,7 @@ async function appFrame() {
     && window.__rinloServerSync === 'v1'
     && window.__rinloEveningReview === 'v1'
     && window.__rinloProductReset === 'v1'
+    && window.__rinloProductPrecision === 'v1'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
@@ -49,18 +50,20 @@ async function finishProductReset(app) {
 async function completeDetailedProfile(app) {
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Изменить параметры/ }).click();
-  await app.locator('#onboarding').waitFor({ state: 'visible' });
-  await app.locator('[data-primary-goal="weight_loss"]').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#obWeight').fill('85');
-  await app.locator('#obGoal').fill('75');
-  await app.locator('#obHeight').fill('176');
-  await app.locator('#obAge').fill('37');
-  await app.locator('#rcSex').selectOption('male');
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
+  await app.getByRole('button', { name: /Уточнить параметры/ }).click();
+  await app.getByRole('heading', { name: 'Уточнить параметры', exact: true }).waitFor({ state: 'visible' });
+  await app.locator('#rppWeight').fill('85');
+  await app.locator('#rppGoal').fill('75');
+  await app.locator('#rppHeight').fill('176');
+  await app.locator('#rppAge').fill('37');
+  await app.locator('#rppActivity').selectOption('low');
+  await app.locator('#rppSex').selectOption('male');
+  await app.getByRole('button', { name: 'Сохранить параметры', exact: true }).click();
+  const profile = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
+  assert(profile?.detailsComplete === true, 'Progressive profile did not become complete');
+  assert(profile?.primaryGoal === 'weight_loss', 'Progressive profile overwrote Product Reset goal');
+  assert(profile?.weight === 85 && profile?.goal === 75 && profile?.height === 176 && profile?.age === 37, 'Progressive profile values missing');
+  await app.locator('.nav button').nth(0).click();
   await app.locator('#today').waitFor({ state: 'visible' });
 }
 
@@ -91,8 +94,8 @@ try {
   const minimalProfile = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
   assert(minimalProfile?.primaryGoal === 'weight_loss' && minimalProfile?.detailsComplete === false, 'Product Reset did not create the minimal local profile');
 
-  // Detailed health parameters are progressive profiling. They are only added
-  // after the user has already seen Rinlo's first recommendation.
+  // Detailed parameters are progressive profiling: the first recommendation
+  // already exists before the user chooses to add numbers.
   await completeDetailedProfile(app);
 
   await app.getByRole('button', { name: 'Нормально' }).click();
@@ -101,8 +104,6 @@ try {
   await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
   await app.locator('.rc-quick button').filter({ hasText: '+1000' }).click();
 
-  // Hold the first food create request open so an edit happens while the create
-  // item is genuinely in flight. The edit must survive as a dependent update.
   let foodCreateSeenResolve;
   let foodCreateRelease;
   let interceptFirstFoodCreate = true;
