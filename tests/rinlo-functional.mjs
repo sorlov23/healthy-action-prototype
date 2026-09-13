@@ -20,6 +20,7 @@ async function appFrame() {
     && window.__rinloSettingsBridge === 'v1'
     && window.__rinloEveningReview === 'v1'
     && window.__rinloProductReset === 'v1'
+    && window.__rinloProductPrecision === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
@@ -78,9 +79,6 @@ try {
   await app.getByRole('button', { name: 'Добавить в дневник' }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Evening Review is a standalone Plan flow. Verify it before the older,
-  // optional action-row regression so one scenario cannot leave transient UI
-  // state that affects the other.
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
   const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
@@ -99,7 +97,6 @@ try {
   assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
   assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
 
-  // Keep the older optional Plan-row regression independently covered.
   await app.locator('.nav button').nth(0).click();
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('.nav button').nth(1).click();
@@ -122,7 +119,7 @@ try {
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
   await app.getByText('Rinlo уже работает без анкеты', { exact: true }).waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Изменить параметры/ }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Уточнить параметры/ }).waitFor({ state: 'visible' });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
@@ -145,16 +142,25 @@ try {
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Detailed parameters are progressive profiling: they are opened only when
-  // the user explicitly asks to make recommendations more precise.
+  // Progressive profiling stays a sheet inside the working app. It must never
+  // send an existing user back through first-run onboarding.
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  const editProfile = app.getByRole('button', { name: /Изменить параметры/ });
+  const editProfile = app.getByRole('button', { name: /Уточнить параметры/ });
   await editProfile.waitFor({ state: 'visible' });
   await editProfile.click();
-  await app.locator('#onboarding').waitFor({ state: 'visible' });
-  await app.locator('#rcOnStep').filter({ hasText: '1 из 4' }).waitFor({ state: 'visible' });
-  await app.getByRole('heading', { name: 'Что сейчас хочется улучшить?' }).waitFor();
+  await app.getByRole('heading', { name: 'Уточнить параметры', exact: true }).waitFor({ state: 'visible' });
+  assert(!(await app.getByRole('heading', { name: /Не идеальный план/ }).isVisible().catch(() => false)), 'Progressive profiling reopened first-run onboarding');
+  await app.locator('#rppWeight').fill('85');
+  await app.locator('#rppGoal').fill('75');
+  await app.locator('#rppHeight').fill('176');
+  await app.locator('#rppAge').fill('37');
+  await app.locator('#rppSex').selectOption('male');
+  await app.getByRole('button', { name: 'Сохранить параметры', exact: true }).click();
+  const precision = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
+  assert(precision?.detailsComplete === true, 'Progressive profile did not become complete');
+  assert(precision?.primaryGoal === 'weight_loss', 'Progressive profile overwrote the primary goal');
+  assert(precision?.weight === 85 && precision?.height === 176 && precision?.sex === 'male', 'Progressive profile values were not saved');
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
   console.log('Rinlo functional MVP smoke test passed');
