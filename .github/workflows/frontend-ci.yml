@@ -20,6 +20,8 @@ on:
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
       - 'rinlo-adaptive-learning-v1.js'
+      - 'rinlo-product-reset-v1.js'
+      - 'rinlo-product-precision-v1.js'
       - 'rinlo-action-sync-v1.js'
       - 'rinlo-evening-review-v1.js'
       - 'rinlo-server-restore-v1.js'
@@ -66,6 +68,8 @@ on:
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
       - 'rinlo-adaptive-learning-v1.js'
+      - 'rinlo-product-reset-v1.js'
+      - 'rinlo-product-precision-v1.js'
       - 'rinlo-action-sync-v1.js'
       - 'rinlo-evening-review-v1.js'
       - 'rinlo-server-restore-v1.js'
@@ -119,6 +123,8 @@ jobs:
           node --check rinlo-stability-v1.js
           node --check rinlo-server-sync-v1.js
           node --check rinlo-adaptive-learning-v1.js
+          node --check rinlo-product-reset-v1.js
+          node --check rinlo-product-precision-v1.js
           node --check rinlo-action-sync-v1.js
           node --check rinlo-evening-review-v1.js
           node --check rinlo-server-restore-v1.js
@@ -199,14 +205,18 @@ jobs:
           grep -q 'rinlo-stability-v1.js?rev=48' pwa.html
           grep -q 'rinlo-server-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html
+          grep -q 'rinlo-product-reset-v1.js?rev=1' pwa.html
+          grep -q 'rinlo-product-precision-v1.js?rev=52' pwa.html
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-evening-review-v1.js?rev=46' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=51' pwa.html
+          grep -q 'service-worker.js?rev=52' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v51" service-worker.js
+          grep -q "rinlo-pwa-v52" service-worker.js
           grep -q "./pwa-sync.js?rev=51" service-worker.js
+          grep -q "./rinlo-product-reset-v1.js?rev=1" service-worker.js
+          grep -q "./rinlo-product-precision-v1.js?rev=52" service-worker.js
           grep -q "./rinlo-supabase-action-transport-v1.js?rev=43" service-worker.js
           grep -q "./rinlo-supabase-evening-review-transport-v1.js?rev=46" service-worker.js
           grep -q "./rinlo-profile-v01.js?rev=45" service-worker.js
@@ -222,6 +232,8 @@ jobs:
           core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
           sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
           adaptive_line=$(grep -n 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html | cut -d: -f1)
+          reset_line=$(grep -n 'rinlo-product-reset-v1.js?rev=1' pwa.html | cut -d: -f1)
+          precision_line=$(grep -n 'rinlo-product-precision-v1.js?rev=52' pwa.html | cut -d: -f1)
           action_sync_line=$(grep -n 'rinlo-action-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
           evening_review_line=$(grep -n 'rinlo-evening-review-v1.js?rev=46' pwa.html | cut -d: -f1)
           restore_line=$(grep -n 'rinlo-server-restore-v1.js?rev=33' pwa.html | cut -d: -f1)
@@ -230,6 +242,8 @@ jobs:
           test "$review_transport_line" -lt "$core_line"
           test "$core_line" -lt "$sync_line"
           test "$sync_line" -lt "$adaptive_line"
-          test "$adaptive_line" -lt "$action_sync_line"
+          test "$adaptive_line" -lt "$reset_line"
+          test "$reset_line" -lt "$precision_line"
+          test "$precision_line" -lt "$action_sync_line"
           test "$action_sync_line" -lt "$evening_review_line"
           test "$evening_review_line" -lt "$restore_line"

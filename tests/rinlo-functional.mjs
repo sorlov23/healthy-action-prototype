@@ -19,9 +19,10 @@ async function appFrame() {
     && window.__rinloStability === 'v1'
     && window.__rinloSettingsBridge === 'v1'
     && window.__rinloEveningReview === 'v1'
+    && window.__rinloProductReset === 'v1'
+    && window.__rinloProductPrecision === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
-  await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
 }
 
@@ -29,28 +30,38 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function finishProductReset(app) {
+  await app.getByRole('heading', { name: /Не идеальный план/ }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: 'Показать мой первый шаг →', exact: true }).click();
+  await app.locator('[data-primary-goal="weight_loss"]').click();
+  await app.locator('#rprNext').click();
+  await app.getByRole('button', { name: 'Нормально', exact: true }).click();
+  await app.getByRole('button', { name: '15 минут', exact: true }).click();
+  await app.locator('#rprCreate').click();
+  await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
+  await app.getByRole('button', { name: 'Оставить этот шаг', exact: true }).click();
+  await app.locator('#today').waitFor({ state: 'visible' });
+}
+
 try {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   let app = await appFrame();
+  await finishProductReset(app);
 
-  await app.locator('[data-primary-goal="weight_loss"]').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#obWeight').fill('85');
-  await app.locator('#obGoal').fill('75');
-  await app.locator('#obHeight').fill('176');
-  await app.locator('#obAge').fill('37');
-  await app.locator('#rcSex').selectOption('male');
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-  await app.locator('#rcOnNext').click();
-
-  await app.locator('#today').waitFor({ state: 'visible' });
-  const hasProfile = await app.evaluate(() => Boolean(JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile));
-  assert(hasProfile, 'Onboarding did not persist profile');
-
-  await app.getByRole('button', { name: 'Нормально' }).click();
-  await app.locator('.rc-action').waitFor({ state: 'visible' });
-  assert((await app.locator('.rc-action h2').textContent())?.trim(), 'Rinlo action was not generated');
+  const firstRun = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = Object.keys(db.days || {}).sort().at(-1);
+    const day = db.days?.[key] || {};
+    return {
+      profile: db.profile || null,
+      checkin: day.rinloCheckin || null,
+      action: (day.rinloActions || []).find((item) => ['suggested', 'accepted'].includes(item.status)) || null,
+    };
+  });
+  assert(firstRun.profile?.primaryGoal === 'weight_loss', 'Product Reset did not persist the primary goal');
+  assert(firstRun.profile?.detailsComplete === false, 'Detailed profile unexpectedly became mandatory');
+  assert(firstRun.checkin?.wellbeing === 'okay', 'Product Reset did not persist today context');
+  assert(firstRun.action?.title, 'Product Reset did not create the first action');
 
   await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
   const water = await app.evaluate(() => {
@@ -68,9 +79,6 @@ try {
   await app.getByRole('button', { name: 'Добавить в дневник' }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Evening Review is a standalone Plan flow. Verify it before the older,
-  // optional action-row regression so one scenario cannot leave transient UI
-  // state that affects the other.
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
   const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
@@ -89,7 +97,6 @@ try {
   assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
   assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
 
-  // Keep the older optional Plan-row regression independently covered.
   await app.locator('.nav button').nth(0).click();
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('.nav button').nth(1).click();
@@ -98,9 +105,6 @@ try {
   if (await proteinRow.isVisible().catch(() => false)) {
     let clicked = false;
     try {
-      // Plan can legitimately rerender while recommendations refresh. If this
-      // optional row disappears during that rerender, treat it like the already
-      // supported "row absent" case rather than waiting on a detached node.
       await proteinRow.click({ timeout: 1500 });
       clicked = true;
     } catch (error) {
@@ -114,9 +118,9 @@ try {
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  await app.getByRole('button', { name: /Изменить параметры/ }).waitFor({ state: 'visible' });
+  await app.getByText('Rinlo уже работает без анкеты', { exact: true }).waitFor({ state: 'visible' });
+  await app.getByRole('button', { name: /Уточнить параметры/ }).waitFor({ state: 'visible' });
 
-  // Persistence is checked independently of which tab the browser restores after reload.
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
 
@@ -125,29 +129,38 @@ try {
     const days = Object.values(db.days || {});
     return {
       profile: Boolean(db.profile),
+      goal: db.profile?.primaryGoal || null,
       water: days.some((day) => Number(day?.water || 0) >= 250),
       food: days.some((day) => (day?.events || []).some((event) => event.type === 'food' && event.text === 'омлет из двух яиц и кофе')),
       eveningReview: days.some((day) => day?.rinloEveningReview?.planFit === 'right' && day?.rinloEveningReview?.actionUseful === 'yes'),
     };
   });
-  assert(persisted.profile && persisted.water && persisted.food && persisted.eveningReview, 'Saved Rinlo state did not survive reload');
+  assert(persisted.profile && persisted.goal === 'weight_loss' && persisted.water && persisted.food && persisted.eveningReview, 'Saved Rinlo state did not survive reload');
 
-  // Whatever tab the browser restores, the saved profile must keep navigation usable.
   await app.locator('.nav').waitFor({ state: 'visible' });
   await app.locator('.nav button').nth(0).click();
   await app.locator('#today').waitFor({ state: 'visible' });
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Profile editing must open the goal-first onboarding from step one. Assert
-  // the user-visible step contract rather than a skin-specific CSS prefix.
+  // Progressive profiling stays a sheet inside the working app. It must never
+  // send an existing user back through first-run onboarding.
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
-  const editProfile = app.getByRole('button', { name: /Изменить параметры/ });
+  const editProfile = app.getByRole('button', { name: /Уточнить параметры/ });
   await editProfile.waitFor({ state: 'visible' });
   await editProfile.click();
-  await app.locator('#onboarding').waitFor({ state: 'visible' });
-  await app.locator('#rcOnStep').filter({ hasText: '1 из 4' }).waitFor({ state: 'visible' });
-  await app.getByRole('heading', { name: 'Что сейчас хочется улучшить?' }).waitFor();
+  await app.getByRole('heading', { name: 'Уточнить параметры', exact: true }).waitFor({ state: 'visible' });
+  assert(!(await app.getByRole('heading', { name: /Не идеальный план/ }).isVisible().catch(() => false)), 'Progressive profiling reopened first-run onboarding');
+  await app.locator('#rppWeight').fill('85');
+  await app.locator('#rppGoal').fill('75');
+  await app.locator('#rppHeight').fill('176');
+  await app.locator('#rppAge').fill('37');
+  await app.locator('#rppSex').selectOption('male');
+  await app.getByRole('button', { name: 'Сохранить параметры', exact: true }).click();
+  const precision = await app.evaluate(() => JSON.parse(localStorage.getItem('healthy-action-v07') || '{}').profile || null);
+  assert(precision?.detailsComplete === true, 'Progressive profile did not become complete');
+  assert(precision?.primaryGoal === 'weight_loss', 'Progressive profile overwrote the primary goal');
+  assert(precision?.weight === 85 && precision?.height === 176 && precision?.sex === 'male', 'Progressive profile values were not saved');
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
   console.log('Rinlo functional MVP smoke test passed');

@@ -9,6 +9,7 @@ on:
       - 'rinlo-*.js'
       - 'tests/rinlo-functional.mjs'
       - 'tests/rinlo-ui-toggle.mjs'
+      - 'tests/rinlo-product-reset.mjs'
       - '.github/workflows/functional-e2e.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'rinlo-*.js'
       - 'tests/rinlo-functional.mjs'
       - 'tests/rinlo-ui-toggle.mjs'
+      - 'tests/rinlo-product-reset.mjs'
       - '.github/workflows/functional-e2e.yml'
 
 jobs:
@@ -72,7 +74,7 @@ jobs:
 
       - name: Run mobile functional smoke test
         run: |
-          if node tests/rinlo-functional.mjs && node tests/rinlo-ui-toggle.mjs; then
+          if node tests/rinlo-product-reset.mjs && node tests/rinlo-functional.mjs && node tests/rinlo-ui-toggle.mjs; then
             exit 0
           fi
           echo '--- PWA HTTP server log ---'
