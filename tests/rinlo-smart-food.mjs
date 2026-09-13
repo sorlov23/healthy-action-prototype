@@ -47,13 +47,13 @@ try {
       ? document.getElementById('app').contentWindow.HEALTHY_FOOD_CATALOG.length
       : -1,
   }));
-  console.log(`RINLO_SMART_FOOD_CATALOG_REALMS=${JSON.stringify(catalogRealms)}`);
+  assert(catalogRealms.outer > 0, `outer catalog missing: ${JSON.stringify(catalogRealms)}`);
+  assert(catalogRealms.iframe === catalogRealms.outer, `catalog bridge mismatch: ${JSON.stringify(catalogRealms)}`);
 
   const directSuggestions = await app.locator('body').evaluate(() =>
     window.RinloSmartFood.suggestions('кури').map(item => item.name)
   );
-  console.log(`RINLO_SMART_FOOD_DIRECT_SUGGESTIONS=${JSON.stringify(directSuggestions)}`);
-  assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)} realms=${JSON.stringify(catalogRealms)}`);
+  assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)}`);
 
   await app.locator('.rc-quick button').filter({ hasText:'Еда' }).click();
   await app.getByRole('heading', { name:'Что съели?', exact:true }).waitFor({ state:'visible' });
@@ -107,7 +107,7 @@ try {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=', 'base64');
   await photo.setInputFiles({ name:'meal.png', mimeType:'image/png', buffer:png });
   await app.locator('#rsfPhotoPreview img').waitFor({ state:'visible' });
-  assert(await app.getByText(/Фото не сохраняется|Vision-анализ/).count() >= 1, 'photo privacy/beta explanation missing');
+  assert(await app.getByText(/Фото остаётся на устройстве и никуда не отправляется/).count() >= 1, 'photo privacy explanation missing');
 
   if (errors.length) throw new Error(`Runtime errors:\n${errors.join('\n')}`);
   console.log(`RINLO_SMART_FOOD_SAVED=${JSON.stringify(saved)}`);
