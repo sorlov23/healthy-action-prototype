@@ -7,22 +7,17 @@
   let observer = null;
   let timer = null;
 
-  const localDayKey = (date = new Date()) => {
+  const dayKey = (date = new Date()) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
-  const readDb = () => {
-    try { return JSON.parse(localStorage.getItem(APP_KEY) || '{}'); }
+  const readDb = (win) => {
+    try { return JSON.parse(win.localStorage.getItem(APP_KEY) || '{}'); }
     catch { return {}; }
   };
-  const currentDayState = (win) => {
-    const key = win.__haViewDay || localDayKey();
-    const db = readDb();
-    return { key, day: db.days?.[key] || {} };
-  };
-  const text = (node) => String(node?.textContent || '').replace(/\s+/g, ' ').trim();
+  const clean = (node) => String(node?.textContent || '').replace(/\s+/g, ' ').trim();
 
   function ensureStyles(doc) {
     if (doc.getElementById('rinlo-today-v2-style')) return;
@@ -58,14 +53,14 @@
       #today.rtv2 .rtv2-checkin-summary b{color:#283b34;font-weight:650}
       #today.rtv2 .rtv2-checkin-summary button{border:0;background:transparent;color:#2f7a5b;font-size:10.5px;font-weight:650;padding:8px 0}
 
-      #today.rtv2 .rc-section.rtv2-add-section{margin-top:18px;margin-bottom:9px}
+      #today.rtv2 .rtv2-add-section{margin-top:18px!important;margin-bottom:9px!important}
       #today.rtv2 .rtv2-add-section h2{font-size:0!important}
       #today.rtv2 .rtv2-add-section h2::after{content:'Добавить';font-size:15px;font-weight:650;color:#111B18}
       #today.rtv2 .rtv2-add-section span{display:none!important}
       #today.rtv2 .rc-quick{margin-bottom:2px}
 
       #today.rtv2 #rcMetrics{margin-top:4px}
-      #today.rtv2 .rtv2-metrics-section{margin-top:18px;margin-bottom:9px}
+      #today.rtv2 .rtv2-metrics-section{margin-top:18px!important;margin-bottom:9px!important}
       #today.rtv2 .rtv2-metrics-section h2{font-size:0!important}
       #today.rtv2 .rtv2-metrics-section h2::after{content:'Ориентиры';font-size:15px;font-weight:650;color:#111B18}
       #today.rtv2 .rtv2-metrics-section span{display:none!important}
@@ -102,60 +97,60 @@
   function enhanceAction(doc, win, day) {
     const card = doc.querySelector('#rcAction .rc-action');
     if (!card) return;
-    const active = (day.rinloActions || []).find((x) => ['suggested', 'accepted'].includes(x.status));
-    const completed = (day.rinloActions || []).find((x) => x.status === 'completed');
+    const actions = day.rinloActions || [];
+    const active = actions.find((item) => ['suggested', 'accepted'].includes(item.status));
+    const completed = actions.find((item) => item.status === 'completed');
     const reviewed = !active && Boolean(completed?.feedback && typeof completed.feedback.useful === 'boolean');
     const closed = Boolean(day.rinloEveningReview || day.closed);
 
-    if (!reviewed && !card.querySelector('.rtv2-why-toggle') && card.querySelector('p')) {
-      const btn = doc.createElement('button');
-      btn.type = 'button';
-      btn.className = 'rtv2-why-toggle';
-      btn.textContent = 'Почему этот шаг?';
-      btn.onclick = () => card.classList.toggle('rtv2-why-open');
-      const effort = card.querySelector('.rc-effort');
-      (effort || card.querySelector('p')).insertAdjacentElement('afterend', btn);
+    if (!reviewed && card.querySelector('p') && !card.querySelector('.rtv2-why-toggle')) {
+      const toggle = doc.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'rtv2-why-toggle';
+      toggle.textContent = 'Почему этот шаг?';
+      toggle.onclick = () => card.classList.toggle('rtv2-why-open');
+      (card.querySelector('.rc-effort') || card.querySelector('p')).insertAdjacentElement('afterend', toggle);
     }
 
-    if (completed && !active && reviewed) {
-      card.classList.add('rtv2-finished');
-      if (!card.querySelector('.rtv2-finished-copy')) {
-        const copy = doc.createElement('div');
-        copy.className = 'rtv2-finished-copy';
-        copy.textContent = 'Дальше можно просто продолжать день.';
-        card.querySelector('.rc-action-kicker')?.insertAdjacentElement('afterend', copy);
-      }
-      if (!closed && !card.querySelector('.rtv2-more-action')) {
-        const more = doc.createElement('button');
-        more.type = 'button';
-        more.className = 'rtv2-more-action';
-        more.textContent = 'Хочу ещё один шаг';
-        more.onclick = () => win.rinloCoreSkipCheckin?.();
-        card.appendChild(more);
-      }
+    if (!reviewed) return;
+    card.classList.add('rtv2-finished');
+    if (!card.querySelector('.rtv2-finished-copy')) {
+      const copy = doc.createElement('div');
+      copy.className = 'rtv2-finished-copy';
+      copy.textContent = 'Дальше можно просто продолжать день.';
+      card.querySelector('.rc-action-kicker')?.insertAdjacentElement('afterend', copy);
+    }
+    if (!closed && !card.querySelector('.rtv2-more-action')) {
+      const more = doc.createElement('button');
+      more.type = 'button';
+      more.className = 'rtv2-more-action';
+      more.textContent = 'Хочу ещё один шаг';
+      more.onclick = () => win.rinloCoreSkipCheckin?.();
+      card.appendChild(more);
     }
   }
 
   function enhanceCheckin(doc, day) {
     const box = doc.getElementById('rcCheckin');
-    const checkin = box?.querySelector('.rc-checkin');
-    if (!box || !checkin || !day.rinloCheckin || !box.classList.contains('rpr-checkin-compact')) return;
-    if (checkin.querySelector('.rtv2-checkin-summary')) return;
-    const selected = text(checkin.querySelector('.rc-mood.sel')) || 'Отмечено';
+    const card = box?.querySelector('.rc-checkin');
+    if (!box || !card || !day.rinloCheckin || !box.classList.contains('rpr-checkin-compact')) return;
+    if (card.querySelector('.rtv2-checkin-summary')) return;
+
+    const mood = clean(card.querySelector('.rc-mood.sel')) || 'Отмечено';
     const energy = Number(day.rinloCheckin.energy);
-    const sleepMinutes = Number(day.rinloCheckin.sleepMinutes);
-    let detail = '';
-    if (Number.isFinite(energy) && energy > 0) detail = ` · энергия ${energy}/5`;
-    else if (Number.isFinite(sleepMinutes) && sleepMinutes > 0) detail = ` · сон ${Math.round(sleepMinutes / 6) / 10} ч`;
+    const sleep = Number(day.rinloCheckin.sleepMinutes);
+    const detail = Number.isFinite(energy) && energy > 0
+      ? ` · энергия ${energy}/5`
+      : Number.isFinite(sleep) && sleep > 0 ? ` · сон ${Math.round(sleep / 6) / 10} ч` : '';
 
     const summary = doc.createElement('div');
     summary.className = 'rtv2-checkin-summary';
-    summary.innerHTML = `<span>Сегодня: <b>${selected}</b>${detail}</span><button type="button">Изменить</button>`;
+    summary.innerHTML = `<span>Сегодня: <b>${mood}</b>${detail}</span><button type="button">Изменить</button>`;
     summary.querySelector('button').onclick = () => {
       box.classList.toggle('rtv2-checkin-open');
       summary.querySelector('button').textContent = box.classList.contains('rtv2-checkin-open') ? 'Свернуть' : 'Изменить';
     };
-    checkin.insertBefore(summary, checkin.firstChild);
+    card.insertBefore(summary, card.firstChild);
   }
 
   function reorderQuickActions(doc) {
@@ -164,10 +159,9 @@
     const section = quick?.previousElementSibling;
     if (!metrics || !quick || !section?.classList.contains('rc-section')) return;
     section.classList.add('rtv2-add-section');
-    if (quick.nextElementSibling !== metrics) {
-      metrics.parentNode.insertBefore(section, metrics);
-      metrics.parentNode.insertBefore(quick, metrics);
-    }
+    if (quick.nextElementSibling === metrics) return;
+    metrics.parentNode.insertBefore(section, metrics);
+    metrics.parentNode.insertBefore(quick, metrics);
   }
 
   function enhanceMetrics(doc) {
@@ -178,12 +172,12 @@
     if (metrics.querySelector('.rtv2-metrics-summary')) return;
 
     const values = {};
-    const calories = text(metrics.querySelector('.rc-cal-top b'));
+    const calories = clean(metrics.querySelector('.rc-cal-top b'));
     if (calories) values.calories = `${calories} ккал`;
     metrics.querySelectorAll('.rc-mini').forEach((item) => {
-      const label = text(item.querySelector('small')).toLowerCase();
-      const value = text(item.querySelector('b'));
-      if (label && value) values[label] = value;
+      const key = clean(item.querySelector('small')).toLowerCase();
+      const value = clean(item.querySelector('b'));
+      if (key && value) values[key] = value;
     });
     const parts = [];
     if (values.calories) parts.push(`<b>${values.calories}</b>`);
@@ -199,17 +193,17 @@
       metrics.classList.toggle('rtv2-open');
       summary.querySelector('button').textContent = metrics.classList.contains('rtv2-open') ? 'Свернуть' : 'Подробнее';
     };
-    (section || metrics).insertAdjacentElement(section ? 'afterend' : 'afterbegin', summary);
+    if (section) section.insertAdjacentElement('afterend', summary);
+    else metrics.insertBefore(summary, metrics.firstChild);
   }
 
   function enhanceTimeline(doc) {
     const timeline = doc.getElementById('rcTimeline');
     if (!timeline) return;
-    const section = timeline.previousElementSibling;
-    section?.classList.add('rtv2-timeline-section');
+    timeline.previousElementSibling?.classList.add('rtv2-timeline-section');
+
     const events = Array.from(timeline.querySelectorAll('.rc-event'));
     events.forEach((event, index) => event.classList.toggle('rtv2-extra-event', index >= 3));
-
     let toggle = timeline.nextElementSibling?.classList.contains('rtv2-timeline-more') ? timeline.nextElementSibling : null;
     if (events.length <= 3) {
       toggle?.remove();
@@ -232,25 +226,34 @@
     const today = doc.getElementById('today');
     const timeline = doc.getElementById('rcTimeline');
     if (!today || !timeline) return;
+
     const hasReview = Boolean(day.rinloEveningReview || day.closed);
-    const completed = (day.rinloActions || []).some((x) => x.status === 'completed');
-    const shouldShow = key === localDayKey() && (hasReview || completed || new Date().getHours() >= 18);
+    const completed = (day.rinloActions || []).some((item) => item.status === 'completed');
+    const shouldShow = key === dayKey() && (hasReview || completed || new Date().getHours() >= 18);
     let card = today.querySelector('.rtv2-evening');
-    if (!shouldShow) { card?.remove(); return; }
+    if (!shouldShow) {
+      card?.remove();
+      return;
+    }
 
     if (!card) {
       card = doc.createElement('div');
       card.className = 'rtv2-evening';
-      const after = timeline.nextElementSibling?.classList.contains('rtv2-timeline-more') ? timeline.nextElementSibling : timeline;
-      after.insertAdjacentElement('afterend', card);
+      const anchor = timeline.nextElementSibling?.classList.contains('rtv2-timeline-more') ? timeline.nextElementSibling : timeline;
+      anchor.insertAdjacentElement('afterend', card);
     }
+
+    const nextState = hasReview ? 'done' : 'open';
     card.classList.toggle('done', hasReview);
+    if (card.dataset.state === nextState) return;
+    card.dataset.state = nextState;
+
     if (hasReview) {
       card.innerHTML = '<b>✓ Итог дня сохранён</b><p>На сегодня всё. Завтра начнём с нового небольшого шага.</p>';
-    } else if (!card.querySelector('button')) {
-      card.innerHTML = '<b>Как прошёл день?</b><p>Пара вопросов — и закончим на сегодня.</p><button type="button">Подвести итог</button>';
-      card.querySelector('button').onclick = () => win.finishDay?.();
+      return;
     }
+    card.innerHTML = '<b>Как прошёл день?</b><p>Пара вопросов — и закончим на сегодня.</p><button type="button">Подвести итог</button>';
+    card.querySelector('button').onclick = () => win.finishDay?.();
   }
 
   function enhanceToday() {
@@ -259,9 +262,13 @@
     const doc = frame.contentDocument;
     const today = doc?.getElementById('today');
     if (!win || !doc || !today) return;
+
     ensureStyles(doc);
     today.classList.add('rtv2');
-    const { key, day } = currentDayState(win);
+    const db = readDb(win);
+    const key = win.__haViewDay || dayKey();
+    const day = db.days?.[key] || {};
+
     enhanceAction(doc, win, day);
     enhanceCheckin(doc, day);
     reorderQuickActions(doc);
