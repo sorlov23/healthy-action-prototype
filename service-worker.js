@@ -22,6 +22,7 @@ const ASSETS=[
   './rinlo-profile-v01.js?rev=45',
   './rinlo-system-v01.js?rev=35',
   './rinlo-core-ui-v1.js?rev=25',
+  './rinlo-ui-fixes-v1.js?rev=1',
   './rinlo-scale-pass-v1.js?rev=29',
   './rinlo-functional-v1.js?rev=30',
   './rinlo-stability-v1.js?rev=48',
