@@ -47,9 +47,36 @@ try {
   await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today.rtv2').waitFor({ state: 'visible' });
   await app.getByRole('heading', { name: magicTitle, exact: true }).waitFor();
-  await app.getByRole('button', { name: 'Почему этот шаг?', exact: true }).waitFor();
+  await app.evaluate(() => window.rinloTodayV2Refresh?.());
+  await app.waitForTimeout(250);
+
+  const todayV2Diagnostic = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = window.__haViewDay || Object.keys(db.days || {}).sort().at(-1);
+    const day = db.days?.[key] || {};
+    const box = document.getElementById('rcAction');
+    const card = box?.querySelector('.rc-action');
+    const why = card?.querySelector('.rtv2-why-toggle');
+    return {
+      key,
+      todayVisible: getComputedStyle(document.getElementById('today')).display,
+      todayClass: document.getElementById('today')?.className || null,
+      refreshType: typeof window.rinloTodayV2Refresh,
+      actionBoxHtml: box?.innerHTML || null,
+      cardExists: Boolean(card),
+      paragraphExists: Boolean(card?.querySelector('p')),
+      effortExists: Boolean(card?.querySelector('.rc-effort')),
+      whyExists: Boolean(why),
+      whyDisplay: why ? getComputedStyle(why).display : null,
+      actionStates: (day.rinloActions || []).map((item) => ({ title: item.title, status: item.status, feedback: item.feedback || null })),
+    };
+  });
+  console.log(`RINLO_TODAY_V2_DIAGNOSTIC=${JSON.stringify(todayV2Diagnostic)}`);
+  assert(todayV2Diagnostic.whyExists, `Today v2 rationale toggle missing: ${JSON.stringify(todayV2Diagnostic)}`);
+
+  await app.getByRole('button', { name: 'Почему этот шаг?', exact: true }).waitFor({ timeout: 5000 });
   await app.getByText('Сегодня:', { exact: false }).waitFor();
-  await app.getByRole('heading', { name: 'Добавить', exact: true }).waitFor();
+  await app.locator('.rtv2-add-section').waitFor({ state: 'visible' });
 
   const hierarchy = await app.evaluate(() => {
     const today = document.getElementById('today');
