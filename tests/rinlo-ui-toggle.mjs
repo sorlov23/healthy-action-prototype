@@ -33,6 +33,7 @@ try {
   await app.locator('[data-primary-goal="weight_loss"]').click();
   await app.locator('#rcOnNext').click();
   await app.locator('#rcCalToggle').waitFor({ state: 'visible', timeout: 10000 });
+  await page.waitForTimeout(250);
 
   const measure = async () => {
     const track = await app.locator('#rcCalToggle').boundingBox();
@@ -48,16 +49,21 @@ try {
   assert(on.track.height >= 29 && on.track.height <= 31, `calorie_switch_track_height:${on.track.height}`);
   assert(on.thumb.width >= 25 && on.thumb.width <= 27, `calorie_switch_thumb_width:${on.thumb.width}`);
   assert(on.card.x + on.card.width - (on.track.x + on.track.width) >= 13, `calorie_switch_right_inset:${JSON.stringify(on)}`);
+  assert(on.thumb.x - on.track.x >= 21, `calorie_switch_on_not_right:${JSON.stringify(on)}`);
   assert(await app.locator('#rcCalToggle').getAttribute('aria-checked') === 'true', 'calorie_switch_aria_on');
 
   await app.locator('#rcCalToggle').click();
+  await page.waitForTimeout(250);
   const off = await measure();
   assert(within(off.thumb, off.track), `calorie_switch_thumb_overflow_off:${JSON.stringify(off)}`);
+  assert(off.thumb.x - off.track.x <= 3, `calorie_switch_off_not_left:${JSON.stringify(off)}`);
   assert(await app.locator('#rcCalToggle').getAttribute('aria-checked') === 'false', 'calorie_switch_aria_off');
 
   await app.locator('#rcCalToggle').click();
+  await page.waitForTimeout(250);
   const onAgain = await measure();
   assert(within(onAgain.thumb, onAgain.track), `calorie_switch_thumb_overflow_on_again:${JSON.stringify(onAgain)}`);
+  assert(onAgain.thumb.x - onAgain.track.x >= 21, `calorie_switch_on_again_not_right:${JSON.stringify(onAgain)}`);
   assert(await app.locator('#rcCalToggle').getAttribute('aria-checked') === 'true', 'calorie_switch_aria_on_again');
 
   console.log(`RINLO_UI_TOGGLE_GEOMETRY=${JSON.stringify({ on, off, onAgain })}`);
