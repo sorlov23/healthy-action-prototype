@@ -21,6 +21,7 @@ async function appFrame() {
     && window.__rinloEveningReview === 'v1'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
+  await frame.waitForFunction(() => document.getElementById('actions')?.dataset.rinloPlan === 'core-v1', null, { timeout: 10000 });
   await frame.locator('[data-primary-goal="weight_loss"]').waitFor({ state: 'attached', timeout: 10000 });
   return frame;
 }
@@ -50,7 +51,8 @@ try {
 
   await app.getByRole('button', { name: 'Нормально' }).click();
   await app.locator('.rc-action').waitFor({ state: 'visible' });
-  assert((await app.locator('.rc-action h2').textContent())?.trim(), 'Rinlo action was not generated');
+  const todayPrimaryTitle = (await app.locator('.rc-action h2').textContent())?.trim();
+  assert(todayPrimaryTitle, 'Rinlo action was not generated');
 
   await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
   const water = await app.evaluate(() => {
@@ -68,11 +70,23 @@ try {
   await app.getByRole('button', { name: 'Добавить в дневник' }).click();
   await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  // Evening Review is a standalone Plan flow. Verify it before the older,
-  // optional action-row regression so one scenario cannot leave transient UI
-  // state that affects the other.
+  // Core v1 Plan is not a tracker checklist. It must center the exact persisted
+  // primary action from Today, allow at most one optional support card and show
+  // no more than two personal focuses.
   await app.locator('.nav button').nth(1).click();
   await app.locator('#actions').waitFor({ state: 'visible' });
+  await app.locator('#actionHero [data-rinlo-plan-primary]').waitFor({ state: 'visible' });
+  const planPrimaryTitle = (await app.locator('#actionHero .rp-primary-title').textContent())?.trim();
+  assert(planPrimaryTitle === todayPrimaryTitle, `Plan primary action diverged from Today: ${planPrimaryTitle} !== ${todayPrimaryTitle}`);
+  const supportCount = await app.locator('#actionsList [data-rinlo-plan-support]:not([data-rinlo-plan-support="none"])').count();
+  assert(supportCount <= 1, `Plan rendered ${supportCount} supporting actions`);
+  const focusCount = await app.locator('#rinloPlanFocuses .rp-focus-card').count();
+  assert(focusCount <= 2, `Plan rendered ${focusCount} personal focuses`);
+  assert(!(await app.locator('#actions').getByText('до четырёх действий', { exact: false }).count()), 'Legacy four-action Plan copy is still visible');
+  assert(!(await app.locator('#actionsList .item').count()), 'Legacy checklist rows are still present in Core Plan');
+  assert(!(await app.locator('#actionsList').getByText(/ккал/i).count()), 'Calories are still presented as a Plan task');
+
+  // Evening Review remains a standalone Plan flow under the new Core contract.
   const finishDay = app.getByRole('button', { name: 'Подвести спокойный итог дня', exact: true });
   await finishDay.waitFor({ state: 'visible' });
   await finishDay.click();
@@ -88,29 +102,6 @@ try {
   assert(eveningReview.closed, 'Evening review did not close the local day');
   assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
   assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
-
-  // Keep the older optional Plan-row regression independently covered.
-  await app.locator('.nav button').nth(0).click();
-  await app.locator('#today').waitFor({ state: 'visible' });
-  await app.locator('.nav button').nth(1).click();
-  await app.locator('#actions').waitFor({ state: 'visible' });
-  const proteinRow = app.locator('#actionsList .item').filter({ hasText: 'Белковый приём пищи' }).first();
-  if (await proteinRow.isVisible().catch(() => false)) {
-    let clicked = false;
-    try {
-      // Plan can legitimately rerender while recommendations refresh. If this
-      // optional row disappears during that rerender, treat it like the already
-      // supported "row absent" case rather than waiting on a detached node.
-      await proteinRow.click({ timeout: 1500 });
-      clicked = true;
-    } catch (error) {
-      if (await proteinRow.isVisible().catch(() => false)) throw error;
-    }
-    if (clicked) {
-      await app.getByRole('heading', { name: 'Добавить приём пищи' }).waitFor();
-      await app.evaluate(() => window.closeSheet?.());
-    }
-  }
 
   await app.locator('.nav button').nth(3).click();
   await app.locator('#profile').waitFor({ state: 'visible' });
