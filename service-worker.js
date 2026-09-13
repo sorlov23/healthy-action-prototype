@@ -28,6 +28,7 @@ const ASSETS=[
   './rinlo-stability-v1.js?rev=48',
   './rinlo-server-sync-v1.js?rev=42',
   './rinlo-adaptive-learning-v1.js?rev=50',
+  './rinlo-product-reset-v1.js?rev=1',
   './rinlo-action-sync-v1.js?rev=42',
   './rinlo-evening-review-v1.js?rev=46',
   './rinlo-server-restore-v1.js?rev=33',
