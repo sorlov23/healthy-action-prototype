@@ -187,7 +187,7 @@
 
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT']);
   let observer = null;
-  let scheduled = false;
+  let scheduledTimer = null;
 
   function replaceText(raw) {
     const value = String(raw ?? '');
@@ -235,25 +235,31 @@
   }
 
   function flush(doc) {
-    scheduled = false;
+    scheduledTimer = null;
     patchNode(doc.body);
     doc.documentElement.lang = 'ru';
   }
 
-  function schedule(doc) {
-    if (scheduled) return;
-    scheduled = true;
-    queueMicrotask(() => flush(doc));
+  function schedule(doc, delay = 40) {
+    if (scheduledTimer) clearTimeout(scheduledTimer);
+    scheduledTimer = setTimeout(() => flush(doc), delay);
   }
 
   function install() {
     const doc = frame.contentDocument;
     if (!doc?.body) return;
     observer?.disconnect();
-    flush(doc);
-    observer = new MutationObserver(() => schedule(doc));
-    observer.observe(doc.body, { childList: true, subtree: true, characterData: true });
+    if (scheduledTimer) clearTimeout(scheduledTimer);
+    observer = new MutationObserver((mutations) => {
+      // Product Reset reconciles its own HTML on the next task. Copy after that
+      // reconciliation has settled so our humanized text is not interpreted as
+      // stale markup and replaced in a render loop.
+      const hasStructuralChange = mutations.some((mutation) => mutation.type === 'childList');
+      schedule(doc, hasStructuralChange ? 40 : 0);
+    });
+    observer.observe(doc.body, { childList: true, subtree: true });
     frame.contentWindow.__rinloCopyPass = VERSION;
+    schedule(doc, 60);
   }
 
   frame.addEventListener('load', () => setTimeout(install, 0));
