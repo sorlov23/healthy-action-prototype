@@ -22,6 +22,12 @@
     });
   }
 
+  function keepPhotoPrivacyCopy(doc) {
+    const note = doc.querySelector('.rsf-photo .rsf-beta');
+    if (!note) return;
+    note.textContent = 'Фото остаётся на устройстве и никуда не отправляется. Сейчас Rinlo использует только вашу подпись; Vision-анализ подключим следующим этапом.';
+  }
+
   function install() {
     const win = frame.contentWindow;
     const doc = frame.contentDocument;
@@ -35,12 +41,19 @@
 
     if (doc.__rinloSmartFoodEventsV1) {
       win.__rinloSmartFoodEvents = VERSION;
+      keepPhotoPrivacyCopy(doc);
       return true;
     }
 
     doc.__rinloSmartFoodEventsV1 = true;
     doc.addEventListener('input', (event) => {
       if (event.target?.id === 'rsfText') win.rinloSmartFoodSuggest?.();
+    }, true);
+    doc.addEventListener('change', (event) => {
+      if (event.target?.id === 'rsfPhotoInput') setTimeout(() => keepPhotoPrivacyCopy(doc), 0);
+    }, true);
+    doc.addEventListener('click', (event) => {
+      if (event.target?.closest?.('.rsf-mode')) setTimeout(() => keepPhotoPrivacyCopy(doc), 0);
     }, true);
 
     win.__rinloSmartFoodEvents = VERSION;
