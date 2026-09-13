@@ -30,12 +30,22 @@ try {
   await app.locator('body').evaluate(() => new Promise((resolve, reject) => {
     const started = Date.now();
     const tick = () => {
-      if (window.__rinloSmartFood === 'v1' && window.RinloSmartFood?.version === 'v1') return resolve();
+      if (
+        window.__rinloSmartFood === 'v1'
+        && window.RinloSmartFood?.version === 'v1'
+        && window.__rinloSmartFoodEvents === 'v1'
+      ) return resolve();
       if (Date.now() - started > 10000) return reject(new Error('smart_food_not_ready'));
       setTimeout(tick, 50);
     };
     tick();
   }));
+
+  const directSuggestions = await app.locator('body').evaluate(() =>
+    window.RinloSmartFood.suggestions('кури').map(item => item.name)
+  );
+  console.log(`RINLO_SMART_FOOD_DIRECT_SUGGESTIONS=${JSON.stringify(directSuggestions)}`);
+  assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)}`);
 
   await app.locator('.rc-quick button').filter({ hasText:'Еда' }).click();
   await app.getByRole('heading', { name:'Что съели?', exact:true }).waitFor({ state:'visible' });
@@ -45,8 +55,8 @@ try {
 
   const input = app.locator('#rsfText');
   await input.fill('кури');
-  await app.locator('.rsf-suggestion').first().waitFor({ state:'visible' });
-  assert((await app.locator('.rsf-suggestion').first().innerText()).toLowerCase().includes('кур'), 'catalog suggestion missing');
+  await app.locator('.rsf-suggestion').first().waitFor({ state:'visible', timeout:5000 });
+  assert((await app.locator('.rsf-suggestion').first().innerText()).toLowerCase().includes('кур'), 'catalog suggestion missing from DOM');
 
   await input.fill('куриная грудка, рис и огурец');
   await app.getByRole('button', { name:'Распознать описание', exact:true }).click();
