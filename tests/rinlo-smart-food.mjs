@@ -34,6 +34,7 @@ try {
         window.__rinloSmartFood === 'v1'
         && window.RinloSmartFood?.version === 'v1'
         && window.__rinloSmartFoodEvents === 'v1'
+        && window.__rinloProductUi === 'v2'
       ) return resolve();
       if (Date.now() - started > 10000) return reject(new Error('smart_food_not_ready'));
       setTimeout(tick, 50);
@@ -55,7 +56,7 @@ try {
   );
   assert(directSuggestions.some(name => name.toLowerCase().includes('кур')), `catalog API did not suggest chicken: ${JSON.stringify(directSuggestions)}`);
 
-  await app.locator('.rc-quick button').filter({ hasText:'Еда' }).click();
+  await app.getByTestId('quick-food').click();
   await app.getByRole('heading', { name:'Добавить еду', exact:true }).waitFor({ state:'visible' });
   await app.getByRole('button', { name:/Фото/ }).waitFor();
   await app.getByRole('button', { name:/Написать/ }).waitFor();
@@ -83,7 +84,7 @@ try {
   assert(largeCal > mediumCal, `large portion did not increase calories: ${mediumCal} -> ${largeCal}`);
 
   await app.getByRole('button', { name:'Сохранить', exact:true }).click();
-  await app.locator('#rcTimeline').getByText('куриная грудка, рис и огурец').waitFor({ state:'visible' });
+  await app.getByTestId('today-timeline').getByText('куриная грудка, рис и огурец').waitFor({ state:'visible' });
   const saved = await app.locator('body').evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     const key = Object.keys(db.days || {}).sort().at(-1);
@@ -92,7 +93,7 @@ try {
   assert(saved?.text === 'куриная грудка, рис и огурец', `food not saved: ${JSON.stringify(saved)}`);
   assert(Number(saved?.cal || 0) === largeCal, 'confirmed calories not preserved');
 
-  await app.locator('.rc-quick button').filter({ hasText:'Еда' }).click();
+  await app.getByTestId('quick-food').click();
   await app.getByRole('button', { name:/Недавнее/ }).click();
   await app.getByRole('button', { name:/куриная грудка, рис и огурец/ }).waitFor({ state:'visible' });
   await app.getByRole('button', { name:/куриная грудка, рис и огурец/ }).click();
