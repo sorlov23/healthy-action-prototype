@@ -39,6 +39,7 @@ const ASSETS=[
   './rinlo-settings-bridge-v1.js?rev=34',
   './rinlo-copy-pass-v1.js?rev=1',
   './rinlo-today-v3.js?rev=1',
+  './rinlo-today-v3-compat.js?rev=1',
   './rinlo-logo.svg?rev=31',
   './manifest.webmanifest',
   './icon.svg?rev=31'
