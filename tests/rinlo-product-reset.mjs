@@ -13,7 +13,7 @@ try {
   const app = await handle.contentFrame();
   if (!app) throw new Error('Rinlo iframe not available');
 
-  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1' && window.__rinloTodayV2 === 'v1', null, { timeout: 15000 });
+  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1' && window.__rinloTodayV3 === 'v3', null, { timeout: 15000 });
   await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
   await app.evaluate(() => window.rinloProductStart());
 
@@ -45,30 +45,34 @@ try {
   assert(Number(state.action.effortMinutes || 0) <= 5, `First action ignored the 5-minute budget: ${JSON.stringify(state.action)}`);
 
   await app.evaluate(() => window.rinloProductEnterApp());
-  await app.locator('#today.rtv2').waitFor({ state: 'visible' });
+  await app.locator('#today.rinlo-today-v3').waitFor({ state: 'visible' });
   await app.getByRole('heading', { name: magicTitle, exact: true }).waitFor();
-  await app.locator('.rtv2-why-toggle').waitFor({ state: 'visible' });
+  await app.locator('.r3-hero').waitFor({ state: 'visible' });
   await app.getByText('Сегодня:', { exact: false }).waitFor();
-  await app.locator('.rtv2-add-section').waitFor({ state: 'visible' });
+  await app.locator('.r3-quick').waitFor({ state: 'visible' });
+  await app.locator('.r3-targets').waitFor({ state: 'visible' });
 
   const hierarchy = await app.evaluate(() => {
     const today = document.getElementById('today');
-    const action = document.getElementById('rcAction');
-    const checkin = document.getElementById('rcCheckin');
-    const metrics = document.getElementById('rcMetrics');
-    const quick = today?.querySelector('.rc-quick');
-    const precision = today?.querySelector('.rpr-precision');
+    const hero = today?.querySelector('.r3-hero');
+    const checkin = today?.querySelector('.r3-checkin');
+    const quick = today?.querySelector('.r3-quick');
+    const targets = today?.querySelector('.r3-targets');
+    const compat = today?.querySelector('.r3-compat');
     return {
-      actionBeforeCheckin: Boolean(today && action && checkin && (action.compareDocumentPosition(checkin) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      quickBeforeMetrics: Boolean(today && quick && metrics && (quick.compareDocumentPosition(metrics) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      metricsDisplay: metrics?.style.display || '',
-      precisionHidden: !precision || getComputedStyle(precision).display === 'none',
+      visualVersion: window.__rinloTodayV3,
+      dataVersion: today?.dataset.rinloToday || '',
+      heroBeforeCheckin: Boolean(hero && checkin && (hero.compareDocumentPosition(checkin) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      checkinBeforeQuick: Boolean(checkin && quick && (checkin.compareDocumentPosition(quick) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      quickBeforeTargets: Boolean(quick && targets && (quick.compareDocumentPosition(targets) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      compatHidden: !compat || getComputedStyle(compat).display === 'none',
     };
   });
-  assert(hierarchy.actionBeforeCheckin, 'Today hierarchy did not put the chosen action first after onboarding check-in');
-  assert(hierarchy.quickBeforeMetrics, 'Today v2 did not put quick add actions before detailed metrics');
-  assert(hierarchy.metricsDisplay === 'none', 'Numeric metrics are still primary before optional profile details');
-  assert(hierarchy.precisionHidden, 'Today v2 still exposes the recurring precision-profile prompt');
+  assert(hierarchy.visualVersion === 'v3' && hierarchy.dataVersion === 'v3', `Today v3 visual contract missing: ${JSON.stringify(hierarchy)}`);
+  assert(hierarchy.heroBeforeCheckin, 'Today v3 did not put the primary hero first');
+  assert(hierarchy.checkinBeforeQuick, 'Today v3 did not keep compact check-in after the hero');
+  assert(hierarchy.quickBeforeTargets, 'Today v3 did not put quick add before targets');
+  assert(hierarchy.compatHidden, 'Legacy compatibility DOM leaked into the visible Today UI');
 
   console.log(`RINLO_PRODUCT_RESET_ACTION=${JSON.stringify({ title: magicTitle, effortMinutes: state.action.effortMinutes, kind: state.action.kind })}`);
   console.log('RINLO_PRODUCT_RESET_RESULT=PASS');
