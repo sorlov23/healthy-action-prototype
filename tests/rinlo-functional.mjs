@@ -23,7 +23,7 @@ async function appFrame() {
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
     && window.__rinloCopyPass === 'v1'
-    && window.__rinloProductUi === 'v2'
+    && window.__rinloProductUi === 'v3'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
