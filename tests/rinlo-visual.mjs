@@ -11,7 +11,7 @@ page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()
 
 async function assertScreen(app, id) {
   await app.locator(`#${id}`).waitFor({ state:'visible' });
-  const geometry = await app.locator('body').evaluate((screenId) => {
+  const geometry = await app.locator('body').evaluate((_body, screenId) => {
     const screen = document.getElementById(screenId);
     const active = [...document.querySelectorAll('.screen.on')].map((el) => el.id);
     const root = document.documentElement;
