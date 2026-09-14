@@ -28,6 +28,8 @@
     apply();
   };
 
+  // Transitional bridge for legacy E2E selectors only. It does not recreate
+  // legacy UI; it reapplies old selector aliases after every real Today render.
   frame.addEventListener('load', () => {
     setTimeout(hook, 0);
     setTimeout(hook, 260);
