@@ -38,7 +38,7 @@ const ASSETS=[
   './rinlo-wordmark.js?rev=30',
   './rinlo-settings-bridge-v1.js?rev=34',
   './rinlo-copy-pass-v1.js?rev=1',
-  './rinlo-product-ui-v1.js?rev=1',
+  './rinlo-product-ui-v2.js?rev=1',
   './rinlo-logo.svg?rev=31',
   './manifest.webmanifest',
   './icon.svg?rev=31'
