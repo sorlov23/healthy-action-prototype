@@ -58,7 +58,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f6f2;fon
 <script src="./rinlo-wordmark.js?rev=30"></script>
 <script src="./rinlo-settings-bridge-v1.js?rev=34"></script>
 <script src="./rinlo-copy-pass-v1.js?rev=1"></script>
-<script src="./rinlo-product-ui-v3.js?rev=1"></script>
+<script src="./rinlo-product-ui-v3.js?rev=2"></script>
 <script>
 const rinloFrame=document.getElementById('app');
 const rinloLoading=document.getElementById('loading');
@@ -66,7 +66,7 @@ const revealRinlo=()=>{if(rinloLoading) rinloLoading.style.display='none';};
 rinloFrame?.addEventListener('load',revealRinlo);
 try{if(rinloFrame?.contentDocument?.readyState==='complete') revealRinlo();}catch{}
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=58',{updateViaCache:'none'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?rev=59',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script>
 </body>
