@@ -43,7 +43,7 @@ async function waitForProductUi(app) {
 
 try {
   await page.goto('http://127.0.0.1:4173/pwa.html?visual-test=1', { waitUntil:'domcontentloaded' });
-  let app = page.frameLocator('#app');
+  const app = page.frameLocator('#app');
   await app.locator('#rprWelcome .rpr-title').waitFor({ state:'visible', timeout:15000 });
 
   const onboarding = await app.locator('body').evaluate(() => {
@@ -120,23 +120,21 @@ try {
   assert(sheet.modes.length === 3 && sheet.modes.every((m)=>m.width >= 95 && m.height >= 80 && m.left >= 0 && m.right <= sheet.viewport.width), `smart_food_mode_geometry:${JSON.stringify(sheet.modes)}`);
   await app.locator('body').evaluate(() => window.closeSheet?.());
 
-  // Regression for the state caught in manual iPhone review: profile exists, but today's check-in does not.
+  // Regression for the state caught in manual iPhone review: user is already inside Today, but today's check-in/action are absent.
   await app.locator('body').evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     const now = new Date();
     const key = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    localStorage.setItem('healthy-action-v07', JSON.stringify({
-      profile: {
-        weight:85, goal:75, height:176, age:37, activity:'low', sex:'male', habits:[],
-        primaryGoal:'weight_loss', secondaryGoals:[], calorieTrackingEnabled:true,
-        detailsComplete:true, productResetVersion:'v1'
-      },
-      days: { [key]: { events:[], water:0, steps:0, habits:{}, closed:false, rinloActions:[] } }
-    }));
+    db.days ||= {};
+    db.days[key] ||= { events:[], water:0, steps:0, habits:{}, closed:false };
+    delete db.days[key].rinloCheckin;
+    db.days[key].rinloActions = [];
+    localStorage.setItem('healthy-action-v07', JSON.stringify(db));
+    window.eval('db = load()');
+    window.show?.('today');
+    window.render?.();
   });
-  await page.reload({ waitUntil:'domcontentloaded' });
-  app = page.frameLocator('#app');
-  await app.locator('#today').waitFor({ state:'visible', timeout:15000 });
-  await waitForProductUi(app);
+  await app.getByTestId('today-checkin').waitFor({ state:'visible', timeout:10000 });
 
   const noCheckin = await app.locator('body').evaluate(() => ({
     questionCount:[...document.querySelectorAll('#today *')].filter((el)=>el.textContent?.trim()==='Как ты сегодня?').length,
