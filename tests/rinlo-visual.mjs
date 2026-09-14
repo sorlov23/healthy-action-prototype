@@ -73,8 +73,8 @@ try {
       const r = el.getBoundingClientRect();
       return { width:r.width,height:r.height };
     });
-    const h1 = getComputedStyle(document.querySelector('.r2-greeting h1'));
-    const actionTitle = getComputedStyle(document.querySelector('.r2-action h2'));
+    const h1 = getComputedStyle(document.querySelector('.r3-head h1'));
+    const actionTitle = getComputedStyle(document.querySelector('.r3-action h2'));
     return {
       action: action && {top:action.top,bottom:action.bottom,width:action.width},
       checkin: checkin && {top:checkin.top,bottom:checkin.bottom,width:checkin.width},
