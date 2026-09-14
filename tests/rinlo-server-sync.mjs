@@ -103,7 +103,13 @@ try {
 
   await completeDetailedProfile(app);
 
-  await app.getByRole('button', { name: 'Нормально', exact: true }).click();
+  const checkinAfterProfile = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = Object.keys(db.days || {}).sort().at(-1);
+    return db.days?.[key]?.rinloCheckin || null;
+  });
+  assert(checkinAfterProfile?.wellbeing === 'okay', `Product Reset check-in changed after profile completion: ${JSON.stringify(checkinAfterProfile)}`);
+  await app.getByTestId('today-checkin').getByText('Сегодня:', { exact: true }).waitFor({ state: 'visible' });
   await app.getByTestId('today-primary-action').waitFor({ state: 'visible' });
 
   await app.getByTestId('quick-water').click();
