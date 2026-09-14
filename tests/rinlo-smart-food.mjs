@@ -34,7 +34,7 @@ try {
         window.__rinloSmartFood === 'v1'
         && window.RinloSmartFood?.version === 'v1'
         && window.__rinloSmartFoodEvents === 'v1'
-        && window.__rinloProductUi === 'v2'
+        && window.__rinloProductUi === 'v3'
       ) return resolve();
       if (Date.now() - started > 10000) return reject(new Error('smart_food_not_ready'));
       setTimeout(tick, 50);
