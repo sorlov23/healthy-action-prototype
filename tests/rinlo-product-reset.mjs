@@ -13,7 +13,7 @@ try {
   const app = await handle.contentFrame();
   if (!app) throw new Error('Rinlo iframe not available');
 
-  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1' && window.__rinloProductUi === 'v2', null, { timeout: 15000 });
+  await app.waitForFunction(() => window.__rinloProductReset === 'v1' && window.__rinloCopyPass === 'v1' && window.__rinloProductUi === 'v3', null, { timeout: 15000 });
   await app.locator('#rprWelcome .rpr-title').waitFor({ state: 'visible' });
   await app.evaluate(() => window.rinloProductStart());
 
@@ -64,7 +64,7 @@ try {
       uiVersion: window.__rinloProductUi || null,
     };
   });
-  assert(hierarchy.uiVersion === 'v2', `Unexpected product UI: ${JSON.stringify(hierarchy)}`);
+  assert(hierarchy.uiVersion === 'v3', `Unexpected product UI: ${JSON.stringify(hierarchy)}`);
   assert(hierarchy.actionBeforeCheckin, 'Today did not prioritize the already-selected action after onboarding');
   assert(hierarchy.checkinBeforeQuick, 'Today hierarchy placed quick logging ahead of day context');
 
