@@ -130,9 +130,7 @@ try {
     delete db.days[key].rinloCheckin;
     db.days[key].rinloActions = [];
     localStorage.setItem('healthy-action-v07', JSON.stringify(db));
-    window.eval('db = load()');
-    window.show?.('today');
-    window.render?.();
+    window.rinloProductGo?.('today');
   });
   await app.getByTestId('today-checkin').waitFor({ state:'visible', timeout:10000 });
 
