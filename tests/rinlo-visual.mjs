@@ -56,7 +56,7 @@ try {
   await app.locator('body').evaluate(() => window.rinloProductEnterApp());
   await app.locator('body').evaluate(() => new Promise((resolve,reject) => {
     const started=Date.now();
-    const tick=()=>{ if(window.__rinloProductUi==='v2') return resolve(); if(Date.now()-started>10000) return reject(new Error('product_ui_not_ready')); setTimeout(tick,50); };
+    const tick=()=>{ if(window.__rinloProductUi==='v3') return resolve(); if(Date.now()-started>10000) return reject(new Error('product_ui_not_ready')); setTimeout(tick,50); };
     tick();
   }));
 
