@@ -64,7 +64,8 @@ const rinloFrame=document.getElementById('app');
 const rinloLoading=document.getElementById('loading');
 const revealRinlo=()=>{if(rinloLoading) rinloLoading.style.display='none';};
 const exposeProductUiContract=()=>{try{const w=rinloFrame?.contentWindow;if(w?.__rinloProductUi==='v3'){w.__rinloProductUiRevision='v3';w.__rinloProductUi='v2';}}catch{}};
-rinloFrame?.addEventListener('load',()=>{revealRinlo();[80,240,600,1200].forEach(ms=>setTimeout(exposeProductUiContract,ms));});
+rinloFrame?.addEventListener('load',revealRinlo);
+rinloFrame?.addEventListener('load',()=>{[80,240,600,1200].forEach(ms=>setTimeout(exposeProductUiContract,ms));});
 try{if(rinloFrame?.contentDocument?.readyState==='complete') revealRinlo();}catch{}
 [120,400,900,1500].forEach(ms=>setTimeout(exposeProductUiContract,ms));
 if('serviceWorker' in navigator){
