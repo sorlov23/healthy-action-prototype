@@ -33,9 +33,17 @@ async function assertScreen(app, id) {
   return geometry;
 }
 
+async function waitForProductUi(app) {
+  await app.locator('body').evaluate(() => new Promise((resolve,reject) => {
+    const started=Date.now();
+    const tick=()=>{ if(window.__rinloProductUi==='v3') return resolve(); if(Date.now()-started>10000) return reject(new Error('product_ui_not_ready')); setTimeout(tick,50); };
+    tick();
+  }));
+}
+
 try {
   await page.goto('http://127.0.0.1:4173/pwa.html?visual-test=1', { waitUntil:'domcontentloaded' });
-  const app = page.frameLocator('#app');
+  let app = page.frameLocator('#app');
   await app.locator('#rprWelcome .rpr-title').waitFor({ state:'visible', timeout:15000 });
 
   const onboarding = await app.locator('body').evaluate(() => {
@@ -54,11 +62,7 @@ try {
   await app.locator('#rprCreate').click();
   await app.locator('.rpr-magic').waitFor({ state:'visible', timeout:10000 });
   await app.locator('body').evaluate(() => window.rinloProductEnterApp());
-  await app.locator('body').evaluate(() => new Promise((resolve,reject) => {
-    const started=Date.now();
-    const tick=()=>{ if(window.__rinloProductUi==='v3') return resolve(); if(Date.now()-started>10000) return reject(new Error('product_ui_not_ready')); setTimeout(tick,50); };
-    tick();
-  }));
+  await waitForProductUi(app);
 
   const todayGeometry = await assertScreen(app,'today');
   const today = await app.locator('body').evaluate(() => {
@@ -114,9 +118,50 @@ try {
   assert(sheet.panel && sheet.panel.left >= -1 && sheet.panel.right <= sheet.viewport.width + 1, `sheet_outside_viewport:${JSON.stringify(sheet)}`);
   assert(sheet.panel.height <= sheet.viewport.height * .9, `sheet_too_tall:${JSON.stringify(sheet)}`);
   assert(sheet.modes.length === 3 && sheet.modes.every((m)=>m.width >= 95 && m.height >= 80 && m.left >= 0 && m.right <= sheet.viewport.width), `smart_food_mode_geometry:${JSON.stringify(sheet.modes)}`);
+  await app.locator('body').evaluate(() => window.closeSheet?.());
+
+  // Regression for the state caught in manual iPhone review: profile exists, but today's check-in does not.
+  await app.locator('body').evaluate(() => {
+    const now = new Date();
+    const key = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    localStorage.setItem('healthy-action-v07', JSON.stringify({
+      profile: {
+        weight:85, goal:75, height:176, age:37, activity:'low', sex:'male', habits:[],
+        primaryGoal:'weight_loss', secondaryGoals:[], calorieTrackingEnabled:true,
+        detailsComplete:true, productResetVersion:'v1'
+      },
+      days: { [key]: { events:[], water:0, steps:0, habits:{}, closed:false, rinloActions:[] } }
+    }));
+  });
+  await page.reload({ waitUntil:'domcontentloaded' });
+  app = page.frameLocator('#app');
+  await app.locator('#today').waitFor({ state:'visible', timeout:15000 });
+  await waitForProductUi(app);
+
+  const noCheckin = await app.locator('body').evaluate(() => ({
+    questionCount:[...document.querySelectorAll('#today *')].filter((el)=>el.textContent?.trim()==='Как ты сегодня?').length,
+    actionCount:document.querySelectorAll('#today [data-testid="today-primary-action"]').length,
+    moodLabels:[...document.querySelectorAll('#today .r3-mood')].map((el)=>el.textContent?.trim()),
+    quickVisible:Boolean(document.querySelector('#today [data-testid="quick-actions"]')),
+  }));
+  assert(noCheckin.questionCount === 1, `duplicate_checkin_question:${JSON.stringify(noCheckin)}`);
+  assert(noCheckin.actionCount === 0, `action_visible_before_checkin:${JSON.stringify(noCheckin)}`);
+  assert(JSON.stringify(noCheckin.moodLabels) === JSON.stringify(['Мало сил','Нормально','Хорошо']), `checkin_choices_wrong:${JSON.stringify(noCheckin)}`);
+  assert(noCheckin.quickVisible, `quick_actions_missing_before_checkin:${JSON.stringify(noCheckin)}`);
+
+  await app.getByRole('button',{name:'Нормально',exact:true}).click();
+  await app.getByTestId('today-primary-action').waitFor({state:'visible',timeout:10000});
+  const afterCheckin = await app.locator('body').evaluate(() => ({
+    questionCount:[...document.querySelectorAll('#today *')].filter((el)=>el.textContent?.trim()==='Как ты сегодня?').length,
+    actionCount:document.querySelectorAll('#today [data-testid="today-primary-action"]').length,
+    compactText:document.querySelector('#today [data-testid="today-checkin"]')?.textContent || '',
+  }));
+  assert(afterCheckin.questionCount === 0, `expanded_checkin_remained_after_answer:${JSON.stringify(afterCheckin)}`);
+  assert(afterCheckin.actionCount === 1, `primary_action_missing_after_checkin:${JSON.stringify(afterCheckin)}`);
+  assert(afterCheckin.compactText.includes('Сегодня:') && afterCheckin.compactText.includes('Нормально'), `compact_checkin_missing:${JSON.stringify(afterCheckin)}`);
 
   if (errors.length) throw new Error(`Runtime errors:\n${errors.join('\n')}`);
-  console.log(`RINLO_VISUAL_GEOMETRY=${JSON.stringify({ onboarding, todayGeometry, today, sheet })}`);
+  console.log(`RINLO_VISUAL_GEOMETRY=${JSON.stringify({ onboarding, todayGeometry, today, sheet, noCheckin, afterCheckin })}`);
   console.log('RINLO_VISUAL_RESULT=PASS');
 } finally {
   await browser.close();
