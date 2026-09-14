@@ -23,6 +23,7 @@ async function appFrame() {
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
     && window.__rinloCopyPass === 'v1'
+    && window.__rinloProductUi === 'v2'
   ), null, { timeout: 10000 });
   await frame.waitForFunction(() => document.getElementById('profile')?.dataset.rinloProfile === 'v01', null, { timeout: 10000 });
   return frame;
@@ -30,6 +31,11 @@ async function appFrame() {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+async function go(app, id) {
+  await app.locator(`[data-rinlo-nav="${id}"]`).click();
+  await app.locator(`#${id}`).waitFor({ state: 'visible' });
 }
 
 async function finishProductReset(app) {
@@ -43,6 +49,7 @@ async function finishProductReset(app) {
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
   await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
+  await app.getByTestId('today-primary-action').waitFor({ state: 'visible' });
 }
 
 try {
@@ -65,7 +72,7 @@ try {
   assert(firstRun.checkin?.wellbeing === 'okay', 'Product Reset did not persist today context');
   assert(firstRun.action?.title, 'Product Reset did not create the first action');
 
-  await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
+  await app.getByTestId('quick-water').click();
   const water = await app.evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     const key = Object.keys(db.days || {}).sort().at(-1);
@@ -73,7 +80,7 @@ try {
   });
   assert(water >= 250, 'Water quick action did not persist');
 
-  await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
+  await app.getByTestId('quick-food').click();
   await app.getByRole('heading', { name: 'Добавить еду', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
   await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
@@ -81,10 +88,9 @@ try {
   await app.locator('#rfFoodCal').fill('310');
   await app.locator('#rfFoodProtein').fill('20');
   await app.getByRole('button', { name: 'Сохранить', exact: true }).click();
-  await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
+  await app.getByTestId('today-timeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  await app.locator('.nav button').nth(1).click();
-  await app.locator('#actions').waitFor({ state: 'visible' });
+  await go(app, 'actions');
   const finishDay = app.getByRole('button', { name: 'Подвести итог дня', exact: true });
   await finishDay.waitFor({ state: 'visible' });
   await finishDay.click();
@@ -101,10 +107,8 @@ try {
   assert(eveningReview.review?.planFit === 'right', 'Evening review plan fit was not saved');
   assert(eveningReview.review?.actionUseful === 'yes', 'Evening review usefulness was not saved');
 
-  await app.locator('.nav button').nth(0).click();
-  await app.locator('#today').waitFor({ state: 'visible' });
-  await app.locator('.nav button').nth(1).click();
-  await app.locator('#actions').waitFor({ state: 'visible' });
+  await go(app, 'today');
+  await go(app, 'actions');
   const proteinRow = app.locator('#actionsList .item').filter({ hasText: 'Белковый приём пищи' }).first();
   if (await proteinRow.isVisible().catch(() => false)) {
     let clicked = false;
@@ -120,8 +124,7 @@ try {
     }
   }
 
-  await app.locator('.nav button').nth(3).click();
-  await app.locator('#profile').waitFor({ state: 'visible' });
+  await go(app, 'profile');
   await app.getByText('Rinlo уже работает без анкеты', { exact: true }).waitFor({ state: 'visible' });
   await app.getByRole('button', { name: /Настроить под себя/ }).waitFor({ state: 'visible' });
 
@@ -141,13 +144,11 @@ try {
   });
   assert(persisted.profile && persisted.goal === 'weight_loss' && persisted.water && persisted.food && persisted.eveningReview, 'Saved Rinlo state did not survive reload');
 
-  await app.locator('.nav').waitFor({ state: 'visible' });
-  await app.locator('.nav button').nth(0).click();
-  await app.locator('#today').waitFor({ state: 'visible' });
-  await app.locator('#rcTimeline').getByText('омлет из двух яиц и кофе').waitFor();
+  await app.locator('[data-rinlo-nav="today"]').waitFor({ state: 'visible' });
+  await go(app, 'today');
+  await app.getByTestId('today-timeline').getByText('омлет из двух яиц и кофе').waitFor();
 
-  await app.locator('.nav button').nth(3).click();
-  await app.locator('#profile').waitFor({ state: 'visible' });
+  await go(app, 'profile');
   const editProfile = app.getByRole('button', { name: /Настроить под себя/ });
   await editProfile.waitFor({ state: 'visible' });
   await editProfile.click();
@@ -165,7 +166,7 @@ try {
   assert(precision?.weight === 85 && precision?.height === 176 && precision?.sex === 'male', 'Progressive profile values were not saved');
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
-  console.log('Rinlo functional MVP smoke test passed');
+  console.log('Rinlo product UI functional smoke test passed');
 } finally {
   await browser.close();
 }
