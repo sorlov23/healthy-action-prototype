@@ -94,7 +94,7 @@ try {
   const finishDay = app.getByRole('button', { name: 'Подвести итог дня', exact: true });
   await finishDay.waitFor({ state: 'visible' });
   await finishDay.click();
-  await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
+  await app.getByRole('heading', { name: 'Итог дня', exact: true }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
   await app.getByRole('button', { name: 'Готово', exact: true }).click();
