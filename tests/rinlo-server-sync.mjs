@@ -27,7 +27,7 @@ async function appFrame() {
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
     && window.__rinloCopyPass === 'v1'
-    && window.__rinloTodayV2 === 'v1'
+    && window.__rinloTodayV3 === 'v3'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
@@ -47,7 +47,7 @@ async function finishProductReset(app) {
   await app.locator('#rprCreate').click();
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
   await app.evaluate(() => window.rinloProductEnterApp());
-  await app.locator('#today').waitFor({ state: 'visible' });
+  await app.locator('#today.rinlo-today-v3').waitFor({ state: 'visible' });
 }
 
 async function completeDetailedProfile(app) {
@@ -67,7 +67,7 @@ async function completeDetailedProfile(app) {
   assert(profile?.primaryGoal === 'weight_loss', 'Progressive profile overwrote Product Reset goal');
   assert(profile?.weight === 85 && profile?.goal === 75 && profile?.height === 176 && profile?.age === 37, 'Progressive profile values missing');
   await app.locator('.nav button').nth(0).click();
-  await app.locator('#today').waitFor({ state: 'visible' });
+  await app.locator('#today.rinlo-today-v3').waitFor({ state: 'visible' });
 }
 
 async function syncNow() {
@@ -100,10 +100,10 @@ try {
   await completeDetailedProfile(app);
 
   await app.evaluate(() => window.rinloCoreCheckin?.('okay'));
-  await app.locator('.rc-action').waitFor({ state: 'visible' });
+  await app.locator('.r3-hero').waitFor({ state: 'visible' });
 
-  await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
-  await app.locator('.rc-quick button').filter({ hasText: '+1000' }).click();
+  await app.locator('.r3-quick button').filter({ hasText: 'Вода' }).click();
+  await app.locator('.r3-quick button').filter({ hasText: 'Шаги' }).click();
 
   let foodCreateSeenResolve;
   let foodCreateRelease;
@@ -118,7 +118,7 @@ try {
     await route.continue();
   });
 
-  await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
+  await app.locator('.r3-quick button').filter({ hasText: 'Еда' }).click();
   await app.getByRole('heading', { name: 'Добавить еду', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
   await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
@@ -148,7 +148,7 @@ try {
   await page.waitForFunction(() => window.RinloServerSync.pending().length === 0, null, { timeout: 10000 });
   await page.unroute('**/api/v1/food/logs');
 
-  await app.locator('.rc-quick button').filter({ hasText: 'Вес' }).click();
+  await app.locator('.r3-quick button').filter({ hasText: 'Вес' }).click();
   await app.locator('#rfWeight').fill('84.6');
   await app.getByRole('button', { name: 'Сохранить' }).click();
 
@@ -187,7 +187,7 @@ try {
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
   app = await appFrame();
-  await app.locator('#today').waitFor({ state: 'visible', timeout: 15000 });
+  await app.locator('#today.rinlo-today-v3').waitFor({ state: 'visible', timeout: 15000 });
   await app.waitForFunction(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     return Object.values(db.days || {}).some((value) =>
