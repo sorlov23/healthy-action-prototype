@@ -5,6 +5,7 @@ on:
     paths:
       - 'pwa.html'
       - 'service-worker.js'
+      - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-product-reset-v1.js'
       - 'tests/rinlo-product-reset.mjs'
       - '.github/workflows/product-reset-ci.yml'
@@ -12,6 +13,7 @@ on:
     paths:
       - 'pwa.html'
       - 'service-worker.js'
+      - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-product-reset-v1.js'
       - 'tests/rinlo-product-reset.mjs'
       - '.github/workflows/product-reset-ci.yml'
@@ -32,7 +34,7 @@ jobs:
         run: |
           grep -q 'rinlo-product-reset-v1.js?rev=1' pwa.html
           grep -q './rinlo-product-reset-v1.js?rev=1' service-worker.js
-          adaptive_line=$(grep -n 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html | cut -d: -f1)
+          adaptive_line=$(grep -n 'rinlo-adaptive-learning-v1.js?rev=51' pwa.html | cut -d: -f1)
           reset_line=$(grep -n 'rinlo-product-reset-v1.js?rev=1' pwa.html | cut -d: -f1)
           action_sync_line=$(grep -n 'rinlo-action-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
           test "$adaptive_line" -lt "$reset_line"

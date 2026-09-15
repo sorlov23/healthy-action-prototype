@@ -20,6 +20,7 @@ on:
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
       - 'rinlo-adaptive-learning-v1.js'
+      - 'rinlo-daily-loop-v1.js'
       - 'rinlo-product-reset-v1.js'
       - 'rinlo-product-precision-v1.js'
       - 'rinlo-product-ui-v3.js'
@@ -47,6 +48,7 @@ on:
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
       - 'tests/rinlo-adaptive-learning.mjs'
+      - 'tests/rinlo-daily-loop.mjs'
       - 'tests/rinlo-fastify-lazy-session.mjs'
       - 'tests/rinlo-smart-food.mjs'
       - 'manifest.webmanifest'
@@ -72,6 +74,7 @@ on:
       - 'rinlo-stability-v1.js'
       - 'rinlo-server-sync-v1.js'
       - 'rinlo-adaptive-learning-v1.js'
+      - 'rinlo-daily-loop-v1.js'
       - 'rinlo-product-reset-v1.js'
       - 'rinlo-product-precision-v1.js'
       - 'rinlo-product-ui-v3.js'
@@ -99,6 +102,7 @@ on:
       - 'tests/rinlo-action-sync.mjs'
       - 'tests/rinlo-evening-review.mjs'
       - 'tests/rinlo-adaptive-learning.mjs'
+      - 'tests/rinlo-daily-loop.mjs'
       - 'tests/rinlo-fastify-lazy-session.mjs'
       - 'tests/rinlo-smart-food.mjs'
       - 'manifest.webmanifest'
@@ -131,6 +135,7 @@ jobs:
           node --check rinlo-stability-v1.js
           node --check rinlo-server-sync-v1.js
           node --check rinlo-adaptive-learning-v1.js
+          node --check rinlo-daily-loop-v1.js
           node --check rinlo-product-reset-v1.js
           node --check rinlo-product-precision-v1.js
           node --check rinlo-product-ui-v3.js
@@ -158,6 +163,7 @@ jobs:
           node --check tests/rinlo-action-sync.mjs
           node --check tests/rinlo-evening-review.mjs
           node --check tests/rinlo-adaptive-learning.mjs
+          node --check tests/rinlo-daily-loop.mjs
           node --check tests/rinlo-fastify-lazy-session.mjs
           node --check tests/rinlo-smart-food.mjs
           node --check service-worker.js
@@ -216,7 +222,7 @@ jobs:
           grep -q 'rinlo-functional-v1.js?rev=30' pwa.html
           grep -q 'rinlo-stability-v1.js?rev=48' pwa.html
           grep -q 'rinlo-server-sync-v1.js?rev=42' pwa.html
-          grep -q 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html
+          grep -q 'rinlo-adaptive-learning-v1.js?rev=51' pwa.html
           grep -q 'rinlo-product-reset-v1.js?rev=1' pwa.html
           grep -q 'rinlo-product-precision-v1.js?rev=52' pwa.html
           grep -q 'rinlo-smart-food-v1.js?rev=54' pwa.html
@@ -225,10 +231,11 @@ jobs:
           grep -q 'rinlo-evening-review-v1.js?rev=46' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
           grep -q 'rinlo-product-ui-v3.js?rev=2' pwa.html
-          grep -q 'service-worker.js?rev=59' pwa.html
+          grep -q 'rinlo-daily-loop-v1.js?rev=1' pwa.html
+          grep -q 'service-worker.js?rev=60' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v59" service-worker.js
+          grep -q "rinlo-pwa-v60" service-worker.js
           grep -q "./pwa-sync.js?rev=51" service-worker.js
           grep -q "./rinlo-product-reset-v1.js?rev=1" service-worker.js
           grep -q "./rinlo-product-precision-v1.js?rev=52" service-worker.js
@@ -239,17 +246,18 @@ jobs:
           grep -q "./rinlo-profile-v01.js?rev=45" service-worker.js
           grep -q "./rinlo-stability-v1.js?rev=48" service-worker.js
           grep -q "./rinlo-server-sync-v1.js?rev=42" service-worker.js
-          grep -q "./rinlo-adaptive-learning-v1.js?rev=50" service-worker.js
+          grep -q "./rinlo-adaptive-learning-v1.js?rev=51" service-worker.js
           grep -q "./rinlo-action-sync-v1.js?rev=42" service-worker.js
           grep -q "./rinlo-evening-review-v1.js?rev=46" service-worker.js
           grep -q "./rinlo-product-ui-v3.js?rev=2" service-worker.js
+          grep -q "./rinlo-daily-loop-v1.js?rev=1" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
           transport_line=$(grep -n 'rinlo-supabase-transport-v1.js?rev=39' pwa.html | cut -d: -f1)
           action_transport_line=$(grep -n 'rinlo-supabase-action-transport-v1.js?rev=43' pwa.html | cut -d: -f1)
           review_transport_line=$(grep -n 'rinlo-supabase-evening-review-transport-v1.js?rev=46' pwa.html | cut -d: -f1)
           core_line=$(grep -n 'rinlo-core-ui-v1.js?rev=25' pwa.html | cut -d: -f1)
           sync_line=$(grep -n 'rinlo-server-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
-          adaptive_line=$(grep -n 'rinlo-adaptive-learning-v1.js?rev=50' pwa.html | cut -d: -f1)
+          adaptive_line=$(grep -n 'rinlo-adaptive-learning-v1.js?rev=51' pwa.html | cut -d: -f1)
           reset_line=$(grep -n 'rinlo-product-reset-v1.js?rev=1' pwa.html | cut -d: -f1)
           precision_line=$(grep -n 'rinlo-product-precision-v1.js?rev=52' pwa.html | cut -d: -f1)
           smart_food_line=$(grep -n 'rinlo-smart-food-v1.js?rev=54' pwa.html | cut -d: -f1)
@@ -258,6 +266,7 @@ jobs:
           evening_review_line=$(grep -n 'rinlo-evening-review-v1.js?rev=46' pwa.html | cut -d: -f1)
           restore_line=$(grep -n 'rinlo-server-restore-v1.js?rev=33' pwa.html | cut -d: -f1)
           product_ui_line=$(grep -n 'rinlo-product-ui-v3.js?rev=2' pwa.html | cut -d: -f1)
+          daily_loop_line=$(grep -n 'rinlo-daily-loop-v1.js?rev=1' pwa.html | cut -d: -f1)
           test "$transport_line" -lt "$action_transport_line"
           test "$action_transport_line" -lt "$review_transport_line"
           test "$review_transport_line" -lt "$core_line"
@@ -271,3 +280,4 @@ jobs:
           test "$action_sync_line" -lt "$evening_review_line"
           test "$evening_review_line" -lt "$restore_line"
           test "$restore_line" -lt "$product_ui_line"
+          test "$product_ui_line" -lt "$daily_loop_line"

@@ -155,24 +155,33 @@
     if (already?.source === 'evening_review' && already.reviewDay === previousReview.day) return current;
 
     const previousKind = previousReview.mainActionKind || null;
+    const avoidPrevious = previousReview.actionUseful === 'no' && Boolean(previousKind);
+    const repeatHelpful = previousReview.actionUseful === 'yes' && Boolean(previousKind);
     const adaptation = {
       source: 'evening_review',
       reviewDay: previousReview.day,
       planFit: previousReview.planFit,
       actionUseful: previousReview.actionUseful,
       previousKind,
-      avoidedPreviousKind: Boolean(avoidedPreviousKind),
+      avoidedPreviousKind: Boolean(avoidedPreviousKind || (avoidPrevious && current.kind !== previousKind)),
+      repeatedHelpfulKind: Boolean(repeatHelpful && current.kind === previousKind),
       effortReduced: false,
+      easedAfterSkip: false,
     };
 
-    if (previousReview.planFit === 'too_much') {
+    const shouldReduceEffort = previousReview.planFit === 'too_much' || previousReview.actionUseful === 'skipped';
+    if (shouldReduceEffort) {
       const before = Number(current.effortMinutes);
       const after = reducedEffortMinutes(before);
       if (Number.isFinite(before) && Number.isFinite(after) && after < before) {
         current.effortMinutes = after;
         current.title = shortenTitle(current.title, before, after);
-        current.rationale = `В прошлый раз план ощущался перегруженным, поэтому сегодня шаг короче. ${current.rationale}`;
+        const prefix = previousReview.actionUseful === 'skipped'
+          ? 'Вчера главный шаг не состоялся, поэтому сегодня начинаем с более короткого варианта.'
+          : 'В прошлый раз план ощущался перегруженным, поэтому сегодня шаг короче.';
+        current.rationale = `${prefix} ${current.rationale}`;
         adaptation.effortReduced = true;
+        adaptation.easedAfterSkip = previousReview.actionUseful === 'skipped';
         adaptation.previousEffortMinutes = before;
         adaptation.adaptedEffortMinutes = after;
       }
