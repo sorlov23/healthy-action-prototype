@@ -84,8 +84,28 @@ try {
     window.rinloProductGo?.('today');
   }, { today, yesterday });
 
+  const parentState = await page.evaluate((day) => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    return {
+      dayKeys:Object.keys(db.days || {}).sort(),
+      review:window.RinloAdaptiveLearning.latestLocalReviewBefore(day),
+      action:(db.days?.[day]?.rinloActions || []).find((item) => ['suggested','accepted'].includes(item.status)) || null,
+    };
+  }, today);
+  const frameState = await app.locator('body').evaluate((day) => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    return {
+      viewDay:window.__haViewDay || null,
+      action:(db.days?.[day]?.rinloActions || []).find((item) => ['suggested','accepted'].includes(item.status)) || null,
+      reviewDays:Object.keys(db.days || {}).filter((key) => db.days?.[key]?.rinloEveningReview).sort(),
+    };
+  }, today);
+  assert(parentState.review?.day === yesterday, `parent_previous_review_missing:${JSON.stringify({ parentState, frameState, today, yesterday })}`);
+  assert(parentState.action?.id === 'daily-loop-today-action', `parent_active_action_missing:${JSON.stringify({ parentState, frameState, today, yesterday })}`);
+  assert(frameState.action?.id === 'daily-loop-today-action', `frame_active_action_missing:${JSON.stringify({ parentState, frameState, today, yesterday })}`);
+
   const adaptiveResult = await page.evaluate(async (day) => window.RinloAdaptiveLearning.adaptCurrentAction(day), today);
-  assert(adaptiveResult?.context?.adaptation?.reviewDay === yesterday, `adaptive_api_did_not_apply:${JSON.stringify(adaptiveResult)}`);
+  assert(adaptiveResult?.context?.adaptation?.reviewDay === yesterday, `adaptive_api_did_not_apply:${JSON.stringify({ adaptiveResult, parentState, frameState })}`);
   await page.evaluate(() => window.RinloDailyLoop.refresh());
   await page.waitForTimeout(80);
   await app.getByTestId('today-primary-action').waitFor({ state:'visible', timeout:10000 });
