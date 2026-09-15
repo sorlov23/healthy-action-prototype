@@ -62,14 +62,31 @@ try {
         updatedAt: new Date().toISOString(),
       },
     };
-    db.days[today] = { events: [], water: 0, steps: 0, habits: {}, closed: false, rinloActions: [] };
+    db.days[today] = {
+      events: [], water: 0, steps: 0, habits: {}, closed: false,
+      rinloCheckin: { day: today, wellbeing: 'okay', updatedAt: new Date().toISOString() },
+      rinloActions: [{
+        id: 'daily-loop-today-action',
+        day: today,
+        kind: 'movement',
+        status: 'suggested',
+        source: 'local-rules',
+        title: 'Пройдитесь 10 минут',
+        rationale: 'Сегодня движения пока немного. Небольшой прогулки достаточно.',
+        effortMinutes: 10,
+        context: { signal: 'steps_low' },
+      }],
+    };
     localStorage.setItem(key, JSON.stringify(db));
     window.__haViewDay = today;
     window.rinloProductGo?.('today');
   }, { today, yesterday });
 
-  await app.locator('body').evaluate(async () => { await window.rinloCoreCheckin?.('okay'); });
+  await page.evaluate(async (day) => { await window.RinloAdaptiveLearning?.adaptCurrentAction(day); }, today);
+  await page.evaluate(() => window.RinloDailyLoop?.refresh());
+  await page.waitForTimeout(80);
   await app.getByTestId('today-primary-action').waitFor({ state:'visible', timeout:10000 });
+
   const adapted = await app.locator('body').evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     const day = db.days?.[window.__haViewDay] || {};
