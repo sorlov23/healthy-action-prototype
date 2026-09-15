@@ -40,7 +40,7 @@ try {
 
   const today = localKey(0);
   const yesterday = localKey(-1);
-  await app.locator('body').evaluate(({ today, yesterday }) => {
+  await app.locator('body').evaluate((_body, { today, yesterday }) => {
     const key = 'healthy-action-v07';
     const db = JSON.parse(localStorage.getItem(key) || '{}');
     db.days ||= {};
@@ -92,7 +92,7 @@ try {
       action:(db.days?.[day]?.rinloActions || []).find((item) => ['suggested','accepted'].includes(item.status)) || null,
     };
   }, today);
-  const frameState = await app.locator('body').evaluate((day) => {
+  const frameState = await app.locator('body').evaluate((_body, day) => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
     return {
       viewDay:window.__haViewDay || null,
