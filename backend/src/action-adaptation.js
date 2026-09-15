@@ -20,7 +20,12 @@ export function selectAdaptiveCandidate(candidates, {
 
   const previousKind = previousReview?.mainActionKind || null;
   const avoidPreviousKind = previousReview?.actionUseful === 'no' && Boolean(previousKind);
-  const preferred = candidates.find((candidate) =>
+  const preferPreviousKind = previousReview?.actionUseful === 'yes' && Boolean(previousKind);
+
+  const helpfulRepeat = preferPreviousKind
+    ? candidates.find((candidate) => candidate.kind === previousKind && candidate.kind !== currentRejectedKind)
+    : null;
+  const preferred = helpfulRepeat || candidates.find((candidate) =>
     candidate.kind !== currentRejectedKind
     && (!avoidPreviousKind || candidate.kind !== previousKind)
   );
@@ -46,17 +51,28 @@ export function selectAdaptiveCandidate(candidates, {
       && previousKind
       && selected.kind !== previousKind
     ),
+    repeatedHelpfulKind: Boolean(
+      preferPreviousKind
+      && previousKind
+      && selected.kind === previousKind
+    ),
     effortReduced: false,
+    easedAfterSkip: false,
   };
 
-  if (previousReview.planFit === 'too_much') {
+  const shouldReduceEffort = previousReview.planFit === 'too_much' || previousReview.actionUseful === 'skipped';
+  if (shouldReduceEffort) {
     const before = Number(result.effortMinutes);
     const after = reducedEffortMinutes(before);
     if (Number.isFinite(before) && Number.isFinite(after) && after < before) {
       result.effortMinutes = after;
       result.title = shortenTitle(result.title, before, after);
-      result.rationale = `В прошлый раз план ощущался перегруженным, поэтому сегодня шаг короче. ${result.rationale}`;
+      const prefix = previousReview.actionUseful === 'skipped'
+        ? 'Вчера главный шаг не состоялся, поэтому сегодня начинаем с более короткого варианта.'
+        : 'В прошлый раз план ощущался перегруженным, поэтому сегодня шаг короче.';
+      result.rationale = `${prefix} ${result.rationale}`;
       adaptation.effortReduced = true;
+      adaptation.easedAfterSkip = previousReview.actionUseful === 'skipped';
       adaptation.previousEffortMinutes = before;
       adaptation.adaptedEffortMinutes = after;
     }
