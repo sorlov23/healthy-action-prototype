@@ -35,6 +35,8 @@ try {
     };
     tick();
   }));
+  await page.waitForFunction(() => window.RinloAdaptiveLearning?.version === 'v1', null, { timeout:10000 });
+  await page.waitForFunction(() => window.RinloDailyLoop?.version === 'v1', null, { timeout:10000 });
 
   const today = localKey(0);
   const yesterday = localKey(-1);
@@ -82,8 +84,9 @@ try {
     window.rinloProductGo?.('today');
   }, { today, yesterday });
 
-  await page.evaluate(async (day) => { await window.RinloAdaptiveLearning?.adaptCurrentAction(day); }, today);
-  await page.evaluate(() => window.RinloDailyLoop?.refresh());
+  const adaptiveResult = await page.evaluate(async (day) => window.RinloAdaptiveLearning.adaptCurrentAction(day), today);
+  assert(adaptiveResult?.context?.adaptation?.reviewDay === yesterday, `adaptive_api_did_not_apply:${JSON.stringify(adaptiveResult)}`);
+  await page.evaluate(() => window.RinloDailyLoop.refresh());
   await page.waitForTimeout(80);
   await app.getByTestId('today-primary-action').waitFor({ state:'visible', timeout:10000 });
 
