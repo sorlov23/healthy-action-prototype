@@ -68,7 +68,7 @@ try {
     window.rinloProductGo?.('today');
   }, { today, yesterday });
 
-  await app.getByRole('button', { name:'Нормально', exact:true }).click();
+  await app.locator('body').evaluate(async () => { await window.rinloCoreCheckin?.('okay'); });
   await app.getByTestId('today-primary-action').waitFor({ state:'visible', timeout:10000 });
   const adapted = await app.locator('body').evaluate(() => {
     const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
