@@ -136,6 +136,7 @@ function boot(initial, { replacementKind = 'hydration' } = {}) {
   assert.equal(active.title, 'Пройдитесь 5 минут');
   assert.match(active.rationale, /шаг короче/);
   assert.equal(active.context.adaptation.effortReduced, true);
+  assert.equal(active.context.adaptation.repeatedHelpfulKind, true);
 }
 
 {
@@ -154,6 +155,25 @@ function boot(initial, { replacementKind = 'hydration' } = {}) {
   assert.equal(active.title, 'Другой шаг 5 минут');
   assert.equal(active.context.adaptation.avoidedPreviousKind, true);
   assert.equal(active.context.adaptation.effortReduced, true);
+}
+
+{
+  const { storage, win } = boot({
+    profile: { primaryGoal: 'weight_loss' },
+    days: {
+      '2026-09-11': previousDay({ planFit: 'right', actionUseful: 'skipped' }),
+      '2026-09-12': currentDay(),
+    },
+  });
+
+  await win.rinloCoreCheckin('okay');
+  const active = storage.read().days['2026-09-12'].rinloActions.find((action) => action.status === 'suggested');
+  assert.equal(active.kind, 'movement');
+  assert.equal(active.effortMinutes, 5);
+  assert.equal(active.title, 'Пройдитесь 5 минут');
+  assert.match(active.rationale, /не состоялся/);
+  assert.equal(active.context.adaptation.effortReduced, true);
+  assert.equal(active.context.adaptation.easedAfterSkip, true);
 }
 
 console.log('Rinlo adaptive learning browser contract passed');
