@@ -22,6 +22,7 @@ on:
       - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-product-reset-v1.js'
       - 'rinlo-product-precision-v1.js'
+      - 'rinlo-product-ui-v3.js'
       - 'rinlo-smart-food-v1.js'
       - 'rinlo-smart-food-events-v1.js'
       - 'rinlo-action-sync-v1.js'
@@ -73,6 +74,7 @@ on:
       - 'rinlo-adaptive-learning-v1.js'
       - 'rinlo-product-reset-v1.js'
       - 'rinlo-product-precision-v1.js'
+      - 'rinlo-product-ui-v3.js'
       - 'rinlo-smart-food-v1.js'
       - 'rinlo-smart-food-events-v1.js'
       - 'rinlo-action-sync-v1.js'
@@ -131,6 +133,7 @@ jobs:
           node --check rinlo-adaptive-learning-v1.js
           node --check rinlo-product-reset-v1.js
           node --check rinlo-product-precision-v1.js
+          node --check rinlo-product-ui-v3.js
           node --check rinlo-smart-food-v1.js
           node --check rinlo-smart-food-events-v1.js
           node --check rinlo-action-sync-v1.js
@@ -221,10 +224,11 @@ jobs:
           grep -q 'rinlo-action-sync-v1.js?rev=42' pwa.html
           grep -q 'rinlo-evening-review-v1.js?rev=46' pwa.html
           grep -q 'rinlo-server-restore-v1.js?rev=33' pwa.html
-          grep -q 'service-worker.js?rev=58' pwa.html
+          grep -q 'rinlo-product-ui-v3.js?rev=2' pwa.html
+          grep -q 'service-worker.js?rev=59' pwa.html
           grep -Fq "rinloFrame?.addEventListener('load',revealRinlo)" pwa.html
           grep -Fq "rinloFrame?.contentDocument?.readyState==='complete'" pwa.html
-          grep -q "rinlo-pwa-v58" service-worker.js
+          grep -q "rinlo-pwa-v59" service-worker.js
           grep -q "./pwa-sync.js?rev=51" service-worker.js
           grep -q "./rinlo-product-reset-v1.js?rev=1" service-worker.js
           grep -q "./rinlo-product-precision-v1.js?rev=52" service-worker.js
@@ -238,6 +242,7 @@ jobs:
           grep -q "./rinlo-adaptive-learning-v1.js?rev=50" service-worker.js
           grep -q "./rinlo-action-sync-v1.js?rev=42" service-worker.js
           grep -q "./rinlo-evening-review-v1.js?rev=46" service-worker.js
+          grep -q "./rinlo-product-ui-v3.js?rev=2" service-worker.js
           grep -q "url.pathname.includes('/api/')" service-worker.js
           transport_line=$(grep -n 'rinlo-supabase-transport-v1.js?rev=39' pwa.html | cut -d: -f1)
           action_transport_line=$(grep -n 'rinlo-supabase-action-transport-v1.js?rev=43' pwa.html | cut -d: -f1)
@@ -252,6 +257,7 @@ jobs:
           action_sync_line=$(grep -n 'rinlo-action-sync-v1.js?rev=42' pwa.html | cut -d: -f1)
           evening_review_line=$(grep -n 'rinlo-evening-review-v1.js?rev=46' pwa.html | cut -d: -f1)
           restore_line=$(grep -n 'rinlo-server-restore-v1.js?rev=33' pwa.html | cut -d: -f1)
+          product_ui_line=$(grep -n 'rinlo-product-ui-v3.js?rev=2' pwa.html | cut -d: -f1)
           test "$transport_line" -lt "$action_transport_line"
           test "$action_transport_line" -lt "$review_transport_line"
           test "$review_transport_line" -lt "$core_line"
@@ -264,3 +270,4 @@ jobs:
           test "$smart_food_events_line" -lt "$action_sync_line"
           test "$action_sync_line" -lt "$evening_review_line"
           test "$evening_review_line" -lt "$restore_line"
+          test "$restore_line" -lt "$product_ui_line"

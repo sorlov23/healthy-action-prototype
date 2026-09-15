@@ -27,6 +27,7 @@ async function appFrame() {
     && window.__rinloProductPrecision === 'v1'
     && window.__rinloSmartFood === 'v1'
     && window.__rinloCopyPass === 'v1'
+    && window.__rinloProductUi === 'v3'
   ), null, { timeout: 15000 });
   await page.waitForFunction(() => (
     window.RinloServerSync
@@ -34,6 +35,11 @@ async function appFrame() {
     && window.HealthyActionAPI?.enabled === true
   ), null, { timeout: 15000 });
   return frame;
+}
+
+async function go(app, id) {
+  await app.locator(`[data-rinlo-nav="${id}"]`).click();
+  await app.locator(`#${id}`).waitFor({ state: 'visible' });
 }
 
 async function finishProductReset(app) {
@@ -47,11 +53,11 @@ async function finishProductReset(app) {
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
   await app.evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
+  await app.getByTestId('today-primary-action').waitFor({ state: 'visible' });
 }
 
 async function completeDetailedProfile(app) {
-  await app.locator('.nav button').nth(3).click();
-  await app.locator('#profile').waitFor({ state: 'visible' });
+  await go(app, 'profile');
   await app.getByRole('button', { name: /Настроить под себя/ }).click();
   await app.getByRole('heading', { name: 'Настроить под себя', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rppWeight').fill('85');
@@ -65,8 +71,7 @@ async function completeDetailedProfile(app) {
   assert(profile?.detailsComplete === true, 'Progressive profile did not become complete');
   assert(profile?.primaryGoal === 'weight_loss', 'Progressive profile overwrote Product Reset goal');
   assert(profile?.weight === 85 && profile?.goal === 75 && profile?.height === 176 && profile?.age === 37, 'Progressive profile values missing');
-  await app.locator('.nav button').nth(0).click();
-  await app.locator('#today').waitFor({ state: 'visible' });
+  await go(app, 'today');
 }
 
 async function syncNow() {
@@ -98,11 +103,17 @@ try {
 
   await completeDetailedProfile(app);
 
-  await app.getByRole('button', { name: 'Нормально' }).click();
-  await app.locator('.rc-action').waitFor({ state: 'visible' });
+  const checkinAfterProfile = await app.evaluate(() => {
+    const db = JSON.parse(localStorage.getItem('healthy-action-v07') || '{}');
+    const key = Object.keys(db.days || {}).sort().at(-1);
+    return db.days?.[key]?.rinloCheckin || null;
+  });
+  assert(checkinAfterProfile?.wellbeing === 'okay', `Product Reset check-in changed after profile completion: ${JSON.stringify(checkinAfterProfile)}`);
+  await app.getByTestId('today-checkin').getByText('Сегодня:', { exact: true }).waitFor({ state: 'visible' });
+  await app.getByTestId('today-primary-action').waitFor({ state: 'visible' });
 
-  await app.locator('.rc-quick button').filter({ hasText: '+250 мл' }).click();
-  await app.locator('.rc-quick button').filter({ hasText: '+1000' }).click();
+  await app.getByTestId('quick-water').click();
+  await app.getByTestId('quick-steps').click();
 
   let foodCreateSeenResolve;
   let foodCreateRelease;
@@ -117,7 +128,7 @@ try {
     await route.continue();
   });
 
-  await app.locator('.rc-quick button').filter({ hasText: 'Еда' }).click();
+  await app.getByTestId('quick-food').click();
   await app.getByRole('heading', { name: 'Добавить еду', exact: true }).waitFor({ state: 'visible' });
   await app.locator('#rsfText').fill('омлет из двух яиц и кофе');
   await app.getByRole('button', { name: 'Распознать описание', exact: true }).click();
@@ -147,14 +158,13 @@ try {
   await page.waitForFunction(() => window.RinloServerSync.pending().length === 0, null, { timeout: 10000 });
   await page.unroute('**/api/v1/food/logs');
 
-  await app.locator('.rc-quick button').filter({ hasText: 'Вес' }).click();
+  await app.getByTestId('quick-weight').click();
   await app.locator('#rfWeight').fill('84.6');
   await app.getByRole('button', { name: 'Сохранить' }).click();
 
-  await app.locator('.nav button').nth(1).click();
-  await app.locator('#actions').waitFor({ state: 'visible' });
+  await go(app, 'actions');
   await app.getByRole('button', { name: 'Подвести итог дня', exact: true }).click();
-  await app.getByRole('heading', { name: 'Итог дня' }).waitFor();
+  await app.getByRole('heading', { name: 'Итог дня', exact: true }).waitFor();
   await app.getByRole('button', { name: 'В самый раз', exact: true }).click();
   await app.getByRole('button', { name: 'Да', exact: true }).click();
   await app.getByRole('button', { name: 'Готово', exact: true }).click();
@@ -212,7 +222,7 @@ try {
   assert(!restoredWeight, `Deleted weight returned from server: ${JSON.stringify(restoredWeight)}`);
 
   if (runtimeErrors.length) throw new Error(`Runtime errors:\n${runtimeErrors.join('\n')}`);
-  console.log('Rinlo server sync E2E passed');
+  console.log('Rinlo product UI server sync E2E passed');
 } finally {
   await browser.close();
 }

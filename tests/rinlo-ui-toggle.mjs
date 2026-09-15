@@ -39,8 +39,17 @@ try {
   await app.locator('.rpr-magic').waitFor({ state: 'visible', timeout: 10000 });
   await app.locator('body').evaluate(() => window.rinloProductEnterApp());
   await app.locator('#today').waitFor({ state: 'visible' });
+  await app.locator('body').evaluate(() => new Promise((resolve, reject) => {
+    const started = Date.now();
+    const tick = () => {
+      if (window.__rinloProductUi === 'v3') return resolve();
+      if (Date.now() - started > 10000) return reject(new Error('product_ui_not_ready'));
+      setTimeout(tick, 50);
+    };
+    tick();
+  }));
 
-  await app.locator('.nav button').nth(3).click();
+  await app.locator('[data-rinlo-nav="profile"]').click();
   await app.locator('#profile').waitFor({ state: 'visible' });
   await app.getByRole('button', { name: /Настроить под себя/ }).click();
   await app.getByRole('heading', { name: 'Настроить под себя', exact: true }).waitFor({ state: 'visible' });
