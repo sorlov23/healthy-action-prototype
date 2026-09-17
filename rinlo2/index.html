@@ -112,7 +112,31 @@
     </nav>
   </div>
 
+  <input type="file" id="photoInput" accept="image/*" hidden />
+
   <div class="decision-flow" id="decisionFlow" hidden>
+    <section class="flow-step" data-flow-step="photo">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Фото блюда</b><span></span></header>
+      <div class="flow-body photo-body">
+        <p class="eyebrow dark">ОДНО УТОЧНЕНИЕ</p>
+        <h1>Что на фото?</h1>
+        <p class="flow-lead">Иногда по одному фото нельзя надёжно понять состав. Назови блюдо одной фразой — Rinlo не будет угадывать лишнего.</p>
+        <button class="photo-preview" id="photoPreview" type="button" aria-label="Выбрать другое фото">
+          <span class="photo-preview-hint">↻ Другое фото</span>
+        </button>
+        <label class="photo-description">
+          <span>Коротко опиши блюдо</span>
+          <input id="photoDescription" maxlength="120" placeholder="Например: бургер, картошка и кола" />
+        </label>
+        <div class="quick-questions photo-quick">
+          <button data-photo-question="Бургер, картошка и кола">Бургер, картошка и кола</button>
+          <button data-photo-question="Роллы">Роллы</button>
+          <button data-photo-question="Овсянка с ягодами">Овсянка с ягодами</button>
+        </div>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" id="analyzePhoto" disabled>Разобрать выбор →</button></div>
+    </section>
+
     <section class="flow-step" data-flow-step="ask">
       <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Спросить текстом</b><span></span></header>
       <div class="flow-body ask-body">
