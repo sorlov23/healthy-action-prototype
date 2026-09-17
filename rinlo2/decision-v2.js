@@ -144,7 +144,7 @@
         <div class="day-calorie-copy">
           <small><span class="day-calorie-dot"></span>Контекст дня</small>
           <strong id="dayCalorieValue">Пока нет сохранённых решений</strong>
-          <span id="dayCalorieNote">Считаем только то, что ты сохранил в Rinlo</span>
+          <span id="dayCalorieNote">Только по решениям, которые ты сохранил в Rinlo</span>
         </div>
         <div class="day-calorie-target"><small>ориентир</small><b>~ ${DAY_TARGET.toLocaleString('ru-RU')} ккал</b></div>
       `;
@@ -178,8 +178,8 @@
     value.textContent = formatCalories(sumCalories(today));
     if (note) {
       note.textContent = today.length
-        ? `${today.length} ${today.length === 1 ? 'сохранённое решение' : 'сохранённых решения'} · это не полный дневник еды`
-        : 'Считаем только то, что ты сохранил в Rinlo';
+        ? `${today.length} ${today.length === 1 ? 'сохранённое решение' : 'сохранённых решения'} · не полный дневник еды`
+        : 'Только по решениям, которые ты сохранил в Rinlo';
     }
   }
 
