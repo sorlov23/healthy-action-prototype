@@ -1,0 +1,59 @@
+name: rinlo2 decision e2e
+
+on:
+  push:
+    paths:
+      - 'rinlo2/**'
+      - 'tests/rinlo2-decision-smoke.mjs'
+      - '.github/workflows/rinlo2-e2e.yml'
+  pull_request:
+    paths:
+      - 'rinlo2/**'
+      - 'tests/rinlo2-decision-smoke.mjs'
+      - '.github/workflows/rinlo2-e2e.yml'
+
+jobs:
+  mobile-decision-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save --no-audit --no-fund playwright@1.55.0
+          for attempt in 1 2 3; do
+            if npx playwright install chromium; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Playwright Chromium installation failed after 3 attempts"
+              exit 1
+            fi
+            echo "Playwright Chromium installation failed (attempt $attempt/3); retrying..."
+            sleep $((attempt * 5))
+          done
+
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rinlo2-http.log 2>&1 &
+          echo $! > /tmp/rinlo2-http.pid
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:4173/rinlo2/index.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/rinlo2-http.log
+          exit 1
+
+      - name: Run Rinlo 2 mobile decision smoke
+        run: |
+          if node tests/rinlo2-decision-smoke.mjs; then
+            exit 0
+          fi
+          echo '--- Rinlo 2 HTTP server log ---'
+          cat /tmp/rinlo2-http.log || true
+          exit 1
