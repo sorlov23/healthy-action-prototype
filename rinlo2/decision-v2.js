@@ -27,11 +27,16 @@
   const savedCalories = document.getElementById('savedCalories');
   const originalPhoto = flow.querySelector('.burger-cola');
   const alternativePhoto = flow.querySelector('.burger-zero');
+  const photoInput = document.getElementById('photoInput');
+  const photoPreview = document.getElementById('photoPreview');
+  const photoDescription = document.getElementById('photoDescription');
+  const analyzePhotoButton = document.getElementById('analyzePhoto');
 
   let activeStep = 'ask';
   let currentDecision = null;
   let decisions = loadDecisions();
   let toastTimer = null;
+  let photoObjectUrl = null;
 
   const presets = {
     burger: {
@@ -197,6 +202,7 @@
     document.body.style.overflow = 'hidden';
     flow.querySelector('.flow-step.active .flow-body')?.scrollTo(0, 0);
     if (name === 'ask') setTimeout(() => questionInput?.focus({ preventScroll: true }), 180);
+    if (name === 'photo') setTimeout(() => photoDescription?.focus({ preventScroll: true }), 180);
   }
 
   function closeFlow() {
@@ -210,6 +216,27 @@
     questionInput.value = '';
     updateQuestionState();
     showStep('ask');
+  }
+
+  function openPhotoPicker() {
+    if (!photoInput) return;
+    photoInput.value = '';
+    photoInput.click();
+  }
+
+  function updatePhotoState() {
+    if (!analyzePhotoButton || !photoDescription) return;
+    analyzePhotoButton.disabled = photoDescription.value.trim().length < 2;
+  }
+
+  function showPhoto(file) {
+    if (!file || !photoPreview) return;
+    if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+    photoObjectUrl = URL.createObjectURL(file);
+    photoPreview.style.backgroundImage = `linear-gradient(180deg,rgba(17,19,21,.02),rgba(17,19,21,.18)),url("${photoObjectUrl}")`;
+    photoDescription.value = '';
+    updatePhotoState();
+    showStep('photo');
   }
 
   function updateQuestionState() {
@@ -324,8 +351,26 @@
   }
 
   document.querySelector('[data-action="text"]')?.addEventListener('click', openAsk);
-  document.querySelector('[data-action="photo"]')?.addEventListener('click', () => showToast('Фото-анализ — следующий технический slice. Текстовый flow уже работает.'));
+  document.querySelector('[data-action="photo"]')?.addEventListener('click', openPhotoPicker);
   document.querySelector('[data-action="voice"]')?.addEventListener('click', () => showToast('Голос подключим после основного decision flow.'));
+
+  photoInput?.addEventListener('change', () => showPhoto(photoInput.files?.[0]));
+  photoPreview?.addEventListener('click', openPhotoPicker);
+  photoDescription?.addEventListener('input', updatePhotoState);
+  document.querySelectorAll('[data-photo-question]').forEach((button) => button.addEventListener('click', () => {
+    photoDescription.value = button.dataset.photoQuestion || '';
+    updatePhotoState();
+    photoDescription.focus();
+  }));
+  analyzePhotoButton?.addEventListener('click', () => {
+    const description = photoDescription?.value.trim() || '';
+    if (description.length < 2) return;
+    currentDecision = classify(description);
+    currentDecision.source = 'photo';
+    currentDecision.question = description;
+    renderResult(currentDecision);
+    showStep('result');
+  });
 
   questionInput?.addEventListener('input', updateQuestionState);
   document.querySelectorAll('[data-question]').forEach((button) => button.addEventListener('click', () => {
@@ -352,8 +397,8 @@
   document.getElementById('keepOriginal')?.addEventListener('click', () => saveChoice(false));
 
   flow.querySelectorAll('[data-flow-back]').forEach((button) => button.addEventListener('click', () => {
-    if (activeStep === 'ask') closeFlow();
-    else if (activeStep === 'result') showStep('ask');
+    if (activeStep === 'ask' || activeStep === 'photo') closeFlow();
+    else if (activeStep === 'result') showStep(currentDecision?.source === 'photo' ? 'photo' : 'ask');
     else if (activeStep === 'alternative') showStep('result');
   }));
 
@@ -369,8 +414,9 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.1-calorie-context',
+    version: 'decision-v2.2-photo-flow',
     openAsk,
+    openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => ({ ...item })),
     getDayContext: () => ({ target: DAY_TARGET, decisions: todayDecisions().length, calories: sumCalories() }),
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
