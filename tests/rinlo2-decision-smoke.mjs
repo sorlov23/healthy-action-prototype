@@ -53,7 +53,7 @@ try {
 
   await page.getByRole('button', { name: 'Открыть историю', exact: true }).click();
   await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
-  await page.getByText('Бургер без соуса + Cola Zero', { exact: true }).first().waitFor({ state: 'visible' });
+  await page.locator('#todayHistoryList').getByText('Бургер без соуса + Cola Zero', { exact: true }).waitFor({ state: 'visible' });
 
   await page.locator('[data-nav="home"]').last().click();
   await page.locator('#dayCalorieContext').waitFor({ state: 'visible' });
