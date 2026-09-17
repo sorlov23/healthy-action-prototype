@@ -34,6 +34,21 @@ try {
   assert(homeGeometry.buttons.every((button) => button.height >= 54 && button.left >= 0 && button.right <= 390), `home_cta_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.buttons[0].bottom < homeGeometry.buttons[1].top, `home_ctas_not_stacked:${JSON.stringify(homeGeometry)}`);
 
+  await page.locator('[data-action="photo"]').click();
+  await page.locator('#photoInput').setInputFiles({
+    name: 'meal.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2VZsAAAAASUVORK5CYII=', 'base64'),
+  });
+  await page.getByRole('heading', { name: 'Что на фото?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('#photoDescription').fill('Овсянка с ягодами');
+  await page.getByRole('button', { name: 'Разобрать выбор', exact: false }).click();
+  await page.getByRole('heading', { name: 'Можно брать', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#resultCalories').textContent())?.includes('320'), 'photo_flow_result_missing');
+  await page.locator('[data-flow-step="result"] [data-flow-back]').click();
+  await page.getByRole('heading', { name: 'Что на фото?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-flow-step="photo"] [data-flow-back]').click();
+
   await page.locator('[data-action="text"]').click();
   await page.getByRole('heading', { name: 'Что хочешь съесть?', exact: true }).waitFor({ state: 'visible' });
   await page.locator('#decisionQuestion').fill('Можно сегодня бургер и колу?');
