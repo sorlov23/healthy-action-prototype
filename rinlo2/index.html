@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7f8" />
+  <title>Rinlo 2.0 — Decisions</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <header class="topbar">
+      <button class="brand" data-nav="home" aria-label="Rinlo — на главную">
+        <img src="./logo.svg" alt="" class="brand-mark" />
+        <span class="brand-copy"><b>Rinlo</b><small>DECISIONS</small></span>
+      </button>
+      <button class="icon-button" data-nav="profile" aria-label="Профиль">◎</button>
+    </header>
+
+    <main class="content">
+      <section class="screen active" data-screen="home">
+        <div class="progress-strip">
+          <div><span class="status-dot"></span><b>Хорошая динамика</b><small>−2,4 кг с начала</small></div>
+          <div class="progress-mini"><strong>72,6</strong><span>→</span><strong>68,0 кг</strong></div>
+        </div>
+
+        <section class="decision-hero">
+          <div class="hero-photo"></div>
+          <div class="hero-shade"></div>
+          <div class="hero-content">
+            <p class="eyebrow">ОДИН ВОПРОС. ПОНЯТНЫЙ ОТВЕТ.</p>
+            <h1>Что собираешься<br />съесть?</h1>
+            <p>Сфотографируй блюдо или спроси словами — Rinlo поможет принять решение до того, как выбор уже сделан.</p>
+            <div class="hero-actions">
+              <button class="btn primary" data-demo="photo">⌁ <span>Сфотографировать</span></button>
+              <button class="btn light" data-demo="text">↗ <span>Спросить текстом</span></button>
+            </div>
+            <button class="voice-link" data-demo="voice">⌁ Спросить голосом</button>
+          </div>
+        </section>
+
+        <div class="section-head"><h2>Недавние решения</h2><button data-nav="history">Все →</button></div>
+        <div class="decision-list compact">
+          <article class="decision-row">
+            <div class="thumb food-berries"></div><div class="row-copy"><b>Овсянка с ягодами</b><span class="verdict good">● Хороший выбор</span><small>Сегодня · 09:12</small></div><span>›</span>
+          </article>
+          <article class="decision-row">
+            <div class="thumb food-coffee"></div><div class="row-copy"><b>Капучино</b><span class="verdict neutral">● В пределах нормы</span><small>Вчера · 16:20</small></div><span>›</span>
+          </article>
+          <article class="decision-row">
+            <div class="thumb food-burger"></div><div class="row-copy"><b>Бургер с картошкой</b><span class="verdict adjust">● Есть вариант лучше</span><small>Вчера · 13:05</small></div><span>›</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="history">
+        <p class="eyebrow dark">ТВОИ ПРЕДЫДУЩИЕ ВЫБОРЫ</p><h1 class="page-title">История решений</h1>
+        <div class="filters"><button class="active">Все</button><button>Подошло</button><button>С корректировкой</button></div>
+        <label class="search"><span>⌕</span><input placeholder="Найти блюдо или решение" /></label>
+        <div class="section-head"><h2>Сегодня</h2><span>2 решения</span></div>
+        <div class="decision-list">
+          <article class="decision-row large"><div class="thumb food-berries"></div><div class="row-copy"><b>Овсянка с ягодами</b><span class="verdict good">● Можно брать</span><small>Сытный завтрак без лишней сложности.</small></div><span>›</span></article>
+          <article class="decision-row large"><div class="thumb food-salad"></div><div class="row-copy"><b>Салат с курицей</b><span class="verdict neutral">● Вписывается</span><small>Соус лучше оставить отдельно.</small></div><span>›</span></article>
+        </div>
+        <div class="section-head"><h2>Вчера</h2><span>3 решения</span></div>
+        <div class="decision-list">
+          <article class="decision-row large"><div class="thumb food-burger"></div><div class="row-copy"><b>Бургер с картошкой</b><span class="verdict adjust">● Есть вариант лучше</span><small>Выбран бургер без большого комбо.</small></div><span>›</span></article>
+          <article class="decision-row large"><div class="thumb food-coffee"></div><div class="row-copy"><b>Капучино</b><span class="verdict good">● Можно брать</span><small>Без сиропа — проще вписать в день.</small></div><span>›</span></article>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="progress">
+        <p class="eyebrow dark">НЕ ОТЧЁТ. ОТВЕТ НА «РАБОТАЕТ ЛИ?»</p><h1 class="page-title">Твой прогресс</h1>
+        <article class="trend-card">
+          <div class="trend-top"><div><strong>−2,4 кг</strong><small>с начала</small></div><span class="pill good-pill">↓ спокойный темп</span></div>
+          <svg class="trend-chart" viewBox="0 0 340 132" role="img" aria-label="Тренд веса вниз">
+            <defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c7ff5b" stop-opacity=".32"/><stop offset="1" stop-color="#c7ff5b" stop-opacity="0"/></linearGradient></defs>
+            <path d="M8 28 C55 33 60 55 110 56 S168 74 210 78 S274 102 332 108 L332 128 L8 128Z" fill="url(#fade)"/>
+            <path d="M8 28 C55 33 60 55 110 56 S168 74 210 78 S274 102 332 108" fill="none" stroke="#8bdc33" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="8" cy="28" r="5" fill="#111315"/><circle cx="332" cy="108" r="6" fill="#8bdc33"/>
+          </svg>
+          <div class="chart-labels"><span>72,6 кг<br><small>старт</small></span><span>70,2 кг<br><small>сейчас</small></span><span>68,0 кг<br><small>цель</small></span></div>
+        </article>
+        <div class="metric-grid">
+          <article><span class="metric-icon lime">✓</span><strong>18</strong><p>решений в твою пользу</p></article>
+          <article><span class="metric-icon">↘</span><strong>−0,5 кг</strong><p>средний темп в неделю</p></article>
+        </div>
+        <article class="insight-card"><p class="eyebrow dark">ПОЛЕЗНЫЙ ПАТТЕРН</p><h2>Чаще всего тебе помогает не менять блюдо, а убирать лишнее из комбо.</h2><p>Так уже было с бургером, шаурмой и пиццей. Rinlo будет учитывать это в следующих решениях.</p></article>
+      </section>
+
+      <section class="screen" data-screen="profile">
+        <p class="eyebrow dark">КОНТЕКСТ ДЛЯ РЕШЕНИЙ</p><h1 class="page-title">Профиль</h1>
+        <article class="goal-card">
+          <div><small>Сейчас</small><strong>70,2 кг</strong></div><div class="goal-line"><span style="width:44%"></span></div><div><small>Цель</small><strong>68,0 кг</strong></div>
+        </article>
+        <div class="settings-list">
+          <button><span>◎</span><div><b>Цель и вес</b><small>Снижение веса · умеренный темп</small></div><i>›</i></button>
+          <button><span>◌</span><div><b>Предпочтения в еде</b><small>Без жёстких ограничений</small></div><i>›</i></button>
+          <button><span>⌁</span><div><b>Что учитывать</b><small>Сытность, калорийность, привычные замены</small></div><i>›</i></button>
+          <button><span>◐</span><div><b>Приватность и данные</b><small>Аккаунт, синхронизация, экспорт</small></div><i>›</i></button>
+        </div>
+        <article class="brand-card"><img src="./logo.svg" alt="" /><div><b>Меньше сомнений.<br>Больше нормальных решений.</b><small>Rinlo Decisions · foundation preview</small></div></article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button class="active" data-nav="home"><span>⌂</span><small>Главная</small></button>
+      <button data-nav="history"><span>◷</span><small>История</small></button>
+      <button data-nav="progress"><span>▥</span><small>Прогресс</small></button>
+      <button data-nav="profile"><span>◎</span><small>Профиль</small></button>
+    </nav>
+  </div>
+
+  <div class="onboarding" id="onboarding" hidden>
+    <section class="welcome-step active" data-onboarding-step="welcome">
+      <div class="welcome-brand"><img src="./logo.svg" alt="" /><span><b>Rinlo</b><small>DECISIONS</small></span></div>
+      <p class="eyebrow dark">НОВЫЙ RINLO</p>
+      <h1>Лучшие решения о еде — без перегруза.</h1>
+      <p class="lead">Спроси до того, как выбор уже сделан. Rinlo даст короткий ответ и предложит более удобный вариант, если он действительно нужен.</p>
+      <div class="steps"><div><b>01</b><span>Сфотографируй или спроси</span></div><div><b>02</b><span>Получи понятный ответ</span></div><div><b>03</b><span>Сделай свой выбор</span></div></div>
+      <button class="btn primary wide" id="startSetup">Начать →</button>
+      <button class="text-button" id="skipOnboarding">Посмотреть демо без настройки</button>
+    </section>
+    <section class="welcome-step" data-onboarding-step="setup">
+      <button class="back-button" id="backWelcome">← Назад</button>
+      <p class="eyebrow dark">ТОЛЬКО ТО, ЧТО МЕНЯЕТ РЕШЕНИЯ</p>
+      <h1>К какой цели идём?</h1>
+      <p class="lead">Никаких анкет про настроение и привычки. Для foundation достаточно базового контекста.</p>
+      <div class="form-grid">
+        <label>Текущий вес<input id="currentWeight" inputmode="decimal" value="70.2" /><span>кг</span></label>
+        <label>Цель<input id="targetWeight" inputmode="decimal" value="68.0" /><span>кг</span></label>
+      </div>
+      <div class="goal-choice"><button class="active">Снизить вес</button><button>Удерживать</button></div>
+      <button class="btn primary wide" id="finishOnboarding">Готово →</button>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
