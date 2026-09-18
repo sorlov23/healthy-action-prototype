@@ -36,6 +36,7 @@
   const differenceList = document.getElementById('differenceList');
   const savedName = document.getElementById('savedName');
   const savedCalories = document.getElementById('savedCalories');
+  const savedThumb = document.getElementById('savedThumb');
   const originalPhoto = flow.querySelector('.burger-cola');
   const alternativePhoto = flow.querySelector('.burger-zero');
   const photoInput = document.getElementById('photoInput');
@@ -167,6 +168,25 @@
     if (/овсян|каша|ягод/.test(text)) return 'food-berries';
     return 'food-salad';
   }
+  function sourceIconMarkup(source = 'text') {
+    if (source === 'photo') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 6.5 9.8 4.8h4.4l1.4 1.7H18a2 2 0 0 1 2 2v8.7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h2.4Z"/><circle cx="12" cy="12.8" r="3.2"/></svg>';
+    }
+    if (source === 'voice') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v1.5M8 9v7M12 6.5v11M16 9v7M20 12v1.5"/></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 5.5h13a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H11l-4.5 3v-3h-1a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"/><path d="M8 10h8M8 13.5h5.5"/></svg>';
+  }
+
+  function setDecisionThumb(node, source = 'text', photoUrl = '') {
+    if (!node) return;
+    node.className = 'thumb decision-source-thumb';
+    node.dataset.source = source || 'text';
+    node.classList.toggle('has-photo', Boolean(photoUrl));
+    node.style.backgroundImage = photoUrl ? `url("${photoUrl}")` : '';
+    node.innerHTML = sourceIconMarkup(source);
+  }
+
 
 
   function inferDecisionStage(question = '') {
@@ -634,6 +654,11 @@
     }));
     savedName.textContent = selected.name;
     savedCalories.textContent = selected.calories;
+    setDecisionThumb(
+      savedThumb,
+      currentDecision.source || 'text',
+      currentDecision.source === 'photo' ? photoObjectUrl : '',
+    );
     renderDecisionSurfaces();
     renderDayContext();
     renderProgress();
@@ -675,7 +700,11 @@
     row.tabIndex = 0;
 
     const thumb = document.createElement('div');
-    thumb.className = `thumb ${decision.original?.thumb || thumbForDish(decision.selected?.name || decision.original?.name || decision.question)}`;
+    const currentPhotoUrl = decision.source === 'photo'
+      && currentDecision?.id === decision.id
+      ? photoObjectUrl
+      : '';
+    setDecisionThumb(thumb, decision.source || 'text', currentPhotoUrl);
 
     const copy = document.createElement('div');
     copy.className = 'row-copy';
@@ -960,7 +989,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.7-ai-text',
+    version: 'decision-v2.8-honest-thumbnails',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
