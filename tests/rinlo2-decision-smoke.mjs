@@ -58,12 +58,18 @@ try {
   await page.getByRole('button', { name: 'Разобрать выбор', exact: false }).click();
   await page.getByRole('heading', { name: 'Можно брать', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#resultCalories').textContent())?.includes('320'), 'photo_flow_result_missing');
+  assert(await page.locator('#showAlternative').isHidden(), 'ready_photo_should_not_offer_alternative');
   await page.locator('[data-flow-step="result"] [data-flow-back]').click();
   await page.getByRole('heading', { name: 'Что на фото?', exact: true }).waitFor({ state: 'visible' });
   await page.locator('[data-flow-step="photo"] [data-flow-back]').click();
 
   await page.locator('[data-action="text"]').click();
   await page.getByRole('heading', { name: 'Что хочешь съесть?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('#decisionQuestion').fill('Я уже приготовил бургер и колу');
+  await page.getByRole('button', { name: 'Получить ответ', exact: false }).click();
+  await page.getByRole('heading', { name: 'Можно, но лучше аккуратнее', exact: true }).waitFor({ state: 'visible' });
+  assert(await page.locator('#showAlternative').isHidden(), 'ready_text_should_not_offer_alternative');
+  await page.locator('[data-flow-step="result"] [data-flow-back]').click();
   await page.locator('#decisionQuestion').fill('Можно сегодня бургер и колу?');
   await page.getByRole('button', { name: 'Получить ответ', exact: false }).click();
 
