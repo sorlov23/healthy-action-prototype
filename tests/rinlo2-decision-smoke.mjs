@@ -132,6 +132,16 @@ try {
   assert(memoryMatchBeforeRevoke.burger.length === 1, `burger_memory_should_match:${JSON.stringify(memoryMatchBeforeRevoke)}`);
   assert(memoryMatchBeforeRevoke.oatmeal.length === 0, `oatmeal_memory_should_not_match:${JSON.stringify(memoryMatchBeforeRevoke)}`);
 
+  await page.evaluate((sources) => window.Rinlo2Decisions?.showMemoryExplanation?.(sources), memoryMatchBeforeRevoke.burger);
+  await page.locator('#memoryExplainSheet').waitFor({ state: 'visible' });
+  const explainText = await page.locator('#memoryExplainSheet').textContent();
+  assert(explainText?.includes('Что повлияло на ответ'), 'memory_explain_title_missing');
+  assert(explainText?.includes('без соуса'), 'memory_explain_value_missing');
+  assert(explainText?.includes('уточнял состав похожего блюда'), 'memory_explain_reason_missing');
+  assert(explainText?.includes('текущий запрос всегда важнее памяти'), 'memory_explain_priority_missing');
+  await page.getByRole('button', { name: 'Понятно', exact: true }).click();
+  await page.locator('#memoryExplainSheet').waitFor({ state: 'hidden' });
+
   await page.getByRole('button', { name: 'Готово', exact: true }).click();
 
   await page.locator('[data-nav="progress"]').last().click();
