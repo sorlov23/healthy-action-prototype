@@ -101,6 +101,9 @@
     state = { ...state, ...normalized };
     saveState();
     renderProfile();
+    window.dispatchEvent(new CustomEvent('rinlo2:profile-applied', {
+      detail: { profile: { ...normalized } }
+    }));
     if (!silent) {
       window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
         detail: { profile: { ...normalized } }
