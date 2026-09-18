@@ -317,6 +317,67 @@
     renderMemory();
   }
 
+  const MEMORY_STOP_WORDS = new Set([
+    'это','как','что','мне','можно','хочу','буду','есть','съесть','взять','сегодня','сейчас',
+    'мой','моя','мои','этот','эта','эти','или','для','без','при','уже','ещё','еще','было',
+    'была','были','был','примерно','обычная','обычный','большая','большой','маленькая',
+  ]);
+
+  function memoryTokens(value = '') {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^a-zа-я0-9]+/gi, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter((token) => token.length >= 3 && !MEMORY_STOP_WORDS.has(token))
+      .map((token) => token.length >= 6 ? token.slice(0, 5) : token);
+  }
+
+  function memoryScore(query, correction) {
+    const queryTokens = new Set(memoryTokens(query));
+    if (!queryTokens.size) return 0;
+
+    const dishTokens = new Set(memoryTokens(correction.dishName || ''));
+    const valueTokens = new Set(memoryTokens(correction.value || ''));
+    let score = 0;
+
+    queryTokens.forEach((token) => {
+      if (dishTokens.has(token)) score += 4;
+      if (valueTokens.has(token)) score += correction.type === 'dish' ? 4 : 2;
+    });
+
+    const queryText = String(query || '').toLowerCase().replace(/ё/g, 'е');
+    const dishText = String(correction.dishName || '').toLowerCase().replace(/ё/g, 'е').trim();
+    const valueText = String(correction.value || '').toLowerCase().replace(/ё/g, 'е').trim();
+    if (dishText.length >= 4 && queryText.includes(dishText)) score += 6;
+    if (correction.type === 'dish' && valueText.length >= 4 && queryText.includes(valueText)) score += 6;
+
+    return score;
+  }
+
+  function getRelevantContext(query, days = 30, limit = 4) {
+    const cutoff = Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000;
+    const text = String(query || '').trim();
+    if (!text) return [];
+
+    return activeCorrections()
+      .filter((item) => {
+        const time = new Date(item.createdAt || 0).getTime();
+        return Number.isFinite(time) && time >= cutoff;
+      })
+      .map((item) => ({ item, score: memoryScore(text, item) }))
+      .filter((entry) => entry.score >= 4)
+      .sort((a, b) => b.score - a.score || new Date(b.item.createdAt || 0) - new Date(a.item.createdAt || 0))
+      .slice(0, Math.max(1, Math.min(6, limit)))
+      .map(({ item, score }) => ({
+        type: item.type,
+        value: String(item.value || '').slice(0, 160),
+        dishName: String(item.dishName || '').slice(0, 120),
+        relevance: score,
+      }));
+  }
+
   function getRecentContext(days = 30, limit = 6) {
     const cutoff = Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000;
     return activeCorrections()
@@ -379,7 +440,7 @@
   }, 0);
 
   window.Rinlo2Corrections = {
-    version: 'v2-memory-control',
+    version: 'v3-relevant-memory',
     enabled,
     localOnly,
     record,
@@ -387,6 +448,7 @@
     getCorrections: () => corrections.map((item) => JSON.parse(JSON.stringify(item))),
     getActiveCorrections: () => activeCorrections().map((item) => JSON.parse(JSON.stringify(item))),
     getRecentContext,
+    getRelevantContext,
     fetchRecent,
     syncNow: scheduleSync,
   };
