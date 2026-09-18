@@ -272,6 +272,14 @@
       alternative,
       selected: null,
       memoryAppliedCount: Number(analysis.__memoryAppliedCount || 0),
+      memorySources: Array.isArray(analysis.__memorySources)
+        ? analysis.__memorySources.slice(0, 4).map((item) => ({
+            type: String(item?.type || ''),
+            value: String(item?.value || '').slice(0, 160),
+            dishName: String(item?.dishName || '').slice(0, 120),
+            relevance: Number(item?.relevance || 0),
+          }))
+        : [],
       vision: {
         confidence: Number(analysis.confidence || 0),
         components: Array.isArray(analysis.components) ? analysis.components.slice(0, 12) : [],
@@ -429,6 +437,7 @@
       const refined = response?.analysis || analysis;
       if (refined.status !== 'recognized') return analysis;
       refined.__memoryAppliedCount = correctionCount;
+      refined.__memorySources = profile.recentCorrections;
       return refined;
     } catch (error) {
       console.warn('Rinlo relevant memory refinement failed', error);
@@ -1143,12 +1152,91 @@
     }
   }
 
+  function memoryTypeLabel(type) {
+    if (type === 'dish') return 'Блюдо';
+    if (type === 'portion') return 'Порция';
+    if (type === 'ingredients') return 'Состав';
+    if (type === 'choice') return 'Фактический выбор';
+    return 'Поправка';
+  }
+
+  function memoryReason(type) {
+    if (type === 'dish') return 'Ты раньше исправлял распознавание похожего блюда.';
+    if (type === 'portion') return 'Ты раньше уточнял порцию похожего блюда.';
+    if (type === 'ingredients') return 'Ты раньше уточнял состав похожего блюда.';
+    if (type === 'choice') return 'Ты раньше отмечал фактический выбор в похожей ситуации.';
+    return 'Эта поправка относится к похожему контексту еды.';
+  }
+
+  function closeMemoryExplanation() {
+    const sheet = document.getElementById('memoryExplainSheet');
+    if (sheet) sheet.hidden = true;
+  }
+
+  function showMemoryExplanation(sources = []) {
+    const sheet = document.getElementById('memoryExplainSheet');
+    const list = document.getElementById('memoryExplainList');
+    if (!sheet || !list) return;
+    const safeSources = Array.isArray(sources) ? sources.filter((item) => item?.value).slice(0, 4) : [];
+    list.replaceChildren(...safeSources.map((item) => {
+      const card = document.createElement('article');
+      card.className = 'memory-explain-item';
+
+      const meta = document.createElement('small');
+      meta.textContent = memoryTypeLabel(item.type);
+
+      const title = document.createElement('b');
+      title.textContent = item.dishName || 'Похожий прошлый выбор';
+
+      const value = document.createElement('p');
+      value.textContent = item.value;
+
+      const reason = document.createElement('span');
+      reason.textContent = memoryReason(item.type);
+
+      card.append(meta, title, value, reason);
+      return card;
+    }));
+    sheet.hidden = safeSources.length === 0;
+  }
+
+  function injectMemoryExplainUi() {
+    if (document.getElementById('memoryExplainSheet')) return;
+
+    const sheet = document.createElement('div');
+    sheet.id = 'memoryExplainSheet';
+    sheet.className = 'memory-explain-sheet';
+    sheet.hidden = true;
+    sheet.innerHTML = `
+      <button class="memory-explain-backdrop" type="button" data-memory-explain-close aria-label="Закрыть"></button>
+      <section class="memory-explain-panel" role="dialog" aria-modal="true" aria-labelledby="memoryExplainTitle">
+        <div class="memory-explain-handle" aria-hidden="true"></div>
+        <div class="memory-explain-head">
+          <div>
+            <small>ПОЧЕМУ RINLO ЭТО УЧЁЛ</small>
+            <h2 id="memoryExplainTitle">Что повлияло на ответ</h2>
+            <p>Rinlo нашёл совпадение только среди твоих явных прошлых поправок. Текущий запрос всегда важнее памяти.</p>
+          </div>
+          <button class="memory-explain-close" type="button" data-memory-explain-close aria-label="Закрыть">×</button>
+        </div>
+        <div class="memory-explain-list" id="memoryExplainList"></div>
+        <p class="memory-explain-trust">Здесь нет скрытых выводов о тебе: только то, что ты сам раньше исправил. Любую такую память можно удалить в Профиле.</p>
+        <button type="button" class="btn primary memory-explain-done" data-memory-explain-close>Понятно</button>
+      </section>
+    `;
+    document.body.appendChild(sheet);
+    sheet.addEventListener('click', (event) => {
+      if (event.target.closest('[data-memory-explain-close]')) closeMemoryExplanation();
+    });
+  }
+
   function injectCorrectionUi() {
     if (document.getElementById('correctionSheet')) return;
 
     const resultBody = document.querySelector('[data-flow-step="result"] .flow-body');
     if (resultBody) {
-      const memoryNote = document.createElement('p');
+      const memoryNote = document.createElement('button');
+      memoryNote.type = 'button';
       memoryNote.id = 'memoryAppliedNote';
       memoryNote.className = 'memory-applied-note';
       memoryNote.hidden = true;
@@ -1166,6 +1254,17 @@
     const detailBody = document.querySelector('[data-flow-step="detail"] .flow-body');
     const stageNote = document.getElementById('detailStageNote');
     if (detailBody) {
+      const memoryCard = document.createElement('button');
+      memoryCard.type = 'button';
+      memoryCard.id = 'detailMemoryExplanation';
+      memoryCard.className = 'detail-memory-explanation';
+      memoryCard.hidden = true;
+      memoryCard.innerHTML = '<small>ПЕРСОНАЛИЗАЦИЯ</small><b>Rinlo учёл твою прошлую поправку</b><span>Посмотреть почему →</span>';
+      memoryCard.addEventListener('click', () => {
+        const sources = Array.isArray(activeDetailDecision?.memorySources) ? activeDetailDecision.memorySources : [];
+        showMemoryExplanation(sources);
+      });
+
       const historyCard = document.createElement('article');
       historyCard.id = 'detailCorrectionHistory';
       historyCard.className = 'detail-section correction-history-card';
@@ -1180,10 +1279,11 @@
       button.addEventListener('click', () => openCorrectionSheet(activeDetailDecision, 'detail'));
 
       if (stageNote) {
+        stageNote.insertAdjacentElement('beforebegin', memoryCard);
         stageNote.insertAdjacentElement('beforebegin', historyCard);
         stageNote.insertAdjacentElement('beforebegin', button);
       } else {
-        detailBody.append(historyCard, button);
+        detailBody.append(historyCard, memoryCard, button);
       }
     }
 
@@ -1253,11 +1353,13 @@
     resultQuestion.textContent = decision.question;
     const memoryNote = document.getElementById('memoryAppliedNote');
     if (memoryNote) {
-      const count = Number(decision.memoryAppliedCount || 0);
-      memoryNote.hidden = count <= 0;
+      const sources = Array.isArray(decision.memorySources) ? decision.memorySources : [];
+      const count = Math.min(Number(decision.memoryAppliedCount || 0), sources.length || Number(decision.memoryAppliedCount || 0));
+      memoryNote.hidden = count <= 0 || sources.length === 0;
       memoryNote.textContent = count > 0
-        ? `Учтена ${count === 1 ? '1 релевантная поправка' : count + ' релевантные поправки'} из твоей памяти Rinlo`
+        ? `Учтена ${count === 1 ? '1 релевантная поправка' : count + ' релевантные поправки'} · Почему?`
         : '';
+      memoryNote.onclick = sources.length ? () => showMemoryExplanation(sources) : null;
     }
     resultTitle.textContent = decision.title;
     resultIcon.textContent = decision.icon;
@@ -1487,6 +1589,11 @@
     const verdict = document.getElementById('detailVerdict');
     verdict?.classList.toggle('good', decision.tone === 'good' || decision.decisionState === 'fits_well');
     renderCorrectionHistory(decision);
+    const detailMemory = document.getElementById('detailMemoryExplanation');
+    if (detailMemory) {
+      const sources = Array.isArray(decision.memorySources) ? decision.memorySources : [];
+      detailMemory.hidden = Number(decision.memoryAppliedCount || 0) <= 0 || sources.length === 0;
+    }
     showStep('detail');
   }
 
@@ -1628,6 +1735,7 @@
       const analysis = response?.analysis;
       if (!analysis) throw new Error('empty_text_analysis');
       analysis.__memoryAppliedCount = profile.recentCorrections.length;
+      analysis.__memorySources = profile.recentCorrections;
 
       if (analysis.status === 'needs_clarification') {
         pendingTextClarification = analysis.clarifying_question || 'Нужно одно уточнение';
@@ -1690,6 +1798,7 @@
   window.addEventListener('rinlo2:profile-applied', () => renderProgress());
 
   injectCalorieContext();
+  injectMemoryExplainUi();
   injectCorrectionUi();
   renderStoredDecisions();
   renderDayContext();
@@ -1697,12 +1806,13 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.13-relevant-memory',
+    version: 'decision-v2.14-explainable-memory',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
     importDecisions,
     getDayContext: () => ({ target: DAY_TARGET, decisions: todayDecisions().length, calories: sumCalories() }),
+    showMemoryExplanation,
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
   };
 })();
