@@ -117,7 +117,7 @@ Deno.serve(async (req: Request) => {
   const dailyTarget = Number(body?.dailyTarget || 2000);
   const dayCaloriesMin = Number(body?.dayCaloriesMin || 0);
   const dayCaloriesMax = Number(body?.dayCaloriesMax || 0);
-  const model = Deno.env.get("RINLO_VISION_MODEL") || "gemini-2.5-flash-lite";
+  const model = Deno.env.get("RINLO_VISION_MODEL") || "gemini-3.1-flash-lite";
 
   const systemPrompt = [
     "Ты — ядро Rinlo Decisions, помощника по выбору еды до того, как пользователь её съел.",
