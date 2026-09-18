@@ -67,12 +67,12 @@ try {
   await page.locator('#decisionQuestion').fill('Можно сегодня бургер и колу?');
   await page.getByRole('button', { name: 'Получить ответ', exact: false }).click();
 
-  await page.getByRole('heading', { name: 'Можно, но аккуратнее', exact: true }).waitFor({ state: 'visible' });
+  await page.getByRole('heading', { name: 'Можно, но лучше аккуратнее', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#resultCalories').textContent())?.includes('820'), 'result_calories_missing');
   assert((await page.locator('#prospectiveCalorieValue').textContent())?.includes('820'), 'prospective_original_calories_missing');
 
-  await page.getByRole('button', { name: 'Посмотреть лучший вариант', exact: true }).click();
-  await page.getByRole('heading', { name: 'Лучше для твоей цели', exact: true }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: 'Показать вариант лучше', exact: true }).click();
+  await page.getByRole('heading', { name: 'Есть вариант лучше', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#alternativeCalories').textContent())?.includes('540'), 'alternative_calories_missing');
   assert((await page.locator('#alternativeProspectiveValue').textContent())?.includes('540'), 'prospective_alternative_calories_missing');
 
