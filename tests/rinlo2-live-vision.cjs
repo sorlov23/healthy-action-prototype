@@ -75,6 +75,16 @@ async function jsonResponse(response) {
     throw new Error(`invalid_decision_state:${JSON.stringify(payload?.analysis || {})}`);
   }
 
+  const canonicalVerdicts = {
+    fits_well: 'Можно брать',
+    fits_with_adjustment: 'Можно, но лучше аккуратнее',
+    better_alternative: 'Есть вариант лучше',
+    needs_clarification: 'Нужно уточнить',
+  };
+  if (payload?.analysis?.verdict_title !== canonicalVerdicts[payload.analysis.decision_state]) {
+    throw new Error(`noncanonical_verdict:${JSON.stringify(payload?.analysis || {})}`);
+  }
+
   console.log('RINLO_LIVE_VISION_RESULT=PASS');
   console.log(JSON.stringify({
     provider: payload.meta.provider,
