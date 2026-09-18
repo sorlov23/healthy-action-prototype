@@ -85,6 +85,11 @@ try {
   assert((await page.locator('#resultCalories').textContent())?.includes('820'), 'result_calories_missing');
   assert((await page.locator('#prospectiveCalorieValue').textContent())?.includes('820'), 'prospective_original_calories_missing');
 
+  await page.locator('#resultFeedbackCard').getByRole('button', { name: 'Полезно', exact: true }).click();
+  assert((await page.locator('#resultFeedbackCard [data-feedback-status]').textContent())?.includes('полезное'), 'result_feedback_helpful_missing');
+  const feedbackAfterHelpful = await page.evaluate(() => window.Rinlo2Feedback?.getRecentStats?.(30));
+  assert(feedbackAfterHelpful?.total === 1 && feedbackAfterHelpful?.helpful === 1, `feedback_helpful_stats_wrong:${JSON.stringify(feedbackAfterHelpful)}`);
+
   await page.getByRole('button', { name: 'Показать вариант лучше', exact: true }).click();
   await page.getByRole('heading', { name: 'Есть вариант лучше', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#alternativeCalories').textContent())?.includes('540'), 'alternative_calories_missing');
@@ -117,6 +122,11 @@ try {
   assert((await page.locator('#detailName').textContent())?.includes('Бургер без соуса + Cola Zero'), 'detail_selected_name_missing');
   assert((await page.locator('#detailTitle').textContent())?.includes('Можно, но лучше аккуратнее'), 'detail_verdict_missing');
   assert((await page.locator('#detailStageNote').textContent())?.includes('до еды'), 'detail_stage_context_missing');
+  assert((await page.locator('#detailFeedbackCard [data-feedback-status]').textContent())?.includes('полезное'), 'detail_feedback_not_persisted');
+  await page.locator('#detailFeedbackCard').getByRole('button', { name: 'Не помогло', exact: true }).click();
+  assert((await page.locator('#detailFeedbackCard [data-feedback-status]').textContent())?.includes('не помогло'), 'detail_feedback_change_missing');
+  const feedbackAfterChange = await page.evaluate(() => window.Rinlo2Feedback?.getRecentStats?.(30));
+  assert(feedbackAfterChange?.total === 1 && feedbackAfterChange?.notHelpful === 1 && feedbackAfterChange?.helpful === 0, `feedback_change_stats_wrong:${JSON.stringify(feedbackAfterChange)}`);
 
   await page.getByRole('button', { name: 'Исправить данные решения', exact: true }).click();
   await page.getByRole('button', { name: 'Неточный состав', exact: true }).click();
@@ -148,6 +158,8 @@ try {
   await page.getByRole('heading', { name: 'Что меняется', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#progressDecisionCount').textContent())?.includes('1 решение'), 'progress_decision_count_wrong');
   assert((await page.locator('#progressChosenAdjustmentCount').textContent())?.trim() === '1', 'progress_adjustment_count_wrong');
+  assert((await page.locator('#progressFeedbackTitle').textContent())?.includes('0 из 1'), 'progress_feedback_quality_wrong');
+  assert((await page.locator('#progressFeedbackText').textContent())?.includes('1 ответ не помог'), 'progress_feedback_negative_signal_missing');
 
   await page.locator('[data-nav="home"]').last().click();
   await page.locator('#dayCalorieContext').waitFor({ state: 'visible' });
