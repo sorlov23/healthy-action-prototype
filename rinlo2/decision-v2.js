@@ -866,8 +866,11 @@
   function renderCorrectionHistory(decision) {
     const card = document.getElementById('detailCorrectionHistory');
     if (!card || !decision?.id) return;
-    const corrections = (window.Rinlo2Corrections?.getCorrections?.() || [])
-      .filter((item) => item?.decisionId === decision.id)
+    const correctionSource = window.Rinlo2Corrections?.getActiveCorrections?.()
+      || window.Rinlo2Corrections?.getCorrections?.()
+      || [];
+    const corrections = correctionSource
+      .filter((item) => item?.decisionId === decision.id && !item?.revokedAt)
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     if (!corrections.length) {
       card.hidden = true;
@@ -1625,7 +1628,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.11-corrections',
+    version: 'decision-v2.12-memory-control',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
