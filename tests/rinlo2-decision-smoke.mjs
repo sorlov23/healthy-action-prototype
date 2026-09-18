@@ -45,6 +45,15 @@ try {
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2VZsAAAAASUVORK5CYII=', 'base64'),
   });
   await page.getByRole('heading', { name: 'Что на фото?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('#photoVisionStatus[data-state="fallback"]').waitFor({ state: 'visible' });
+  const visionState = await page.evaluate(() => ({
+    enabled: window.RinloVision?.enabled,
+    localOnly: window.RinloVision?.localOnly,
+    status: document.getElementById('photoVisionStatus')?.dataset.state,
+    text: document.getElementById('photoVisionStatus')?.textContent || '',
+  }));
+  assert(visionState.enabled === false && visionState.localOnly === true, `vision_not_local_only:${JSON.stringify(visionState)}`);
+  assert(visionState.status === 'fallback' && visionState.text.includes('уточнение'), `vision_fallback_missing:${JSON.stringify(visionState)}`);
   await page.locator('#photoDescription').fill('Овсянка с ягодами');
   await page.getByRole('button', { name: 'Разобрать выбор', exact: false }).click();
   await page.getByRole('heading', { name: 'Можно брать', exact: true }).waitFor({ state: 'visible' });
@@ -89,7 +98,7 @@ try {
   assert((await page.locator('#dayCalorieValue').textContent())?.includes('540'), 'day_context_not_persisted_after_reload');
 
   if (errors.length) throw new Error(`Runtime errors:\n${errors.join('\n')}`);
-  console.log(`RINLO2_DECISION_CONTEXT=${JSON.stringify({ homeGeometry, api })}`);
+  console.log(`RINLO2_DECISION_CONTEXT=${JSON.stringify({ homeGeometry, visionState, api })}`);
   console.log('RINLO2_DECISION_RESULT=PASS');
 } finally {
   await browser.close();
