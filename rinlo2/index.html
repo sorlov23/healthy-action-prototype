@@ -124,6 +124,10 @@
         <button class="photo-preview" id="photoPreview" type="button" aria-label="Выбрать другое фото">
           <span class="photo-preview-hint">↻ Другое фото</span>
         </button>
+        <div class="photo-vision-status" id="photoVisionStatus" data-state="idle" aria-live="polite">
+          <span class="photo-vision-dot"></span>
+          <div><b>Фото готово</b><small>Rinlo попробует распознать блюдо автоматически</small></div>
+        </div>
         <label class="photo-description">
           <span>Коротко опиши блюдо</span>
           <input id="photoDescription" maxlength="120" placeholder="Например: бургер, картошка и кола" />
@@ -226,6 +230,7 @@
   <script src="../runtime-config.js"></script>
   <script src="../rinlo-supabase-auth-v1.js"></script>
   <script src="./app.js"></script>
+  <script src="./vision-v1.js"></script>
   <script src="./decision-v2.js"></script>
   <script src="./supabase-decisions-v1.js"></script>
 </body>
