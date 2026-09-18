@@ -37,6 +37,7 @@
         ? input.payload
         : {},
       createdAt: input.createdAt || input.created_at || new Date().toISOString(),
+      revokedAt: input.revokedAt || input.revoked_at || null,
     };
   }
 
@@ -92,6 +93,7 @@
       dish_name: correction.dishName || null,
       payload: correction.payload || {},
       created_at: correction.createdAt || new Date().toISOString(),
+      revoked_at: correction.revokedAt || null,
     };
   }
 
@@ -104,6 +106,7 @@
       dishName: row.dish_name,
       payload: row.payload,
       createdAt: row.created_at,
+      revokedAt: row.revoked_at,
     });
   }
 
@@ -113,7 +116,7 @@
     const row = toRow(correction, session.user.id);
     const { data } = await request('/rest/v1/rinlo_decision_corrections?on_conflict=user_id,client_correction_id', {
       method: 'POST',
-      headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
+      headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify(row),
     });
     return Array.isArray(data) ? data[0] : data;
@@ -140,9 +143,9 @@
     let added = 0;
     incoming.forEach((item) => {
       const normalized = normalize(item);
-      if (!normalized || byId.has(normalized.id)) return;
+      if (!normalized) return;
+      if (!byId.has(normalized.id)) added += 1;
       byId.set(normalized.id, normalized);
-      added += 1;
     });
     corrections = [...byId.values()];
     saveLocal();
@@ -162,6 +165,7 @@
       detail: { correction: JSON.parse(JSON.stringify(correction)) },
     }));
 
+    renderMemory();
     if (enabled) {
       upsertCorrection(correction).catch((error) => {
         console.warn('Rinlo correction background sync failed', error);
@@ -170,9 +174,152 @@
     return JSON.parse(JSON.stringify(correction));
   }
 
+  function activeCorrections() {
+    return corrections.filter((item) => !item.revokedAt);
+  }
+
+  function correctionTypeLabel(type) {
+    if (type === 'dish') return 'Блюдо';
+    if (type === 'portion') return 'Порция';
+    if (type === 'ingredients') return 'Состав';
+    if (type === 'choice') return 'Фактический выбор';
+    return 'Поправка';
+  }
+
+  function formatMemoryDate(value) {
+    const date = new Date(value || 0);
+    if (!Number.isFinite(date.getTime())) return '';
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  }
+
+  function showMemoryStatus(message) {
+    const node = document.getElementById('rinloMemoryStatus');
+    if (!node) return;
+    node.textContent = message || '';
+    clearTimeout(showMemoryStatus.timer);
+    if (message) {
+      showMemoryStatus.timer = setTimeout(() => {
+        if (node.textContent === message) node.textContent = '';
+      }, 2200);
+    }
+  }
+
+  async function revokeCorrection(id) {
+    const correction = corrections.find((item) => item.id === id);
+    if (!correction || correction.revokedAt) return null;
+    correction.revokedAt = new Date().toISOString();
+    saveLocal();
+    renderMemory();
+
+    window.dispatchEvent(new CustomEvent('rinlo2:correction-revoked', {
+      detail: { correction: JSON.parse(JSON.stringify(correction)) },
+    }));
+
+    if (enabled) {
+      upsertCorrection(correction).catch((error) => {
+        console.warn('Rinlo correction revoke sync failed', error);
+      });
+    }
+    return JSON.parse(JSON.stringify(correction));
+  }
+
+  function renderMemory() {
+    const list = document.getElementById('rinloMemoryList');
+    const empty = document.getElementById('rinloMemoryEmpty');
+    const summary = document.getElementById('rinloMemorySummary');
+    if (!list || !empty || !summary) return;
+
+    const active = activeCorrections()
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    summary.textContent = active.length
+      ? `${active.length} ${active.length === 1 ? 'актуальная поправка' : (active.length >= 2 && active.length <= 4 ? 'актуальные поправки' : 'актуальных поправок')}`
+      : 'Память по поправкам пока пустая';
+
+    empty.hidden = active.length > 0;
+    const visible = active.slice(0, 6);
+    list.replaceChildren(...visible.map((item) => {
+      const row = document.createElement('article');
+      row.className = 'profile-memory-row';
+
+      const copy = document.createElement('div');
+      copy.className = 'profile-memory-copy';
+
+      const meta = document.createElement('small');
+      meta.textContent = [correctionTypeLabel(item.type), formatMemoryDate(item.createdAt)]
+        .filter(Boolean)
+        .join(' · ');
+
+      const title = document.createElement('b');
+      title.textContent = item.dishName || 'Поправка к решению';
+
+      const value = document.createElement('p');
+      value.textContent = item.value;
+
+      const forget = document.createElement('button');
+      forget.type = 'button';
+      forget.dataset.forgetCorrection = item.id;
+      forget.textContent = 'Забыть';
+      forget.setAttribute('aria-label', `Не учитывать поправку: ${item.value}`);
+
+      copy.append(meta, title, value);
+      row.append(copy, forget);
+      return row;
+    }));
+
+    const more = document.getElementById('rinloMemoryMore');
+    if (more) {
+      const hiddenCount = Math.max(0, active.length - visible.length);
+      more.hidden = hiddenCount === 0;
+      more.textContent = hiddenCount ? `Ещё ${hiddenCount} в памяти Rinlo` : '';
+    }
+  }
+
+  function injectMemoryUi() {
+    if (document.getElementById('rinloMemoryCard')) {
+      renderMemory();
+      return;
+    }
+    const profile = document.querySelector('[data-screen="profile"]');
+    const trustCard = profile?.querySelector('.profile-trust-card');
+    if (!profile || !trustCard) return;
+
+    const card = document.createElement('article');
+    card.id = 'rinloMemoryCard';
+    card.className = 'profile-memory-card';
+    card.innerHTML = `
+      <div class="profile-memory-head">
+        <div>
+          <small>ПРОЗРАЧНАЯ ПАМЯТЬ</small>
+          <h2>Что Rinlo запомнил</h2>
+          <p id="rinloMemorySummary">Память по поправкам пока пустая</p>
+        </div>
+        <span class="profile-memory-mark" aria-hidden="true">↺</span>
+      </div>
+      <p class="profile-memory-explain">Здесь только твои явные исправления. Они помогают в похожих ситуациях, но не становятся жёсткими правилами.</p>
+      <div class="profile-memory-list" id="rinloMemoryList"></div>
+      <p class="profile-memory-empty" id="rinloMemoryEmpty">Когда ты исправишь блюдо, порцию, состав или фактический выбор, Rinlo покажет это здесь.</p>
+      <small class="profile-memory-more" id="rinloMemoryMore" hidden></small>
+      <span class="profile-memory-status" id="rinloMemoryStatus" aria-live="polite"></span>
+    `;
+    trustCard.insertAdjacentElement('afterend', card);
+
+    card.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-forget-correction]');
+      if (!button) return;
+      const id = button.dataset.forgetCorrection;
+      button.disabled = true;
+      button.textContent = 'Убираю…';
+      await revokeCorrection(id);
+      showMemoryStatus('Rinlo больше не будет учитывать эту поправку');
+    });
+
+    renderMemory();
+  }
+
   function getRecentContext(days = 30, limit = 6) {
     const cutoff = Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000;
-    return corrections
+    return activeCorrections()
       .filter((item) => {
         const time = new Date(item.createdAt || 0).getTime();
         return Number.isFinite(time) && time >= cutoff;
@@ -200,6 +347,7 @@
 
     const remote = await fetchRecent(90);
     const pulled = mergeCorrections(remote);
+    renderMemory();
     window.dispatchEvent(new CustomEvent('rinlo2:corrections-sync', {
       detail: { status: 'synced', pushed, pulled },
     }));
@@ -223,14 +371,21 @@
   }
 
   window.addEventListener('online', scheduleSync);
-  setTimeout(scheduleSync, 0);
+  window.addEventListener('rinlo2:correction-recorded', renderMemory);
+  window.addEventListener('rinlo2:correction-revoked', renderMemory);
+  setTimeout(() => {
+    injectMemoryUi();
+    scheduleSync();
+  }, 0);
 
   window.Rinlo2Corrections = {
-    version: 'v1',
+    version: 'v2-memory-control',
     enabled,
     localOnly,
     record,
+    revokeCorrection,
     getCorrections: () => corrections.map((item) => JSON.parse(JSON.stringify(item))),
+    getActiveCorrections: () => activeCorrections().map((item) => JSON.parse(JSON.stringify(item))),
     getRecentContext,
     fetchRecent,
     syncNow: scheduleSync,
