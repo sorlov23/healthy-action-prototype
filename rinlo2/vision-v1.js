@@ -152,12 +152,62 @@
     return data;
   }
 
+
+  async function analyzeAudio(audioBlob, context = {}) {
+    if (!enabled) throw error('decision_ai_disabled', 'decision_ai_disabled');
+    if (providerUnavailable) throw error('decision_ai_not_configured', 'decision_ai_not_configured', 503);
+    if (!audioBlob || !String(audioBlob.type || '').startsWith('audio/')) {
+      throw error('invalid_audio', 'invalid_audio', 400);
+    }
+
+    const [session, audioDataUrl] = await Promise.all([
+      auth.ensureSession(),
+      readAsDataUrl(audioBlob),
+    ]);
+    if (!session?.access_token) throw error('no_supabase_session', 'no_supabase_session', 401);
+
+    const response = await fetch(`${base}/functions/v1/analyze-food`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        audioDataUrl,
+        question: String(context.clarification || '').trim(),
+        goal: context.goal || 'weight_loss',
+        decisionStage: ['choosing','preparing','ready','auto'].includes(context.decisionStage)
+          ? context.decisionStage
+          : 'auto',
+        dailyTarget: Number(context.dailyTarget || 0),
+        dayCaloriesMin: Number(context.dayCaloriesMin || 0),
+        dayCaloriesMax: Number(context.dayCaloriesMax || 0),
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (data?.error === 'vision_not_configured') providerUnavailable = true;
+      throw error(
+        data?.message || data?.error || `audio_decision_${response.status}`,
+        data?.error || data?.code || null,
+        response.status,
+      );
+    }
+    if (!data?.analysis) throw error('empty_audio_analysis', 'empty_audio_analysis', 502);
+    return data;
+  }
+
   window.RinloVision = {
-    version: 'v1.2-multimodal-decisions',
+    version: 'v1.3-audio-decisions',
     enabled,
     localOnly,
     analyzeFile,
     analyzeText,
+    analyzeAudio,
     compressImage,
     isProviderAvailable: () => !providerUnavailable,
   };
