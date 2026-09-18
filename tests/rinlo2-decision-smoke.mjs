@@ -215,6 +215,18 @@ try {
   assert((await page.locator('#settingsAccountBadge').textContent())?.includes('Локальный'), 'account_protection_badge_wrong_local_only');
   const localAuthSession = await page.evaluate(() => localStorage.getItem('rinlo_supabase_session_v1'));
   assert(localAuthSession === null, 'local_only_should_not_create_auth_session');
+  const accountProtectionCases = await page.evaluate(() => {
+    const isProtected = window.Rinlo2AccountProtection?.isProtectedUser;
+    return {
+      authMethod: typeof window.RinloSupabaseAuth?.requestEmailProtection,
+      anonymousConfirmedSession: isProtected?.({ id: 'anon', is_anonymous: true, confirmed_at: '2026-09-19T00:00:00Z' }),
+      verifiedEmail: isProtected?.({ id: 'verified', is_anonymous: true, email_confirmed_at: '2026-09-19T00:00:00Z' }),
+      permanent: isProtected?.({ id: 'permanent', is_anonymous: false }),
+    };
+  });
+  assert(accountProtectionCases.authMethod === 'function', `account_protection_auth_method_missing:${JSON.stringify(accountProtectionCases)}`);
+  assert(accountProtectionCases.anonymousConfirmedSession === false, `anonymous_user_must_stay_temporary:${JSON.stringify(accountProtectionCases)}`);
+  assert(accountProtectionCases.verifiedEmail === true && accountProtectionCases.permanent === true, `protected_account_detection_wrong:${JSON.stringify(accountProtectionCases)}`);
   await page.getByRole('button', { name: '← Профиль', exact: true }).click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
 
