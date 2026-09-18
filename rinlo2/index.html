@@ -170,7 +170,15 @@
           <div><small>Примерно</small><strong id="resultCalories">~ 820 ккал</strong></div>
           <div><small>В контексте дня</small><strong id="resultContext">плотный выбор</strong></div>
         </article>
-        <article class="fit-card"><b>Как это вписывается в твою цель?</b><p id="resultFit">Если хочется сохранить текущий темп, лучше немного облегчить комбинацию, а не отказываться от идеи целиком.</p></article>
+        <article class="fit-card" id="fitCard"><b>Как это вписывается в твою цель?</b><p id="resultFit">Если хочется сохранить текущий темп, лучше немного облегчить комбинацию, а не отказываться от идеи целиком.</p></article>
+        <article class="action-now-card" id="actionNowCard" hidden>
+          <b>Можно сделать сейчас</b>
+          <ul id="actionNowList"></ul>
+        </article>
+        <article class="future-tip-card" id="futureTipCard" hidden>
+          <small>НА БУДУЩЕЕ</small>
+          <p id="futureTip"></p>
+        </article>
       </div>
       <div class="flow-footer stacked"><button class="btn primary wide" id="showAlternative">Показать вариант лучше</button><button class="btn secondary wide" id="saveOriginal">Оставить как есть</button></div>
     </section>
