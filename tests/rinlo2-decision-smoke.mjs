@@ -9,7 +9,7 @@ page.on('pageerror', (error) => errors.push(error.message));
 page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
 
 try {
-  await page.goto('http://127.0.0.1:4173/rinlo2/index.html?reset=1', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:4173/rinlo2/index.html?reset=1&local=1', { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
   await page.reload({ waitUntil: 'domcontentloaded' });
 
