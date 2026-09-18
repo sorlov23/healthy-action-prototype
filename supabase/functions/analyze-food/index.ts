@@ -246,6 +246,21 @@ Deno.serve(async (req: Request) => {
   const dailyTarget = Number(body?.dailyTarget || 0);
   const dayCaloriesMin = Number(body?.dayCaloriesMin || 0);
   const dayCaloriesMax = Number(body?.dayCaloriesMax || 0);
+
+  const rawProfile = body?.profile && typeof body.profile === "object" ? body.profile : {};
+  const profileGoal = ["lose","maintain","aware"].includes(String(rawProfile.goal || ""))
+    ? String(rawProfile.goal)
+    : null;
+  const currentWeight = Number(rawProfile.currentWeight || 0) > 0 ? Number(rawProfile.currentWeight) : null;
+  const targetWeight = Number(rawProfile.targetWeight || 0) > 0 ? Number(rawProfile.targetWeight) : null;
+  const allowedPriorities = new Set(["satiety","calories","familiar","simplicity"]);
+  const priorities = Array.isArray(rawProfile.priorities)
+    ? rawProfile.priorities.map((item: unknown) => String(item)).filter((item: string) => allowedPriorities.has(item)).slice(0, 4)
+    : [];
+  const recentDecisionCount = Math.max(0, Math.min(100, Number(rawProfile.recentDecisionCount || 0)));
+  const recentAdjustedCount = Math.max(0, Math.min(recentDecisionCount, Number(rawProfile.recentAdjustedCount || 0)));
+  const recentChosenAdjustmentCount = Math.max(0, Math.min(recentDecisionCount, Number(rawProfile.recentChosenAdjustmentCount || 0)));
+  const recentPattern = String(rawProfile.recentPattern || "").trim().slice(0, 240);
   const model = Deno.env.get("RINLO_DECISION_MODEL")
     || Deno.env.get("RINLO_VISION_MODEL")
     || "gemini-3.1-flash-lite";
@@ -255,6 +270,10 @@ Deno.serve(async (req: Request) => {
     "Отвечай по-русски, коротко, нейтрально и без морализаторства.",
     "Не называй еду хорошей или плохой. Не ставь диагнозы и не давай медицинских рекомендаций.",
     "Не изображай точность, которой нет: калорийность всегда диапазон и оценка, если точный состав и масса неизвестны.",
+    "Профиль пользователя — это контекст, а не медицинская рекомендация и не повод высчитывать точную норму калорий.",
+    "Если указан вес, используй его только вместе с явно выбранной целью как слабый контекст. Не делай выводов о здоровье, ИМТ или безопасном темпе похудения.",
+    "Приоритеты пользователя — tie-breaker между равноценными вариантами, а не запреты.",
+    "Поведенческий паттерн последних решений можно использовать, чтобы не повторять неудобные советы, но не превращай его в оценку поведения.",
     "Если уверенность в блюде, составе или порции недостаточна, верни status=needs_clarification,",
     "decision_state=needs_clarification и задай ровно один полезный короткий вопрос.",
     "Если блюдо распознано достаточно уверенно, оцени реалистичный диапазон калорий.",
@@ -282,8 +301,24 @@ Deno.serve(async (req: Request) => {
     "Если alternative.available=false, верни пустое name, 0 в calorie_min/calorie_max и пустой changes.",
   ].join(" ");
 
+  const priorityLabels: Record<string, string> = {
+    satiety: "сытность",
+    calories: "калорийность",
+    familiar: "привычные продукты",
+    simplicity: "простота",
+  };
+  const profileParts = [
+    profileGoal ? `явная цель: ${profileGoal}` : "",
+    currentWeight ? `текущий вес: ${currentWeight} кг` : "",
+    targetWeight ? `целевой вес: ${targetWeight} кг` : "",
+    priorities.length ? `приоритеты: ${priorities.map((item: string) => priorityLabels[item]).join(", ")}` : "",
+    recentDecisionCount ? `решений за 7 дней: ${recentDecisionCount}; требовали корректировки: ${recentAdjustedCount}; пользователь выбрал корректировку: ${recentChosenAdjustmentCount}` : "",
+    recentPattern ? `наблюдаемый паттерн: ${recentPattern}` : "",
+  ].filter(Boolean).join("; ");
+
   const userText = [
-    `Цель: ${goal}.`,
+    `Цель запроса: ${goal}.`,
+    profileParts ? `Персональный контекст: ${profileParts}.` : "Персональный контекст пока не задан.",
     decisionStage === "auto" ? "Стадию решения определи из запроса пользователя." : `Стадия решения: ${decisionStage}.`,
     dailyTarget > 0 ? `Персональный ориентир дня: около ${dailyTarget} ккал.` : "Персональный калорийный ориентир пока не задан.",
     `По уже сохранённым решениям Rinlo сегодня: примерно ${dayCaloriesMin}–${dayCaloriesMax} ккал.`,
