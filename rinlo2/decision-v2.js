@@ -271,6 +271,7 @@
       },
       alternative,
       selected: null,
+      memoryAppliedCount: Number(analysis.__memoryAppliedCount || 0),
       vision: {
         confidence: Number(analysis.confidence || 0),
         components: Array.isArray(analysis.components) ? analysis.components.slice(0, 12) : [],
@@ -365,7 +366,7 @@
     return 'general_food_choice';
   }
 
-  function buildDecisionProfile() {
+  function buildDecisionProfile(memoryQuery = '') {
     const explicit = window.Rinlo2Foundation?.getDecisionProfile?.()
       || window.Rinlo2Foundation?.getState?.()
       || {};
@@ -378,6 +379,9 @@
       decision.selected?.kind === 'alternative'
     ).length;
     const pattern = recent.length >= 3 ? progressPattern(recent) : null;
+    const relevantCorrections = memoryQuery
+      ? (window.Rinlo2Corrections?.getRelevantContext?.(memoryQuery, 30, 4) || [])
+      : [];
 
     return {
       goal: explicit.goal || null,
@@ -388,8 +392,47 @@
       recentAdjustedCount,
       recentChosenAdjustmentCount,
       recentPattern: pattern?.title || '',
-      recentCorrections: window.Rinlo2Corrections?.getRecentContext?.(30, 6) || [],
+      recentCorrections: relevantCorrections,
     };
+  }
+
+  function memoryQueryFromAnalysis(analysis = {}, fallback = '') {
+    return [
+      fallback,
+      analysis.dish_name,
+      analysis.request_summary,
+      analysis.portion_assumption,
+      ...(Array.isArray(analysis.components) ? analysis.components.slice(0, 8) : []),
+    ].filter(Boolean).join(' ');
+  }
+
+  async function refineWithRelevantMemory(analysis, fallbackQuery, day) {
+    if (!analysis || analysis.status !== 'recognized') return analysis;
+    const engine = window.RinloVision;
+    if (!engine?.enabled || typeof engine.refineAnalysis !== 'function') return analysis;
+
+    const memoryQuery = memoryQueryFromAnalysis(analysis, fallbackQuery);
+    const profile = buildDecisionProfile(memoryQuery);
+    const correctionCount = profile.recentCorrections.length;
+    if (!correctionCount) return analysis;
+
+    try {
+      const response = await engine.refineAnalysis(analysis, {
+        query: memoryQuery,
+        goal: requestGoal(profile),
+        profile,
+        decisionStage: analysis.decision_stage || 'choosing',
+        dailyTarget: DAY_TARGET || 0,
+        dayCaloriesMin: day.min,
+        dayCaloriesMax: day.max,
+      });
+      const refined = response?.analysis || analysis;
+      refined.__memoryAppliedCount = correctionCount;
+      return refined;
+    } catch (error) {
+      console.warn('Rinlo relevant memory refinement failed', error);
+      return analysis;
+    }
   }
 
   function decisionWord(count) {
@@ -639,7 +682,7 @@
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
-      const analysis = response?.analysis;
+      let analysis = response?.analysis;
       if (!analysis) throw new Error('empty_voice_analysis');
 
       if (analysis.status === 'needs_clarification') {
@@ -654,7 +697,9 @@
       }
 
       pendingVoiceClarification = '';
-      const summary = String(analysis.request_summary || analysis.dish_name || 'Голосовой вопрос').trim();
+      const initialSummary = String(analysis.request_summary || analysis.dish_name || 'Голосовой вопрос').trim();
+      analysis = await refineWithRelevantMemory(analysis, initialSummary, day);
+      const summary = String(analysis.request_summary || analysis.dish_name || initialSummary).trim();
       currentDecision = visionDecision(summary, analysis, 'voice');
       setVoiceState('done', 'Готово', summary);
       renderResult(currentDecision);
@@ -774,8 +819,16 @@
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
-      const analysis = response?.analysis;
+      let analysis = response?.analysis;
       if (!analysis) throw new Error('empty_photo_analysis');
+
+      if (analysis.status === 'recognized') {
+        analysis = await refineWithRelevantMemory(
+          analysis,
+          String(analysis.dish_name || analysis.request_summary || ''),
+          day,
+        );
+      }
       photoAnalysis = analysis;
 
       if (analysis.status === 'recognized') {
@@ -982,7 +1035,6 @@
     if (!engine?.enabled || typeof engine.analyzeText !== 'function') return null;
 
     const day = sumCalories();
-    const profile = buildDecisionProfile();
     const labels = {
       dish: 'правильное блюдо',
       portion: 'правильный размер порции',
@@ -994,6 +1046,7 @@
       `Явная поправка пользователя к предыдущему распознаванию Rinlo — ${labels[type] || 'уточнение'}: ${value}.`,
       'Считай эту поправку фактом текущего решения и пересобери ответ. Не повторяй старое распознавание, если оно ей противоречит.',
     ].join('\n');
+    const profile = buildDecisionProfile(correctionText);
 
     const response = await engine.analyzeText(correctionText, {
       goal: requestGoal(profile),
@@ -1094,6 +1147,12 @@
 
     const resultBody = document.querySelector('[data-flow-step="result"] .flow-body');
     if (resultBody) {
+      const memoryNote = document.createElement('p');
+      memoryNote.id = 'memoryAppliedNote';
+      memoryNote.className = 'memory-applied-note';
+      memoryNote.hidden = true;
+      resultBody.appendChild(memoryNote);
+
       const button = document.createElement('button');
       button.type = 'button';
       button.id = 'resultCorrectionButton';
@@ -1191,6 +1250,14 @@
 
   function renderResult(decision) {
     resultQuestion.textContent = decision.question;
+    const memoryNote = document.getElementById('memoryAppliedNote');
+    if (memoryNote) {
+      const count = Number(decision.memoryAppliedCount || 0);
+      memoryNote.hidden = count <= 0;
+      memoryNote.textContent = count > 0
+        ? `Учтена ${count === 1 ? '1 релевантная поправка' : count + ' релевантные поправки'} из твоей памяти Rinlo`
+        : '';
+    }
     resultTitle.textContent = decision.title;
     resultIcon.textContent = decision.icon;
     resultExplanation.textContent = decision.explanation;
@@ -1548,7 +1615,7 @@
     const stage = inferDecisionStage(requestText);
 
     try {
-      const profile = buildDecisionProfile();
+      const profile = buildDecisionProfile(requestText);
       const response = await window.RinloVision.analyzeText(requestText, {
         goal: requestGoal(profile),
         profile,
@@ -1628,7 +1695,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.12-memory-control',
+    version: 'decision-v2.13-relevant-memory',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
