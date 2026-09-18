@@ -14,6 +14,27 @@ async function jsonResponse(response) {
   catch { return { raw: text }; }
 }
 
+
+function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
+  const samples = Math.max(1, Math.floor(durationSeconds * sampleRate));
+  const dataSize = samples * 2;
+  const buffer = Buffer.alloc(44 + dataSize);
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+  return `data:audio/wav;base64,${buffer.toString('base64')}`;
+}
+
 (async () => {
   const { url, key } = readRuntimeConfig();
 
@@ -127,6 +148,44 @@ async function jsonResponse(response) {
     throw new Error(`text_noncanonical_verdict:${JSON.stringify(textPayload?.analysis || {})}`);
   }
 
+  const audioDecision = await fetch(`${url}/functions/v1/analyze-food`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      apikey: key,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      audioDataUrl: silentWavDataUrl(),
+      goal: 'weight_loss',
+      decisionStage: 'auto',
+      dailyTarget: 0,
+      dayCaloriesMin: 0,
+      dayCaloriesMax: 0,
+    }),
+  });
+
+  const audioPayload = await jsonResponse(audioDecision);
+  if (!audioDecision.ok) {
+    throw new Error(`audio_decision_call_failed:${audioDecision.status}:${JSON.stringify(audioPayload)}`);
+  }
+  if (audioPayload?.meta?.provider !== 'google-gemini') {
+    throw new Error(`audio_unexpected_provider:${JSON.stringify(audioPayload?.meta || {})}`);
+  }
+  if (!['recognized','needs_clarification'].includes(audioPayload?.analysis?.status)) {
+    throw new Error(`audio_invalid_status:${JSON.stringify(audioPayload?.analysis || {})}`);
+  }
+  if (!['choosing','preparing','ready'].includes(audioPayload?.analysis?.decision_stage)) {
+    throw new Error(`audio_invalid_stage:${JSON.stringify(audioPayload?.analysis || {})}`);
+  }
+  if (typeof audioPayload?.analysis?.request_summary !== 'string') {
+    throw new Error(`audio_missing_request_summary:${JSON.stringify(audioPayload?.analysis || {})}`);
+  }
+  if (audioPayload?.analysis?.verdict_title !== canonicalVerdicts[audioPayload.analysis.decision_state]) {
+    throw new Error(`audio_noncanonical_verdict:${JSON.stringify(audioPayload?.analysis || {})}`);
+  }
+
   console.log('RINLO_LIVE_VISION_RESULT=PASS');
   console.log(JSON.stringify({
     provider: payload.meta.provider,
@@ -143,6 +202,12 @@ async function jsonResponse(response) {
       status: textPayload.analysis.status,
       decisionState: textPayload.analysis.decision_state,
       verdict: textPayload.analysis.verdict_title,
+    },
+    audioProbe: {
+      status: audioPayload.analysis.status,
+      decisionStage: audioPayload.analysis.decision_stage,
+      requestSummary: audioPayload.analysis.request_summary,
+      verdict: audioPayload.analysis.verdict_title,
     },
   }, null, 2));
 })().catch((error) => {
