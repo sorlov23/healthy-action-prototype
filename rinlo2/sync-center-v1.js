@@ -80,7 +80,7 @@
           && identity?.identity_data?.email_verified === true
         );
       const protectedAccount = user.is_anonymous === false
-        || Boolean(user.email_confirmed_at || user.confirmed_at || verifiedEmailIdentity);
+        || Boolean(user.email_confirmed_at || verifiedEmailIdentity);
       return { enabled: Boolean(session?.user?.id), anonymous: !protectedAccount, user };
     } catch {
       return { enabled: false, anonymous: true };
