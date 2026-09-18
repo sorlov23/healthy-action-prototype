@@ -8,6 +8,12 @@
   const questionInput = document.getElementById('decisionQuestion');
   const questionCount = document.getElementById('questionCount');
   const analyzeButton = document.getElementById('analyzeDecision');
+  const textAiStatus = document.getElementById('textAiStatus');
+  const textAiTitle = document.getElementById('textAiTitle');
+  const textAiDetail = document.getElementById('textAiDetail');
+  const textClarification = document.getElementById('textClarification');
+  const textClarificationQuestion = document.getElementById('textClarificationQuestion');
+  const textClarificationAnswer = document.getElementById('textClarificationAnswer');
   const resultQuestion = document.getElementById('resultQuestion');
   const resultCard = document.getElementById('resultVerdictCard');
   const resultIcon = document.getElementById('resultIcon');
@@ -53,6 +59,8 @@
   let photoObjectUrl = null;
   let photoAnalysis = null;
   let autoPhotoDescription = '';
+  let textBaseQuestion = '';
+  let pendingTextClarification = '';
 
   const presets = {
     burger: {
@@ -177,7 +185,7 @@
     if (detailNode) detailNode.textContent = detail;
   }
 
-  function visionDecision(description, analysis) {
+  function visionDecision(description, analysis, source = 'photo') {
     const calorieText = formatEstimatedCalories(analysis.calorie_min, analysis.calorie_max);
     const stage = ['choosing','preparing','ready'].includes(analysis.decision_stage)
       ? analysis.decision_stage
@@ -195,7 +203,7 @@
 
     return {
       id: `d-${Date.now()}`,
-      source: 'photo',
+      source,
       stage,
       question: description || analysis.dish_name || 'Фото блюда',
       createdAt: new Date().toISOString(),
@@ -203,9 +211,9 @@
       title: analysis.verdict_title || (alternative ? 'Можно, но лучше аккуратнее' : 'Можно брать'),
       icon: '✓',
       tone: analysis.decision_state === 'fits_well' ? 'good' : 'caution',
-      explanation: analysis.explanation || 'Rinlo оценил блюдо по фото.',
+      explanation: analysis.explanation || (source === 'photo' ? 'Rinlo оценил блюдо по фото.' : 'Rinlo разобрал твой вопрос.'),
       calories: calorieText,
-      context: analysis.context_label || 'оценка по фото',
+      context: analysis.context_label || (source === 'photo' ? 'оценка по фото' : 'оценка по описанию'),
       fit: analysis.fit_text || 'Оценка учитывает твою цель и текущий контекст дня.',
       actionsNow: Array.isArray(analysis.actions_now)
         ? analysis.actions_now.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
@@ -414,9 +422,27 @@
     document.body.style.overflow = '';
   }
 
+  function resetTextAiState() {
+    textBaseQuestion = '';
+    pendingTextClarification = '';
+    if (textAiStatus) textAiStatus.hidden = true;
+    if (textClarification) textClarification.hidden = true;
+    if (textClarificationAnswer) textClarificationAnswer.value = '';
+    if (analyzeButton) analyzeButton.textContent = 'Получить ответ →';
+  }
+
+  function setTextAiStatus(state, title, detail) {
+    if (!textAiStatus) return;
+    textAiStatus.hidden = false;
+    textAiStatus.dataset.state = state;
+    if (textAiTitle) textAiTitle.textContent = title;
+    if (textAiDetail) textAiDetail.textContent = detail;
+  }
+
   function openAsk() {
     currentDecision = null;
     questionInput.value = '';
+    resetTextAiState();
     updateQuestionState();
     showStep('ask');
   }
@@ -816,19 +842,85 @@
     showStep('result');
   });
 
-  questionInput?.addEventListener('input', updateQuestionState);
+  questionInput?.addEventListener('input', () => {
+    if (textBaseQuestion && questionInput.value.trim() !== textBaseQuestion) resetTextAiState();
+    updateQuestionState();
+  });
+  textClarificationAnswer?.addEventListener('input', () => {
+    if (pendingTextClarification && analyzeButton) {
+      analyzeButton.disabled = textClarificationAnswer.value.trim().length < 1;
+    }
+  });
   document.querySelectorAll('[data-question]').forEach((button) => button.addEventListener('click', () => {
     questionInput.value = button.dataset.question || '';
     updateQuestionState();
     questionInput.focus();
   }));
 
-  analyzeButton?.addEventListener('click', () => {
-    const question = questionInput.value.trim();
-    if (question.length < 3) return;
-    currentDecision = classify(question);
-    renderResult(currentDecision);
-    showStep('result');
+  analyzeButton?.addEventListener('click', async () => {
+    const localOnly = window.RinloVision?.localOnly === true;
+    const clarification = String(textClarificationAnswer?.value || '').trim();
+    const baseQuestion = textBaseQuestion || questionInput.value.trim();
+    if (baseQuestion.length < 3) return;
+
+    if (localOnly || typeof window.RinloVision?.analyzeText !== 'function') {
+      currentDecision = classify(baseQuestion);
+      renderResult(currentDecision);
+      showStep('result');
+      return;
+    }
+
+    if (pendingTextClarification && clarification.length < 1) {
+      textClarificationAnswer?.focus();
+      return;
+    }
+
+    const requestText = pendingTextClarification
+      ? `${baseQuestion}\nУточнение пользователя: ${clarification}`
+      : baseQuestion;
+    textBaseQuestion = baseQuestion;
+
+    analyzeButton.disabled = true;
+    analyzeButton.textContent = 'Разбираю…';
+    setTextAiStatus('analyzing', 'Разбираю вопрос…', 'Учитываю блюдо, стадию решения и твой текущий контекст.');
+
+    const foundation = window.Rinlo2Foundation?.getState?.() || {};
+    const day = sumCalories();
+    const stage = inferDecisionStage(requestText);
+
+    try {
+      const response = await window.RinloVision.analyzeText(requestText, {
+        goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        decisionStage: stage,
+        dailyTarget: DAY_TARGET || 0,
+        dayCaloriesMin: day.min,
+        dayCaloriesMax: day.max,
+      });
+      const analysis = response?.analysis;
+      if (!analysis) throw new Error('empty_text_analysis');
+
+      if (analysis.status === 'needs_clarification') {
+        pendingTextClarification = analysis.clarifying_question || 'Нужно одно уточнение';
+        setTextAiStatus('clarify', 'Нужно уточнить', pendingTextClarification);
+        if (textClarificationQuestion) textClarificationQuestion.textContent = pendingTextClarification;
+        if (textClarification) textClarification.hidden = false;
+        if (textClarificationAnswer) textClarificationAnswer.value = '';
+        analyzeButton.textContent = 'Продолжить →';
+        analyzeButton.disabled = true;
+        setTimeout(() => textClarificationAnswer?.focus({ preventScroll: true }), 80);
+        return;
+      }
+
+      pendingTextClarification = '';
+      currentDecision = visionDecision(baseQuestion, analysis, 'text');
+      renderResult(currentDecision);
+      showStep('result');
+    } catch (error) {
+      setTextAiStatus('error', 'Не получилось получить ответ', 'Попробуй ещё раз — вопрос останется на месте.');
+      analyzeButton.textContent = 'Попробовать снова →';
+    } finally {
+      if (!pendingTextClarification) analyzeButton.disabled = questionInput.value.trim().length < 3;
+    }
   });
 
   showAlternativeButton?.addEventListener('click', () => {
@@ -867,7 +959,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.6-history-detail',
+    version: 'decision-v2.7-ai-text',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
