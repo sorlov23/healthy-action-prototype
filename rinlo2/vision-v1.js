@@ -91,6 +91,7 @@
         dailyTarget: Number(context.dailyTarget || 0),
         dayCaloriesMin: Number(context.dayCaloriesMin || 0),
         dayCaloriesMax: Number(context.dayCaloriesMax || 0),
+        profile: context.profile || {},
       }),
     });
 
@@ -136,6 +137,7 @@
         dailyTarget: Number(context.dailyTarget || 0),
         dayCaloriesMin: Number(context.dayCaloriesMin || 0),
         dayCaloriesMax: Number(context.dayCaloriesMax || 0),
+        profile: context.profile || {},
       }),
     });
 
@@ -185,6 +187,7 @@
         dailyTarget: Number(context.dailyTarget || 0),
         dayCaloriesMin: Number(context.dayCaloriesMin || 0),
         dayCaloriesMax: Number(context.dayCaloriesMax || 0),
+        profile: context.profile || {},
       }),
     });
 
@@ -202,7 +205,7 @@
   }
 
   window.RinloVision = {
-    version: 'v1.3-audio-decisions',
+    version: 'v1.4-personalized-decisions',
     enabled,
     localOnly,
     analyzeFile,
