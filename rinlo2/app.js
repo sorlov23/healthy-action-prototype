@@ -125,7 +125,9 @@
   if (params.get('reset') === '1') {
     localStorage.removeItem(STORAGE_KEY);
     state = { ...defaultState };
-    history.replaceState({}, '', location.pathname);
+    const cleanUrl = new URL(location.href);
+    cleanUrl.searchParams.delete('reset');
+    history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
   }
 
   if (!state.onboardingDone) {
