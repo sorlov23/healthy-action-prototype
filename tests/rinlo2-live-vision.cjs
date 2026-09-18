@@ -51,6 +51,7 @@ async function jsonResponse(response) {
     body: JSON.stringify({
       imageDataUrl,
       goal: 'weight_loss',
+      decisionStage: 'ready',
       dailyTarget: 2000,
       dayCaloriesMin: 0,
       dayCaloriesMax: 0,
@@ -70,6 +71,12 @@ async function jsonResponse(response) {
   }
   if (!['recognized', 'needs_clarification'].includes(payload?.analysis?.status)) {
     throw new Error(`invalid_analysis_status:${JSON.stringify(payload?.analysis || {})}`);
+  }
+  if (payload?.analysis?.decision_stage !== 'ready') {
+    throw new Error(`unexpected_decision_stage:${JSON.stringify(payload?.analysis || {})}`);
+  }
+  if (!Array.isArray(payload?.analysis?.actions_now) || typeof payload?.analysis?.future_tip !== 'string') {
+    throw new Error(`missing_stage_guidance:${JSON.stringify(payload?.analysis || {})}`);
   }
   if (!['fits_well','fits_with_adjustment','better_alternative','needs_clarification'].includes(payload?.analysis?.decision_state)) {
     throw new Error(`invalid_decision_state:${JSON.stringify(payload?.analysis || {})}`);
@@ -91,6 +98,9 @@ async function jsonResponse(response) {
     model: payload.meta.model,
     status: payload.analysis.status,
     decisionState: payload.analysis.decision_state,
+    decisionStage: payload.analysis.decision_stage,
+    actionsNow: payload.analysis.actions_now,
+    futureTip: payload.analysis.future_tip,
     confidence: payload.analysis.confidence,
     dishName: payload.analysis.dish_name,
     clarifyingQuestion: payload.analysis.clarifying_question,
