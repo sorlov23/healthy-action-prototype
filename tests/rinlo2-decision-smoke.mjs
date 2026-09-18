@@ -88,7 +88,21 @@ try {
 
   await page.getByRole('button', { name: 'Открыть историю', exact: true }).click();
   await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
-  await page.locator('#todayHistoryList').getByText('Бургер без соуса + Cola Zero', { exact: true }).waitFor({ state: 'visible' });
+  const historyRow = page.locator('#historyList').getByRole('button').filter({ hasText: 'Бургер без соуса + Cola Zero' });
+  await historyRow.waitFor({ state: 'visible' });
+  assert((await page.locator('#historyCount').textContent())?.includes('1'), 'history_count_wrong');
+
+  await historyRow.click();
+  await page.locator('[data-flow-step="detail"]').waitFor({ state: 'visible' });
+  assert((await page.locator('#detailName').textContent())?.includes('Бургер без соуса + Cola Zero'), 'detail_selected_name_missing');
+  assert((await page.locator('#detailTitle').textContent())?.includes('Можно, но лучше аккуратнее'), 'detail_verdict_missing');
+  assert((await page.locator('#detailStageNote').textContent())?.includes('до еды'), 'detail_stage_context_missing');
+  await page.getByRole('button', { name: 'Готово', exact: true }).click();
+
+  await page.locator('[data-nav="progress"]').last().click();
+  await page.getByRole('heading', { name: 'Что меняется', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#progressDecisionCount').textContent())?.includes('1 решение'), 'progress_decision_count_wrong');
+  assert((await page.locator('#progressChosenAdjustmentCount').textContent())?.trim() === '1', 'progress_adjustment_count_wrong');
 
   await page.locator('[data-nav="home"]').last().click();
   await page.locator('#dayCalorieContext').waitFor({ state: 'visible' });
