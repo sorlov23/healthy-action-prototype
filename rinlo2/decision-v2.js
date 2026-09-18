@@ -1035,6 +1035,7 @@
 
   function persistCorrectedDecision(decision) {
     if (!decision?.id) return false;
+    decision.updatedAt = new Date().toISOString();
     const index = decisions.findIndex((item) => item?.id === decision.id);
     if (index < 0) return false;
     decisions[index] = decision;
@@ -1530,6 +1531,7 @@
     if (!currentDecision) return;
     const selected = useAlternative && currentDecision.alternative ? currentDecision.alternative : currentDecision.original;
     currentDecision.selected = { ...selected, kind: useAlternative ? 'alternative' : 'original' };
+    currentDecision.updatedAt = new Date().toISOString();
     const existingFeedback = window.Rinlo2Feedback?.getFeedback?.(currentDecision.id);
     if (existingFeedback?.feedback) window.Rinlo2Feedback?.setFeedback?.(currentDecision, existingFeedback.feedback);
     decisions.unshift(currentDecision);
@@ -1718,21 +1720,45 @@
   }
 
   function importDecisions(incoming = []) {
-    const existing = new Set(decisions.map((item) => item?.id).filter(Boolean));
-    let added = 0;
+    const indexById = new Map(
+      decisions
+        .map((item, index) => [item?.id, index])
+        .filter(([id]) => Boolean(id))
+    );
+    let changed = 0;
+
     incoming.forEach((decision) => {
-      if (!decision?.id || existing.has(decision.id)) return;
-      decisions.push(decision);
-      existing.add(decision.id);
-      added += 1;
+      if (!decision?.id) return;
+      const index = indexById.get(decision.id);
+      if (index == null) {
+        decisions.push(decision);
+        indexById.set(decision.id, decisions.length - 1);
+        changed += 1;
+        return;
+      }
+
+      const local = decisions[index];
+      const localTime = new Date(local?.updatedAt || local?.createdAt || 0).getTime();
+      const remoteTime = new Date(decision?.updatedAt || decision?.createdAt || 0).getTime();
+      if (Number.isFinite(remoteTime) && remoteTime > (Number.isFinite(localTime) ? localTime : 0)) {
+        decisions[index] = decision;
+        if (currentDecision?.id === decision.id) currentDecision = decision;
+        if (activeDetailDecision?.id === decision.id) activeDetailDecision = decision;
+        changed += 1;
+      }
     });
-    if (!added) return 0;
+
+    if (!changed) return 0;
     decisions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     saveDecisions();
     renderDecisionSurfaces();
     renderDayContext();
     renderProgress();
-    return added;
+    if (activeDetailDecision?.id) {
+      const fresh = decisions.find((item) => item.id === activeDetailDecision.id);
+      if (fresh) activeDetailDecision = fresh;
+    }
+    return changed;
   }
 
   document.querySelector('[data-action="text"]')?.addEventListener('click', openAsk);
@@ -1929,7 +1955,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.15-quality-feedback',
+    version: 'decision-v2.16-sync-safe',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
