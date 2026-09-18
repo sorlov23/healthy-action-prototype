@@ -81,6 +81,11 @@
   let voiceStartedAt = 0;
   let voiceAnalyzeOnStop = true;
   let pendingVoiceClarification = '';
+  let activeDetailDecision = null;
+  let correctionTarget = null;
+  let correctionOrigin = 'result';
+  let correctionType = 'dish';
+  let correctionChoice = null;
 
   const presets = {
     burger: {
@@ -383,6 +388,7 @@
       recentAdjustedCount,
       recentChosenAdjustmentCount,
       recentPattern: pattern?.title || '',
+      recentCorrections: window.Rinlo2Corrections?.getRecentContext?.(30, 6) || [],
     };
   }
 
@@ -842,6 +848,344 @@
     };
   }
 
+  function correctionTypeLabel(type) {
+    if (type === 'dish') return 'Блюдо';
+    if (type === 'portion') return 'Порция';
+    if (type === 'ingredients') return 'Состав';
+    if (type === 'choice') return 'Фактический выбор';
+    return 'Поправка';
+  }
+
+  function correctionPrompt(type) {
+    if (type === 'dish') return ['Что это было на самом деле?', 'Например: куриная шаурма, а не бургер'];
+    if (type === 'portion') return ['Какая была порция?', 'Например: большая, примерно 450 г'];
+    if (type === 'ingredients') return ['Что в составе было иначе?', 'Например: соуса не было, без сыра'];
+    return ['', ''];
+  }
+
+  function renderCorrectionHistory(decision) {
+    const card = document.getElementById('detailCorrectionHistory');
+    if (!card || !decision?.id) return;
+    const corrections = (window.Rinlo2Corrections?.getCorrections?.() || [])
+      .filter((item) => item?.decisionId === decision.id)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    if (!corrections.length) {
+      card.hidden = true;
+      return;
+    }
+    const latest = corrections[0];
+    const label = card.querySelector('small');
+    const value = card.querySelector('p');
+    if (label) label.textContent = corrections.length > 1
+      ? `ПОПРАВКИ · ${corrections.length}`
+      : 'ПОПРАВКА ПОЛЬЗОВАТЕЛЯ';
+    if (value) value.textContent = `${correctionTypeLabel(latest.type)}: ${latest.value}`;
+    card.hidden = false;
+  }
+
+  function updateCorrectionEditor() {
+    const inputWrap = document.getElementById('correctionInputWrap');
+    const inputLabel = document.getElementById('correctionInputLabel');
+    const input = document.getElementById('correctionInput');
+    const choiceWrap = document.getElementById('correctionChoiceWrap');
+    const save = document.getElementById('saveCorrection');
+    const prompt = correctionPrompt(correctionType);
+
+    document.querySelectorAll('[data-correction-type]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.correctionType === correctionType);
+    });
+
+    const isChoice = correctionType === 'choice';
+    if (inputWrap) inputWrap.hidden = isChoice;
+    if (choiceWrap) choiceWrap.hidden = !isChoice;
+    if (inputLabel) inputLabel.textContent = prompt[0];
+    if (input) {
+      input.placeholder = prompt[1];
+      if (isChoice) input.value = '';
+    }
+
+    document.querySelectorAll('[data-correction-choice]').forEach((button) => {
+      const choice = button.dataset.correctionChoice;
+      button.classList.toggle('active', choice === correctionChoice);
+      if (choice === 'alternative') {
+        button.hidden = !correctionTarget?.alternative;
+      }
+    });
+
+    if (save) {
+      const ready = isChoice
+        ? Boolean(correctionChoice)
+        : Boolean(String(input?.value || '').trim());
+      save.disabled = !ready;
+    }
+  }
+
+  function closeCorrectionSheet() {
+    const sheet = document.getElementById('correctionSheet');
+    if (sheet) sheet.hidden = true;
+    correctionTarget = null;
+    correctionChoice = null;
+  }
+
+  function openCorrectionSheet(decision, origin = 'result') {
+    if (!decision) return;
+    correctionTarget = decision;
+    correctionOrigin = origin;
+    correctionType = 'dish';
+    correctionChoice = null;
+
+    const sheet = document.getElementById('correctionSheet');
+    const title = document.getElementById('correctionSheetTitle');
+    const subtitle = document.getElementById('correctionSheetSubtitle');
+    const input = document.getElementById('correctionInput');
+    const choiceType = document.querySelector('[data-correction-type="choice"]');
+    if (input) input.value = '';
+    if (title) title.textContent = 'Что нужно поправить?';
+    if (subtitle) subtitle.textContent = decision.original?.name
+      ? `Сейчас Rinlo считает, что это «${decision.original.name}».`
+      : 'Поправка сохранится и будет учитываться в похожих решениях.';
+    if (choiceType) choiceType.hidden = !(origin === 'detail' && decision.selected && decision.alternative);
+    if (sheet) sheet.hidden = false;
+    updateCorrectionEditor();
+  }
+
+  function persistCorrectedDecision(decision) {
+    if (!decision?.id) return false;
+    const index = decisions.findIndex((item) => item?.id === decision.id);
+    if (index < 0) return false;
+    decisions[index] = decision;
+    saveDecisions();
+    window.dispatchEvent(new CustomEvent('rinlo2:decision-saved', {
+      detail: { decision: JSON.parse(JSON.stringify(decision)) }
+    }));
+    renderDecisionSurfaces();
+    renderDayContext();
+    renderProgress();
+    return true;
+  }
+
+  function applyChoiceCorrection(decision, choice) {
+    if (!decision?.original) return false;
+    const useAlternative = choice === 'alternative' && Boolean(decision.alternative);
+    const selected = useAlternative ? decision.alternative : decision.original;
+    decision.selected = { ...selected, kind: useAlternative ? 'alternative' : 'original' };
+    if (currentDecision?.id === decision.id) currentDecision = decision;
+    persistCorrectedDecision(decision);
+    return true;
+  }
+
+  async function reanalyzeWithCorrection(decision, type, value) {
+    const engine = window.RinloVision;
+    if (!engine?.enabled || typeof engine.analyzeText !== 'function') return null;
+
+    const day = sumCalories();
+    const profile = buildDecisionProfile();
+    const labels = {
+      dish: 'правильное блюдо',
+      portion: 'правильный размер порции',
+      ingredients: 'правильный состав',
+    };
+    const baseQuestion = String(decision.question || decision.original?.name || 'Предыдущее решение').trim();
+    const correctionText = [
+      baseQuestion,
+      `Явная поправка пользователя к предыдущему распознаванию Rinlo — ${labels[type] || 'уточнение'}: ${value}.`,
+      'Считай эту поправку фактом текущего решения и пересобери ответ. Не повторяй старое распознавание, если оно ей противоречит.',
+    ].join('\n');
+
+    const response = await engine.analyzeText(correctionText, {
+      goal: requestGoal(profile),
+      profile,
+      decisionStage: ['choosing','preparing','ready'].includes(decision.stage) ? decision.stage : 'choosing',
+      dailyTarget: DAY_TARGET || 0,
+      dayCaloriesMin: day.min,
+      dayCaloriesMax: day.max,
+    });
+    const analysis = response?.analysis;
+    if (!analysis || analysis.status === 'needs_clarification') return null;
+
+    const revised = visionDecision(baseQuestion, analysis, decision.source || 'text');
+    revised.id = decision.id;
+    revised.createdAt = decision.createdAt || revised.createdAt;
+    revised.source = decision.source || revised.source;
+    revised.stage = decision.stage || revised.stage;
+    revised.correctionsApplied = Number(decision.correctionsApplied || 0) + 1;
+
+    if (decision.selected) {
+      const keepAlternative = decision.selected.kind === 'alternative' && revised.alternative;
+      const selected = keepAlternative ? revised.alternative : revised.original;
+      revised.selected = { ...selected, kind: keepAlternative ? 'alternative' : 'original' };
+    }
+    return revised;
+  }
+
+  async function saveCorrectionFromSheet() {
+    if (!correctionTarget) return;
+    const decision = correctionTarget;
+    const input = document.getElementById('correctionInput');
+    const save = document.getElementById('saveCorrection');
+    const isChoice = correctionType === 'choice';
+    const value = isChoice
+      ? (correctionChoice === 'alternative' ? 'выбрал предложенный вариант Rinlo' : 'оставил исходный вариант')
+      : String(input?.value || '').trim();
+    if (!value) return;
+
+    if (save) {
+      save.disabled = true;
+      save.textContent = 'Сохраняю…';
+    }
+
+    try {
+      window.Rinlo2Corrections?.record?.({
+        decisionId: decision.id,
+        type: correctionType,
+        value,
+        dishName: decision.original?.name || decision.question || '',
+        payload: {
+          source: decision.source || 'text',
+          origin: correctionOrigin,
+          ...(isChoice ? { choice: correctionChoice } : {}),
+        },
+      });
+
+      if (isChoice) {
+        applyChoiceCorrection(decision, correctionChoice);
+        closeCorrectionSheet();
+        if (correctionOrigin === 'detail') showDecisionDetail(decision);
+        showToast('Фактический выбор обновлён');
+        return;
+      }
+
+      let revised = null;
+      try {
+        revised = await reanalyzeWithCorrection(decision, correctionType, value);
+      } catch (error) {
+        console.warn('Rinlo correction reanalysis failed', error);
+      }
+
+      if (revised) {
+        if (currentDecision?.id === decision.id) currentDecision = revised;
+        const wasSaved = persistCorrectedDecision(revised);
+        closeCorrectionSheet();
+        if (correctionOrigin === 'detail' && wasSaved) {
+          showDecisionDetail(revised);
+        } else {
+          renderResult(revised);
+          showStep('result');
+        }
+        showToast('Поправка учтена — ответ обновлён');
+      } else {
+        closeCorrectionSheet();
+        if (correctionOrigin === 'detail') renderCorrectionHistory(decision);
+        showToast('Поправка сохранена для следующих решений');
+      }
+    } finally {
+      if (save) {
+        save.textContent = 'Сохранить поправку';
+        save.disabled = false;
+      }
+    }
+  }
+
+  function injectCorrectionUi() {
+    if (document.getElementById('correctionSheet')) return;
+
+    const resultBody = document.querySelector('[data-flow-step="result"] .flow-body');
+    if (resultBody) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.id = 'resultCorrectionButton';
+      button.className = 'correction-link';
+      button.textContent = 'Что-то распознано не так? Исправить';
+      button.addEventListener('click', () => openCorrectionSheet(currentDecision, 'result'));
+      resultBody.appendChild(button);
+    }
+
+    const detailBody = document.querySelector('[data-flow-step="detail"] .flow-body');
+    const stageNote = document.getElementById('detailStageNote');
+    if (detailBody) {
+      const historyCard = document.createElement('article');
+      historyCard.id = 'detailCorrectionHistory';
+      historyCard.className = 'detail-section correction-history-card';
+      historyCard.hidden = true;
+      historyCard.innerHTML = '<small>ПОПРАВКА ПОЛЬЗОВАТЕЛЯ</small><p></p>';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.id = 'detailCorrectionButton';
+      button.className = 'correction-link detail-correction-link';
+      button.textContent = 'Исправить данные решения';
+      button.addEventListener('click', () => openCorrectionSheet(activeDetailDecision, 'detail'));
+
+      if (stageNote) {
+        stageNote.insertAdjacentElement('beforebegin', historyCard);
+        stageNote.insertAdjacentElement('beforebegin', button);
+      } else {
+        detailBody.append(historyCard, button);
+      }
+    }
+
+    const sheet = document.createElement('div');
+    sheet.id = 'correctionSheet';
+    sheet.className = 'correction-sheet';
+    sheet.hidden = true;
+    sheet.innerHTML = `
+      <button class="correction-sheet-backdrop" type="button" data-correction-close aria-label="Закрыть"></button>
+      <section class="correction-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="correctionSheetTitle">
+        <div class="correction-sheet-handle" aria-hidden="true"></div>
+        <div class="correction-sheet-head">
+          <div>
+            <small>ПОПРАВКА RINLO</small>
+            <h2 id="correctionSheetTitle">Что нужно поправить?</h2>
+            <p id="correctionSheetSubtitle"></p>
+          </div>
+          <button type="button" class="correction-sheet-close" data-correction-close aria-label="Закрыть">×</button>
+        </div>
+        <div class="correction-types">
+          <button type="button" class="active" data-correction-type="dish">Не то блюдо</button>
+          <button type="button" data-correction-type="portion">Другая порция</button>
+          <button type="button" data-correction-type="ingredients">Неточный состав</button>
+          <button type="button" data-correction-type="choice">Выбрал другое</button>
+        </div>
+        <label class="correction-input-wrap" id="correctionInputWrap">
+          <span id="correctionInputLabel">Что это было на самом деле?</span>
+          <input id="correctionInput" maxlength="240" autocomplete="off" />
+        </label>
+        <div class="correction-choice-wrap" id="correctionChoiceWrap" hidden>
+          <span>Что было выбрано в итоге?</span>
+          <div>
+            <button type="button" data-correction-choice="original">Исходный вариант</button>
+            <button type="button" data-correction-choice="alternative">Вариант Rinlo</button>
+          </div>
+        </div>
+        <p class="correction-trust-note">Rinlo сохранит именно твою поправку. Она не станет универсальным правилом и будет учитываться только там, где действительно релевантна.</p>
+        <button class="btn primary wide" type="button" id="saveCorrection" disabled>Сохранить поправку</button>
+      </section>
+    `;
+    document.body.appendChild(sheet);
+
+    sheet.querySelectorAll('[data-correction-close]').forEach((button) => {
+      button.addEventListener('click', closeCorrectionSheet);
+    });
+    sheet.querySelectorAll('[data-correction-type]').forEach((button) => {
+      button.addEventListener('click', () => {
+        correctionType = button.dataset.correctionType || 'dish';
+        correctionChoice = null;
+        const input = document.getElementById('correctionInput');
+        if (input) input.value = '';
+        updateCorrectionEditor();
+        if (correctionType !== 'choice') setTimeout(() => input?.focus({ preventScroll: true }), 50);
+      });
+    });
+    sheet.querySelectorAll('[data-correction-choice]').forEach((button) => {
+      button.addEventListener('click', () => {
+        correctionChoice = button.dataset.correctionChoice || null;
+        updateCorrectionEditor();
+      });
+    });
+    document.getElementById('correctionInput')?.addEventListener('input', updateCorrectionEditor);
+    document.getElementById('saveCorrection')?.addEventListener('click', saveCorrectionFromSheet);
+  }
+
   function renderResult(decision) {
     resultQuestion.textContent = decision.question;
     resultTitle.textContent = decision.title;
@@ -1031,6 +1375,7 @@
   }
 
   function showDecisionDetail(decision) {
+    activeDetailDecision = decision;
     const selected = decision.selected || decision.original || {};
     const setText = (id, value) => {
       const node = document.getElementById(id);
@@ -1070,6 +1415,7 @@
 
     const verdict = document.getElementById('detailVerdict');
     verdict?.classList.toggle('good', decision.tone === 'good' || decision.decisionState === 'fits_well');
+    renderCorrectionHistory(decision);
     showStep('detail');
   }
 
@@ -1272,13 +1618,14 @@
   window.addEventListener('rinlo2:profile-applied', () => renderProgress());
 
   injectCalorieContext();
+  injectCorrectionUi();
   renderStoredDecisions();
   renderDayContext();
   renderProgress();
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.10-personalized',
+    version: 'decision-v2.11-corrections',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
