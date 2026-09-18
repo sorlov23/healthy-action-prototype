@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'supabase/schema/**'
+      - 'supabase/migrations/*rinlo_decision_correction*.sql'
       - '.github/workflows/supabase-schema-ci.yml'
   pull_request:
     paths:
       - 'supabase/schema/**'
+      - 'supabase/migrations/*rinlo_decision_correction*.sql'
       - '.github/workflows/supabase-schema-ci.yml'
 
 jobs:
@@ -44,6 +46,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 <<'SQL'
           create role anon nologin;
           create role authenticated nologin;
+          create role service_role nologin;
           create schema auth;
           create schema extensions;
           create table auth.users (id uuid primary key);
@@ -74,6 +77,11 @@ jobs:
       - name: Apply Rinlo Decisions profile
         run: psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_decision_profiles.sql
 
+      - name: Apply Rinlo correction memory
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260918195449_rinlo_decision_corrections_v1.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260918201000_rinlo_decision_correction_memory_control.sql
+
       - name: Verify security invariants
         run: |
           psql -v ON_ERROR_STOP=1 <<'SQL'
@@ -87,12 +95,12 @@ jobs:
             select count(*) into table_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r';
-            if table_count <> 14 then raise exception 'expected 14 public tables, got %', table_count; end if;
+            if table_count <> 15 then raise exception 'expected 15 public tables, got %', table_count; end if;
 
             select count(*) into rls_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity;
-            if rls_count <> 14 then raise exception 'expected RLS on 14 public tables, got %', rls_count; end if;
+            if rls_count <> 15 then raise exception 'expected RLS on 15 public tables, got %', rls_count; end if;
 
             if to_regclass('public.app_users') is not null or to_regclass('public.auth_sessions') is not null then
               raise exception 'legacy auth tables must not exist';
@@ -219,6 +227,66 @@ jobs:
             exit 1
           else
             echo "cross-user profile write correctly blocked by RLS"
+          fi
+
+      - name: Verify Rinlo correction ownership and revoke
+        run: |
+          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx '1|1'
+          begin;
+          insert into auth.users(id) values
+            ('99999999-9999-4999-8999-999999999999'),
+            ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = '99999999-9999-4999-8999-999999999999';
+
+          insert into public.rinlo_decision_corrections(
+            user_id, client_correction_id, client_decision_id,
+            correction_type, correction_value, dish_name
+          ) values (
+            '99999999-9999-4999-8999-999999999999',
+            'ci-correction-1',
+            'ci-decision-memory',
+            'ingredients',
+            'без соуса',
+            'Бургер'
+          );
+
+          update public.rinlo_decision_corrections
+          set revoked_at = now()
+          where user_id=auth.uid() and client_correction_id='ci-correction-1';
+
+          select
+            count(*) || '|' ||
+            count(*) filter(where revoked_at is not null)
+          from public.rinlo_decision_corrections
+          where user_id=auth.uid() and client_correction_id='ci-correction-1';
+          rollback;
+          SQL
+
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          insert into auth.users(id) values
+            ('99999999-9999-4999-8999-999999999999'),
+            ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = '99999999-9999-4999-8999-999999999999';
+          insert into public.rinlo_decision_corrections(
+            user_id, client_correction_id, client_decision_id,
+            correction_type, correction_value
+          ) values (
+            'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            'ci-cross-user-correction',
+            'ci-cross-user-decision',
+            'dish',
+            'чужая поправка'
+          );
+          rollback;
+          SQL
+          then
+            echo "cross-user correction write unexpectedly succeeded"
+            exit 1
+          else
+            echo "cross-user correction write correctly blocked by RLS"
           fi
 
       - name: Verify catalogue is read-only
