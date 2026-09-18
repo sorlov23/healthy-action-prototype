@@ -211,13 +211,20 @@ Deno.serve(async (req: Request) => {
   }
 
   const body = await req.json().catch(() => null);
+  const question = String(body?.question || "").trim();
   const imageDataUrl = String(body?.imageDataUrl || "");
-  const match = /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=]+)$/i.exec(imageDataUrl);
-  if (!match) return json({ error: "invalid_image" }, 400);
+  const match = imageDataUrl
+    ? /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=]+)$/i.exec(imageDataUrl)
+    : null;
+
+  if (!question && !imageDataUrl) return json({ error: "input_required" }, 400);
+  if (imageDataUrl && !match) return json({ error: "invalid_image" }, 400);
   if (imageDataUrl.length > 9_000_000) return json({ error: "image_too_large" }, 413);
 
-  const mimeType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
-  const imageBase64 = match[2];
+  const mimeType = match
+    ? (match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase())
+    : "";
+  const imageBase64 = match ? match[2] : "";
   const goal = String(body?.goal || "weight_loss");
   const decisionStage = ["choosing", "preparing", "ready"].includes(String(body?.decisionStage || ""))
     ? String(body.decisionStage)
@@ -225,17 +232,19 @@ Deno.serve(async (req: Request) => {
   const dailyTarget = Number(body?.dailyTarget || 0);
   const dayCaloriesMin = Number(body?.dayCaloriesMin || 0);
   const dayCaloriesMax = Number(body?.dayCaloriesMax || 0);
-  const model = Deno.env.get("RINLO_VISION_MODEL") || "gemini-3.1-flash-lite";
+  const model = Deno.env.get("RINLO_DECISION_MODEL")
+    || Deno.env.get("RINLO_VISION_MODEL")
+    || "gemini-3.1-flash-lite";
 
   const systemPrompt = [
     "Ты — ядро Rinlo Decisions, помощника по выбору еды до того, как пользователь её съел.",
     "Отвечай по-русски, коротко, нейтрально и без морализаторства.",
     "Не называй еду хорошей или плохой. Не ставь диагнозы и не давай медицинских рекомендаций.",
-    "Не изображай точность, которой нет: калорийность по фото всегда диапазон и оценка.",
+    "Не изображай точность, которой нет: калорийность всегда диапазон и оценка, если точный состав и масса неизвестны.",
     "Если уверенность в блюде, составе или порции недостаточна, верни status=needs_clarification,",
     "decision_state=needs_clarification и задай ровно один полезный короткий вопрос.",
     "Если блюдо распознано достаточно уверенно, оцени реалистичный диапазон калорий.",
-    "Если по фото нельзя надёжно оценить порцию, скрытые соусы, масло, панировку или состав заметно меняет оценку — лучше попроси одно уточнение.",
+    "Если по фото или тексту нельзя надёжно оценить порцию, скрытые соусы, масло, панировку или состав заметно меняют оценку — лучше попроси одно уточнение.",
     "Решение должно учитывать цель пользователя, уже сохранённый контекст дня и стадию решения.",
     "decision_stage=choosing: человек ещё выбирает еду — можно предлагать другую версию блюда, напиток, гарнир, размер порции.",
     "decision_stage=preparing: еда готовится — можно менять только то, что ещё реально изменить во время приготовления.",
@@ -262,7 +271,9 @@ Deno.serve(async (req: Request) => {
     `Стадия решения: ${decisionStage}.`,
     dailyTarget > 0 ? `Персональный ориентир дня: около ${dailyTarget} ккал.` : "Персональный калорийный ориентир пока не задан.",
     `По уже сохранённым решениям Rinlo сегодня: примерно ${dayCaloriesMin}–${dayCaloriesMax} ккал.`,
-    "Проанализируй фото предполагаемой еды и верни решение строго по JSON-схеме.",
+    question ? `Вопрос пользователя: ${question}` : "Пользователь прислал фото еды.",
+    imageDataUrl ? "Если фото и текст расходятся, не угадывай: попроси одно уточнение." : "Проанализируй текстовый запрос без выдуманной точности.",
+    "Верни решение строго по JSON-схеме.",
   ].join(" ");
 
   const endpoint =
@@ -283,12 +294,12 @@ Deno.serve(async (req: Request) => {
           role: "user",
           parts: [
             { text: userText },
-            {
+            ...(imageDataUrl ? [{
               inlineData: {
                 mimeType,
                 data: imageBase64,
               },
-            },
+            }] : []),
           ],
         },
       ],
@@ -304,7 +315,7 @@ Deno.serve(async (req: Request) => {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     console.error(
-      "Gemini vision request failed",
+      "Gemini decision request failed",
       response.status,
       payload?.error?.status || payload?.error?.code || "",
     );
