@@ -1269,6 +1269,8 @@
     renderDecisionSurfaces();
   }));
 
+  window.addEventListener('rinlo2:profile-applied', () => renderProgress());
+
   injectCalorieContext();
   renderStoredDecisions();
   renderDayContext();
