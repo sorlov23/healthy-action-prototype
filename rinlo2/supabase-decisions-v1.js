@@ -75,7 +75,10 @@
       calorie_max: range.max,
       source_metadata: {
         client: 'rinlo2-web-prototype',
-        decision_version: 'v2.3',
+        decision_version: 'v2.5',
+        stage: decision.stage || null,
+        actions_now: Array.isArray(decision.actionsNow) ? decision.actionsNow.slice(0, 3) : [],
+        future_tip: decision.futureTip || '',
         vision: decision.vision || null,
       },
       created_at: decision.createdAt || new Date().toISOString(),
@@ -110,6 +113,11 @@
         kind: row.selected_kind === 'alternative' ? 'alternative' : 'original',
       },
       vision: row.source_metadata?.vision || null,
+      stage: row.source_metadata?.stage || row.source_metadata?.vision?.stage || null,
+      actionsNow: Array.isArray(row.source_metadata?.actions_now)
+        ? row.source_metadata.actions_now.slice(0, 3)
+        : (row.source_metadata?.vision?.actionsNow || []),
+      futureTip: row.source_metadata?.future_tip || row.source_metadata?.vision?.futureTip || '',
       decisionState: row.decision_state || null,
     };
   }
@@ -192,7 +200,7 @@
   setTimeout(scheduleSync, 0);
 
   window.Rinlo2Supabase = {
-    version: 'v1.1-vision-metadata',
+    version: 'v1.2-stage-context',
     enabled,
     localOnly,
     upsertDecision,
