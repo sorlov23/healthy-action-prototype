@@ -71,22 +71,44 @@
       </section>
 
       <section class="screen" data-screen="progress">
-        <p class="eyebrow dark">НЕ ОТЧЁТ. ОТВЕТ НА «РАБОТАЕТ ЛИ?»</p><h1 class="page-title">Твой прогресс</h1>
-        <article class="trend-card">
-          <div class="trend-top"><div><strong>−2,4 кг</strong><small>с начала</small></div><span class="pill good-pill">↓ спокойный темп</span></div>
-          <svg class="trend-chart" viewBox="0 0 340 132" role="img" aria-label="Тренд веса вниз">
-            <defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c7ff5b" stop-opacity=".32"/><stop offset="1" stop-color="#c7ff5b" stop-opacity="0"/></linearGradient></defs>
-            <path d="M8 28 C55 33 60 55 110 56 S168 74 210 78 S274 102 332 108 L332 128 L8 128Z" fill="url(#fade)"/>
-            <path d="M8 28 C55 33 60 55 110 56 S168 74 210 78 S274 102 332 108" fill="none" stroke="#8bdc33" stroke-width="4" stroke-linecap="round"/>
-            <circle cx="8" cy="28" r="5" fill="#111315"/><circle cx="332" cy="108" r="6" fill="#8bdc33"/>
-          </svg>
-          <div class="chart-labels"><span>72,6 кг<br><small>старт</small></span><span>70,2 кг<br><small>сейчас</small></span><span>68,0 кг<br><small>цель</small></span></div>
+        <p class="eyebrow dark">НЕ ДНЕВНИК. ПАТТЕРНЫ РЕШЕНИЙ.</p>
+        <h1 class="page-title">Что меняется</h1>
+
+        <article class="progress-decision-card">
+          <div>
+            <small>Последние 7 дней</small>
+            <strong id="progressDecisionCount">Пока нет решений</strong>
+          </div>
+          <span class="progress-signal" aria-hidden="true">↗</span>
+          <p>Rinlo смотрит не на идеальность питания, а на то, какие решения реально повторяются.</p>
         </article>
-        <div class="metric-grid">
-          <article><span class="metric-icon lime">✓</span><strong>18</strong><p>решений в твою пользу</p></article>
-          <article><span class="metric-icon">↘</span><strong>−0,5 кг</strong><p>средний темп в неделю</p></article>
+
+        <div class="metric-grid decision-metrics">
+          <article>
+            <span class="metric-icon lime">↗</span>
+            <strong id="progressAdjustedCount">0</strong>
+            <p>решений потребовали небольшой корректировки</p>
+          </article>
+          <article>
+            <span class="metric-icon">✓</span>
+            <strong id="progressChosenAdjustmentCount">0</strong>
+            <p>раз выбран вариант с корректировкой</p>
+          </article>
         </div>
-        <article class="insight-card"><p class="eyebrow dark">ПОЛЕЗНЫЙ ПАТТЕРН</p><h2>Чаще всего тебе помогает не менять блюдо, а убирать лишнее из комбо.</h2><p>Так уже было с бургером, шаурмой и пиццей. Rinlo будет учитывать это в следующих решениях.</p></article>
+
+        <article class="insight-card" id="progressPatternCard">
+          <p class="eyebrow dark">ПОЛЕЗНЫЙ ПАТТЕРН</p>
+          <h2 id="progressPatternTitle">Нужно ещё несколько решений.</h2>
+          <p id="progressPatternText">После нескольких реальных выборов Rinlo покажет, что чаще всего помогает именно тебе.</p>
+        </article>
+
+        <article class="goal-context-card">
+          <div>
+            <small>Цель остаётся контекстом, а не оценкой еды</small>
+            <strong id="progressWeightContext">70,2 → 68,0 кг</strong>
+          </div>
+          <span>Вес помогает персонализировать решения, но не превращает Rinlo в дневник калорий.</span>
+        </article>
       </section>
 
       <section class="screen" data-screen="profile">
