@@ -1,6 +1,6 @@
 (() => {
   const STORAGE_KEY = 'rinlo2-decisions-v2';
-  const DAY_TARGET = 2000;
+  const DAY_TARGET = null;
   const flow = document.getElementById('decisionFlow');
   if (!flow) return;
 
@@ -226,7 +226,7 @@
 
     const style = document.createElement('style');
     style.textContent = `
-      .day-calorie-context{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid rgba(17,19,21,.06);border-radius:18px;padding:13px 15px;margin:-5px 0 16px;box-shadow:0 7px 24px rgba(17,19,21,.04)}
+      .day-calorie-context{display:block;background:#fff;border:1px solid rgba(17,19,21,.06);border-radius:18px;padding:13px 15px;margin:4px 0 16px;box-shadow:0 7px 24px rgba(17,19,21,.04)}
       .day-calorie-copy{min-width:0;display:flex;flex-direction:column;gap:3px}.day-calorie-copy small{font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#8a9298}.day-calorie-copy strong{font-size:15px;line-height:1.2;letter-spacing:-.025em}.day-calorie-copy span{font-size:10px;line-height:1.35;color:#7b848c}
       .day-calorie-target{text-align:right;display:flex;flex-direction:column;gap:2px;white-space:nowrap}.day-calorie-target small{font-size:9px;color:#8a9298}.day-calorie-target b{font-size:12px}.day-calorie-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#c7ff5b;box-shadow:0 0 0 4px rgba(199,255,91,.16);margin-right:6px}
       .prospective-calories{margin-top:11px;padding:12px 14px;background:#111315;color:#fff;border-radius:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}.prospective-calories div{display:flex;flex-direction:column;gap:2px}.prospective-calories small{font-size:9px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.09em;font-weight:800}.prospective-calories strong{font-size:13px;line-height:1.25}.prospective-calories span{font-size:10px;color:rgba(255,255,255,.62);line-height:1.3;text-align:right;max-width:130px}
@@ -234,8 +234,8 @@
     `;
     document.head.appendChild(style);
 
-    const progress = document.querySelector('[data-screen="home"] .progress-strip');
-    if (progress) {
+    const hero = document.querySelector('[data-screen="home"] .decision-hero');
+    if (hero) {
       const card = document.createElement('section');
       card.className = 'day-calorie-context';
       card.id = 'dayCalorieContext';
@@ -245,11 +245,9 @@
           <strong id="dayCalorieValue">Пока нет сохранённых решений</strong>
           <span id="dayCalorieNote">Только по решениям, которые ты сохранил в Rinlo</span>
         </div>
-        <div class="day-calorie-target"><small>ориентир</small><b>~ ${DAY_TARGET.toLocaleString('ru-RU')} ккал</b></div>
       `;
-      progress.insertAdjacentElement('afterend', card);
+      hero.insertAdjacentElement('beforebegin', card);
     }
-
     const metrics = document.querySelector('.result-metrics');
     if (metrics) {
       const note = document.createElement('article');
@@ -459,7 +457,7 @@
       const response = await vision.analyzeFile(file, {
         goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
         decisionStage: 'ready',
-        dailyTarget: DAY_TARGET,
+        dailyTarget: DAY_TARGET || 0,
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
