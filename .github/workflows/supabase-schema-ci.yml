@@ -110,15 +110,13 @@ jobs:
 
       - name: Verify Rinlo Decisions ownership and upsert
         run: |
-          psql -v ON_ERROR_STOP=1 <<'SQL'
+          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx '1'
           begin;
           insert into auth.users(id) values
             ('55555555-5555-4555-8555-555555555555'),
             ('66666666-6666-4666-8666-666666666666');
-
           set local role authenticated;
           set local "request.jwt.claim.sub" = '55555555-5555-4555-8555-555555555555';
-
           insert into public.rinlo_decisions(
             user_id, client_decision_id, source, question, decision_state,
             verdict_title, explanation, original_option, selected_option, selected_kind,
@@ -139,43 +137,41 @@ jobs:
           )
           on conflict(user_id, client_decision_id)
           do update set verdict_title=excluded.verdict_title, updated_at=now();
-
-          do $
-          declare
-            own_count integer;
-            cross_user_blocked boolean := false;
-          begin
-            select count(*) into own_count
-            from public.rinlo_decisions
+          select count(*) from public.rinlo_decisions
             where user_id=auth.uid() and client_decision_id='ci-decision-1';
-            if own_count <> 1 then raise exception 'decision upsert failed'; end if;
-
-            begin
-              insert into public.rinlo_decisions(
-                user_id, client_decision_id, source, question, decision_state,
-                verdict_title, explanation, original_option, selected_option, selected_kind
-              ) values (
-                '66666666-6666-4666-8666-666666666666',
-                'ci-cross-user',
-                'text',
-                'Чужое решение',
-                'fits_well',
-                'Можно брать',
-                'CI',
-                '{}'::jsonb,
-                '{}'::jsonb,
-                'original'
-              );
-            exception when insufficient_privilege then
-              cross_user_blocked := true;
-            end;
-
-            if not cross_user_blocked then
-              raise exception 'cross-user decision write was not blocked';
-            end if;
-          end $;
           rollback;
           SQL
+
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          insert into auth.users(id) values
+            ('55555555-5555-4555-8555-555555555555'),
+            ('66666666-6666-4666-8666-666666666666');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = '55555555-5555-4555-8555-555555555555';
+          insert into public.rinlo_decisions(
+            user_id, client_decision_id, source, question, decision_state,
+            verdict_title, explanation, original_option, selected_option, selected_kind
+          ) values (
+            '66666666-6666-4666-8666-666666666666',
+            'ci-cross-user',
+            'text',
+            'Чужое решение',
+            'fits_well',
+            'Можно брать',
+            'CI',
+            '{}'::jsonb,
+            '{}'::jsonb,
+            'original'
+          );
+          rollback;
+          SQL
+          then
+            echo "cross-user decision write unexpectedly succeeded"
+            exit 1
+          else
+            echo "cross-user decision write correctly blocked by RLS"
+          fi
 
       - name: Verify catalogue is read-only
         run: |
