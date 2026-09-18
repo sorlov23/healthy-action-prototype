@@ -14,6 +14,7 @@
     targetWeight: null,
     goal: null,
     priorities: [],
+    profileUpdatedAt: null,
     activeScreen: 'home'
   };
 
@@ -110,9 +111,10 @@
     }
   }
 
-  function applyDecisionProfile(profile, { silent = false } = {}) {
+  function applyDecisionProfile(profile, { silent = false, updatedAt = null } = {}) {
     const normalized = normalizeProfile(profile);
-    state = { ...state, ...normalized, profileVersion: 2 };
+    const nextUpdatedAt = updatedAt || (!silent ? new Date().toISOString() : state.profileUpdatedAt || null);
+    state = { ...state, ...normalized, profileVersion: 2, profileUpdatedAt: nextUpdatedAt };
     saveState();
     renderProfile();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-applied', {
@@ -191,6 +193,7 @@
     state.goal = allowedGoals.has(activeGoal) ? activeGoal : 'lose';
     state.priorities = Array.isArray(state.priorities) ? state.priorities : [];
     state.profileVersion = 2;
+    state.profileUpdatedAt = new Date().toISOString();
     saveState();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
       detail: { profile: normalizeProfile(state) }
@@ -268,9 +271,9 @@
   renderProfile();
 
   window.Rinlo2Foundation = {
-    version: 'foundation-v2-decision-profile',
+    version: 'foundation-v3-profile-sync',
     getState: () => ({ ...state }),
-    getDecisionProfile: () => normalizeProfile(state),
+    getDecisionProfile: () => ({ ...normalizeProfile(state), updatedAt: state.profileUpdatedAt || null }),
     applyDecisionProfile: (profile, options = {}) => applyDecisionProfile(profile, options),
     navigate: showScreen,
     reset() {
