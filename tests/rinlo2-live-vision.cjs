@@ -124,6 +124,16 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
     body: JSON.stringify({
       question: 'Можно сегодня бургер и колу? Я ещё выбираю, что съесть.',
       goal: 'weight_loss',
+      profile: {
+        goal: 'lose',
+        currentWeight: 80,
+        targetWeight: 72,
+        priorities: ['satiety','simplicity'],
+        recentDecisionCount: 4,
+        recentAdjustedCount: 2,
+        recentChosenAdjustmentCount: 1,
+        recentPattern: 'Чаще всего помогает корректировать напиток.',
+      },
       decisionStage: 'choosing',
       dailyTarget: 0,
       dayCaloriesMin: 0,
