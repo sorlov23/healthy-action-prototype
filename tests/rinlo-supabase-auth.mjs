@@ -9,6 +9,10 @@ let signupCount = 0;
 let refreshCount = 0;
 let rejectRefresh = false;
 let nextUser = 1;
+let userFetchCount = 0;
+let userUpdateCount = 0;
+let resendCount = 0;
+let protectedUser = false;
 
 const localStorage = {
   getItem(key) { return values.has(key) ? values.get(key) : null; },
@@ -51,6 +55,36 @@ async function fetchMock(url, options = {}) {
       user: { id: 'user-1', is_anonymous: true },
     });
   }
+  if (String(url).includes('/auth/v1/user') && options.method === 'PUT') {
+    userUpdateCount += 1;
+    const body = JSON.parse(options.body || '{}');
+    assert.equal(body.email, 'owner@example.com');
+    return response(200, {
+      id: 'user-2',
+      is_anonymous: true,
+      email_change: body.email,
+      identities: [],
+    });
+  }
+  if (String(url).endsWith('/auth/v1/user') && options.method === 'GET') {
+    userFetchCount += 1;
+    return response(200, protectedUser
+      ? {
+          id: 'user-2',
+          is_anonymous: false,
+          email: 'owner@example.com',
+          email_confirmed_at: '2026-09-19T00:00:00Z',
+          identities: [{ provider: 'email', identity_data: { email_verified: true } }],
+        }
+      : { id: 'user-2', is_anonymous: true, identities: [] });
+  }
+  if (String(url).endsWith('/auth/v1/resend') && options.method === 'POST') {
+    resendCount += 1;
+    const body = JSON.parse(options.body || '{}');
+    assert.equal(body.type, 'email_change');
+    assert.equal(body.email, 'owner@example.com');
+    return response(200, {});
+  }
   throw new Error(`Unexpected fetch ${url}`);
 }
 
@@ -91,7 +125,7 @@ const context = vm.createContext({
 vm.runInContext(source, context, { filename: 'rinlo-supabase-auth-v1.js' });
 
 const auth = window.RinloSupabaseAuth;
-assert.equal(auth.version, 'v1');
+assert.equal(auth.version, 'v2-account-protection');
 assert.equal(auth.enabled, true);
 assert.equal(signupCount, 0, 'loading the bridge must not create an anonymous user');
 
@@ -129,6 +163,25 @@ assert.equal(auth.getUserId(), 'user-2');
 
 const accessToken = await auth.getAccessToken();
 assert.equal(accessToken, 'access-user-2');
+
+const pendingUser = await auth.requestEmailProtection('OWNER@example.com');
+assert.equal(userUpdateCount, 1);
+assert.equal(pendingUser.id, 'user-2');
+assert.equal(pendingUser.is_anonymous, true);
+assert.equal(pendingUser.email_change, 'owner@example.com');
+assert.equal(auth.getSession().user.email_change, 'owner@example.com');
+assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
+
+await auth.resendEmailChange('owner@example.com');
+assert.equal(resendCount, 1);
+
+protectedUser = true;
+const verified = await auth.getUser();
+assert.equal(userFetchCount, 1);
+assert.equal(verified.is_anonymous, false);
+assert.equal(verified.email, 'owner@example.com');
+assert.equal(auth.getSession().user.email_confirmed_at, '2026-09-19T00:00:00Z');
+assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
 
 auth.clearLocalSession();
 assert.equal(auth.getSession(), null);
