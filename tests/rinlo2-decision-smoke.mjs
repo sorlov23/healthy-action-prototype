@@ -137,6 +137,24 @@ try {
   await page.locator('#dayCalorieContext').waitFor({ state: 'visible' });
   assert((await page.locator('#dayCalorieValue').textContent())?.includes('540'), 'day_context_not_persisted_after_reload');
 
+  await page.locator('[data-nav="profile"]').last().click();
+  await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-profile-goal="aware"]').click();
+  await page.locator('#profileCurrentWeight').fill('80');
+  await page.locator('#profileTargetWeight').fill('72');
+  await page.locator('[data-profile-priority="satiety"]').click();
+  await page.locator('[data-profile-priority="simplicity"]').click();
+  await page.getByRole('button', { name: 'Сохранить контекст', exact: true }).click();
+
+  const profileApi = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
+  assert(profileApi?.goal === 'aware', `profile_goal_wrong:${JSON.stringify(profileApi)}`);
+  assert(profileApi?.currentWeight === 80 && profileApi?.targetWeight === 72, `profile_weight_wrong:${JSON.stringify(profileApi)}`);
+  assert(Array.isArray(profileApi?.priorities) && profileApi.priorities.includes('satiety') && profileApi.priorities.includes('simplicity'), `profile_priorities_wrong:${JSON.stringify(profileApi)}`);
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
+  assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
+
   if (errors.length) throw new Error(`Runtime errors:\n${errors.join('\n')}`);
   console.log(`RINLO2_DECISION_CONTEXT=${JSON.stringify({ homeGeometry, visionState, api })}`);
   console.log('RINLO2_DECISION_RESULT=PASS');
