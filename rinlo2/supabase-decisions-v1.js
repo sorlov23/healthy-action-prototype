@@ -134,21 +134,24 @@
     return Array.isArray(data) ? data[0] : data;
   }
 
-  function todayStartIso() {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  function recentStartIso(days = 90) {
+    return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   }
 
-  async function fetchToday() {
+  async function fetchRecent(days = 90) {
     if (!enabled) return [];
     const query = [
       'select=*',
-      `created_at=gte.${encodeURIComponent(todayStartIso())}`,
+      `created_at=gte.${encodeURIComponent(recentStartIso(days))}`,
       'order=created_at.desc',
-      'limit=50',
+      'limit=100',
     ].join('&');
     const { data } = await request(`/rest/v1/rinlo_decisions?${query}`, { method: 'GET' });
     return (Array.isArray(data) ? data : []).map(fromRow);
+  }
+
+  async function fetchToday() {
+    return fetchRecent(1);
   }
 
   async function syncLocal() {
@@ -164,7 +167,7 @@
       }
     }
 
-    const remote = await fetchToday();
+    const remote = await fetchRecent(90);
     const pulled = window.Rinlo2Decisions?.importDecisions?.(remote) || 0;
     window.dispatchEvent(new CustomEvent('rinlo2:sync', {
       detail: { status: 'synced', pushed, pulled }
@@ -200,11 +203,12 @@
   setTimeout(scheduleSync, 0);
 
   window.Rinlo2Supabase = {
-    version: 'v1.2-stage-context',
+    version: 'v1.3-history-sync',
     enabled,
     localOnly,
     upsertDecision,
     fetchToday,
+    fetchRecent,
     syncNow: scheduleSync,
   };
 })();
