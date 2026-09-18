@@ -132,6 +132,8 @@ Deno.serve(async (req: Request) => {
     },
     body: JSON.stringify({
       model,
+      store: false,
+      reasoning: { effort: "none" },
       input: [
         {
           role: "system",
