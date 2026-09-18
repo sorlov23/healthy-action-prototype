@@ -95,7 +95,7 @@ try {
   assert((await page.locator('#dayCalorieValue').textContent())?.includes('540'), 'day_context_not_updated');
 
   const api = await page.locator('body').evaluate(() => window.Rinlo2Decisions?.getDayContext?.());
-  assert(api?.target === 2000, `day_target_wrong:${JSON.stringify(api)}`);
+  assert(api?.target === null, `day_target_should_be_unset:${JSON.stringify(api)}`);
   assert(api?.decisions === 1, `day_decision_count_wrong:${JSON.stringify(api)}`);
   assert(api?.calories?.min === 540 && api?.calories?.max === 540, `day_calories_wrong:${JSON.stringify(api)}`);
 
