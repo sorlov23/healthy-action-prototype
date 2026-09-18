@@ -198,6 +198,11 @@
 
   async function syncLocal() {
     if (!enabled) return { pushed: 0, pulled: 0 };
+
+    // Pull first so a newer rating from another client wins before we push.
+    const remote = await fetchRecent(90);
+    mergeRemote(remote);
+
     let pushed = 0;
     for (const item of feedback) {
       try {
@@ -207,8 +212,7 @@
         console.warn('Rinlo feedback sync push failed', error);
       }
     }
-    const remote = await fetchRecent(90);
-    mergeRemote(remote);
+
     window.dispatchEvent(new CustomEvent('rinlo2:feedback-sync', {
       detail: { status: 'synced', pushed, pulled: remote.length },
     }));
@@ -232,7 +236,7 @@
   setTimeout(scheduleSync, 0);
 
   window.Rinlo2Feedback = {
-    version: 'v1',
+    version: 'v2-sync-safe',
     enabled,
     localOnly,
     setFeedback,
