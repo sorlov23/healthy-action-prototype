@@ -224,7 +224,7 @@ Deno.serve(async (req: Request) => {
     ? /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=]+)$/i.exec(imageDataUrl)
     : null;
   const audioMatch = audioDataUrl
-    ? /^data:(audio\/(?:wav|wave|x-wav|mp3|mpeg|mp4|m4a|aac|ogg|flac|webm|opus));base64,([A-Za-z0-9+/=]+)$/i.exec(audioDataUrl)
+    ? /^data:(audio\/(?:wav|wave|x-wav|mp3|mpeg|mp4|m4a|aac|ogg|flac|webm|opus))(?:;[^,;]+)*;base64,([A-Za-z0-9+/=]+)$/i.exec(audioDataUrl)
     : null;
 
   if (!question && !imageDataUrl && !audioDataUrl) return json({ error: "input_required" }, 400);
