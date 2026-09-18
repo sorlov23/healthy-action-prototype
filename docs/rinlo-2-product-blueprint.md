@@ -92,13 +92,42 @@ Every analysis should produce a structured decision, not free-form advice only.
 
 Avoid moral labels such as “bad”, “cheat”, “forbidden”, “clean”.
 
+### Intervention window
+
+Rinlo should recommend the best action that is **still realistically available now**, not the theoretically ideal meal.
+
+Every decision has a stage:
+- **choosing** — the user is still choosing what to eat; dish, drink, side and portion may all be changed;
+- **preparing** — food is being prepared; only choices that have not already happened should be changed;
+- **ready** — food is already prepared/plated; do not tell the user to discard, replace or re-cook the main food.
+
+For a ready meal, the primary recommendation may adjust:
+- portion;
+- second helping;
+- sauce;
+- bread;
+- drink;
+- dessert;
+- another choice that has not happened yet.
+
+A theoretically better ingredient or dish may appear only as a small **“На будущее”** note. It must not become the primary CTA.
+
+Default assumption for a photo of a plated meal: **ready**.
+
+If the stage is materially ambiguous, ask one useful clarification:
+> “Это уже готовая порция или ты ещё выбираешь, что приготовить?”
+
+Core rule:
+> **Rinlo does not search for the theoretically perfect meal. It finds the best decision among actions the person can still take.**
+
 ### Decision answer anatomy
 
 1. **Verdict** — one sentence.
 2. **Why** — maximum 2–3 concise reasons.
-3. **Best action** — what to do now.
-4. **Alternative** — only when useful.
-5. **Optional details** — calories/macros/context behind disclosure, never the first thing the user sees.
+3. **Best action** — what the user can realistically do now.
+4. **Alternative** — only when it is still actionable at the current decision stage.
+5. **Future tip** — optional, secondary, never a replacement for the current meal.
+6. **Optional details** — calories/macros/context behind disclosure, never the first thing the user sees.
 
 Example:
 
