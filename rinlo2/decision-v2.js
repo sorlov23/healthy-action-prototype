@@ -352,6 +352,40 @@
     });
   }
 
+
+  function requestGoal(profile = {}) {
+    if (profile.goal === 'lose') return 'weight_loss';
+    if (profile.goal === 'maintain') return 'maintain_weight';
+    if (profile.goal === 'aware') return 'aware_eating';
+    return 'general_food_choice';
+  }
+
+  function buildDecisionProfile() {
+    const explicit = window.Rinlo2Foundation?.getDecisionProfile?.()
+      || window.Rinlo2Foundation?.getState?.()
+      || {};
+    const recent = decisionsSince(7);
+    const recentAdjustedCount = recent.filter((decision) =>
+      ['fits_with_adjustment', 'better_alternative'].includes(decision.decisionState)
+      || Boolean(decision.alternative)
+    ).length;
+    const recentChosenAdjustmentCount = recent.filter((decision) =>
+      decision.selected?.kind === 'alternative'
+    ).length;
+    const pattern = recent.length >= 3 ? progressPattern(recent) : null;
+
+    return {
+      goal: explicit.goal || null,
+      currentWeight: Number(explicit.currentWeight) > 0 ? Number(explicit.currentWeight) : null,
+      targetWeight: Number(explicit.targetWeight) > 0 ? Number(explicit.targetWeight) : null,
+      priorities: Array.isArray(explicit.priorities) ? explicit.priorities.slice(0, 4) : [],
+      recentDecisionCount: recent.length,
+      recentAdjustedCount,
+      recentChosenAdjustmentCount,
+      recentPattern: pattern?.title || '',
+    };
+  }
+
   function decisionWord(count) {
     const n10 = count % 10;
     const n100 = count % 100;
@@ -440,9 +474,13 @@
     const foundation = window.Rinlo2Foundation?.getState?.() || {};
     const current = Number(foundation.currentWeight);
     const target = Number(foundation.targetWeight);
-    if (weightNode && Number.isFinite(current) && Number.isFinite(target)) {
-      const fmt = (value) => value.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      weightNode.textContent = `${fmt(current)} → ${fmt(target)} кг`;
+    if (weightNode) {
+      if (Number.isFinite(current) && current > 0 && Number.isFinite(target) && target > 0) {
+        const fmt = (value) => value.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        weightNode.textContent = `${fmt(current)} → ${fmt(target)} кг`;
+      } else {
+        weightNode.textContent = 'Вес не задан';
+      }
     }
   }
 
@@ -585,9 +623,11 @@
     const day = sumCalories();
 
     try {
+      const profile = buildDecisionProfile();
       const response = await engine.analyzeAudio(blob, {
         clarification,
-        goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        goal: requestGoal(profile),
+        profile,
         decisionStage: 'auto',
         dailyTarget: DAY_TARGET || 0,
         dayCaloriesMin: day.min,
@@ -719,8 +759,10 @@
     const foundation = window.Rinlo2Foundation?.getState?.() || {};
     const day = sumCalories();
     try {
+      const profile = buildDecisionProfile();
       const response = await vision.analyzeFile(file, {
-        goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        goal: requestGoal(profile),
+        profile,
         decisionStage: 'ready',
         dailyTarget: DAY_TARGET || 0,
         dayCaloriesMin: day.min,
@@ -1157,8 +1199,10 @@
     const stage = inferDecisionStage(requestText);
 
     try {
+      const profile = buildDecisionProfile();
       const response = await window.RinloVision.analyzeText(requestText, {
-        goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        goal: requestGoal(profile),
+        profile,
         decisionStage: stage,
         dailyTarget: DAY_TARGET || 0,
         dayCaloriesMin: day.min,
@@ -1232,7 +1276,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.9-voice',
+    version: 'decision-v2.10-personalized',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
