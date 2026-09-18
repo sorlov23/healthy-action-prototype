@@ -501,6 +501,9 @@
     const patternTitle = document.getElementById('progressPatternTitle');
     const patternText = document.getElementById('progressPatternText');
     const weightNode = document.getElementById('progressWeightContext');
+    const feedbackTitle = document.getElementById('progressFeedbackTitle');
+    const feedbackText = document.getElementById('progressFeedbackText');
+    const feedbackSignal = document.getElementById('progressFeedbackSignal');
     if (!countNode) return;
 
     const recent = decisionsSince(7);
@@ -527,6 +530,21 @@
         const pattern = progressPattern(recent);
         patternTitle.textContent = pattern.title;
         patternText.textContent = pattern.text;
+      }
+    }
+
+    const feedbackStats = window.Rinlo2Feedback?.getRecentStats?.(30) || { total: 0, helpful: 0, notHelpful: 0 };
+    if (feedbackTitle && feedbackText) {
+      if (feedbackStats.total > 0) {
+        feedbackTitle.textContent = `${feedbackStats.helpful} из ${feedbackStats.total} ответов отмечены полезными`;
+        feedbackText.textContent = feedbackStats.notHelpful
+          ? `Ещё ${feedbackStats.notHelpful} ${feedbackStats.notHelpful === 1 ? 'ответ не помог' : 'ответа не помогли'} — это отдельный сигнал качества, а не правило о твоей еде.`
+          : 'Пока все оценённые ответы были полезными. Это сигнал качества советов, а не оценка твоего питания.';
+        if (feedbackSignal) feedbackSignal.textContent = feedbackStats.helpful === feedbackStats.total ? '✓' : '↗';
+      } else {
+        feedbackTitle.textContent = 'Пока нет оценок';
+        feedbackText.textContent = 'После пары оценок здесь будет видно, насколько ответы Rinlo реально помогают принимать решения.';
+        if (feedbackSignal) feedbackSignal.textContent = '○';
       }
     }
 
@@ -1230,6 +1248,100 @@
     });
   }
 
+  function feedbackCopy(value) {
+    if (value === 'helpful') return 'Отмечено как полезное';
+    if (value === 'not_helpful') return 'Отмечено: не помогло';
+    return '';
+  }
+
+  function updateFeedbackSurface(decision, scope = 'result') {
+    const card = document.getElementById(scope === 'detail' ? 'detailFeedbackCard' : 'resultFeedbackCard');
+    if (!card) return;
+    const item = window.Rinlo2Feedback?.getFeedback?.(decision?.id);
+    const value = item?.feedback || null;
+    card.querySelectorAll('[data-feedback-value]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.feedbackValue === value);
+      button.setAttribute('aria-pressed', button.dataset.feedbackValue === value ? 'true' : 'false');
+    });
+    const status = card.querySelector('[data-feedback-status]');
+    if (status) status.textContent = feedbackCopy(value);
+  }
+
+  function setDecisionFeedback(decision, value) {
+    if (!decision?.id || !window.Rinlo2Feedback?.setFeedback) return;
+    window.Rinlo2Feedback.setFeedback(decision, value);
+    updateFeedbackSurface(decision, 'result');
+    updateFeedbackSurface(decision, 'detail');
+    renderProgress();
+    showToast(value === 'helpful'
+      ? 'Спасибо — отметил ответ как полезный'
+      : 'Спасибо — сохранил, что ответ не помог');
+  }
+
+  function createFeedbackCard(id, compact = false) {
+    const card = document.createElement('article');
+    card.id = id;
+    card.className = compact ? 'decision-feedback-card compact' : 'decision-feedback-card';
+    card.innerHTML = `
+      <div class="decision-feedback-copy">
+        <small>КАЧЕСТВО ОТВЕТА</small>
+        <b>Этот ответ помог?</b>
+      </div>
+      <div class="decision-feedback-actions" role="group" aria-label="Оценить ответ Rinlo">
+        <button type="button" data-feedback-value="helpful" aria-pressed="false">Полезно</button>
+        <button type="button" data-feedback-value="not_helpful" aria-pressed="false">Не помогло</button>
+      </div>
+      <span class="decision-feedback-status" data-feedback-status aria-live="polite"></span>
+    `;
+    return card;
+  }
+
+  function injectFeedbackUi() {
+    if (document.getElementById('resultFeedbackCard')) return;
+
+    const resultBody = document.querySelector('[data-flow-step="result"] .flow-body');
+    if (resultBody) {
+      const card = createFeedbackCard('resultFeedbackCard');
+      const correction = document.getElementById('resultCorrectionButton');
+      if (correction) correction.insertAdjacentElement('beforebegin', card);
+      else resultBody.appendChild(card);
+      card.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-feedback-value]');
+        if (button) setDecisionFeedback(currentDecision, button.dataset.feedbackValue);
+      });
+    }
+
+    const detailBody = document.querySelector('[data-flow-step="detail"] .flow-body');
+    const stageNote = document.getElementById('detailStageNote');
+    if (detailBody) {
+      const card = createFeedbackCard('detailFeedbackCard', true);
+      if (stageNote) stageNote.insertAdjacentElement('beforebegin', card);
+      else detailBody.appendChild(card);
+      card.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-feedback-value]');
+        if (button) setDecisionFeedback(activeDetailDecision, button.dataset.feedbackValue);
+      });
+    }
+
+    const progressScreen = document.querySelector('[data-screen="progress"]');
+    const patternCard = document.getElementById('progressPatternCard');
+    if (progressScreen && !document.getElementById('progressFeedbackCard')) {
+      const card = document.createElement('article');
+      card.id = 'progressFeedbackCard';
+      card.className = 'progress-feedback-card';
+      card.innerHTML = `
+        <div>
+          <small>КАЧЕСТВО ОТВЕТОВ · 30 ДНЕЙ</small>
+          <strong id="progressFeedbackTitle">Пока нет оценок</strong>
+          <p id="progressFeedbackText">После пары оценок здесь будет видно, насколько ответы Rinlo реально помогают принимать решения.</p>
+        </div>
+        <span id="progressFeedbackSignal" aria-hidden="true">○</span>
+      `;
+      if (patternCard) patternCard.insertAdjacentElement('afterend', card);
+      else progressScreen.appendChild(card);
+    }
+  }
+
   function injectCorrectionUi() {
     if (document.getElementById('correctionSheet')) return;
 
@@ -1392,6 +1504,7 @@
     saveOriginalButton.classList.toggle('primary', !hasAlternative);
     saveOriginalButton.classList.toggle('secondary', hasAlternative);
     renderProspective(decision.original.calories, 'prospectiveCalorieValue');
+    updateFeedbackSurface(decision, 'result');
   }
 
   function renderAlternative(decision) {
@@ -1417,6 +1530,8 @@
     if (!currentDecision) return;
     const selected = useAlternative && currentDecision.alternative ? currentDecision.alternative : currentDecision.original;
     currentDecision.selected = { ...selected, kind: useAlternative ? 'alternative' : 'original' };
+    const existingFeedback = window.Rinlo2Feedback?.getFeedback?.(currentDecision.id);
+    if (existingFeedback?.feedback) window.Rinlo2Feedback?.setFeedback?.(currentDecision, existingFeedback.feedback);
     decisions.unshift(currentDecision);
     saveDecisions();
     window.dispatchEvent(new CustomEvent('rinlo2:decision-saved', {
@@ -1594,6 +1709,7 @@
       const sources = Array.isArray(decision.memorySources) ? decision.memorySources : [];
       detailMemory.hidden = Number(decision.memoryAppliedCount || 0) <= 0 || sources.length === 0;
     }
+    updateFeedbackSurface(decision, 'detail');
     showStep('detail');
   }
 
@@ -1796,17 +1912,24 @@
   }));
 
   window.addEventListener('rinlo2:profile-applied', () => renderProgress());
+  window.addEventListener('rinlo2:feedback-changed', () => renderProgress());
+  window.addEventListener('rinlo2:feedback-sync', () => {
+    renderProgress();
+    if (currentDecision) updateFeedbackSurface(currentDecision, 'result');
+    if (activeDetailDecision) updateFeedbackSurface(activeDetailDecision, 'detail');
+  });
 
   injectCalorieContext();
   injectMemoryExplainUi();
   injectCorrectionUi();
+  injectFeedbackUi();
   renderStoredDecisions();
   renderDayContext();
   renderProgress();
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.14-explainable-memory',
+    version: 'decision-v2.15-quality-feedback',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
