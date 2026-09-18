@@ -164,9 +164,14 @@
 
   async function syncLocal() {
     if (!enabled) return { pushed: 0, pulled: 0 };
-    const local = window.Rinlo2Decisions?.getDecisions?.() || [];
+
+    // Pull first so an older local copy can never overwrite a newer cloud copy.
+    const remote = await fetchRecent(90);
+    const pulled = window.Rinlo2Decisions?.importDecisions?.(remote) || 0;
+    const mergedLocal = window.Rinlo2Decisions?.getDecisions?.() || [];
+
     let pushed = 0;
-    for (const decision of local) {
+    for (const decision of mergedLocal) {
       try {
         await upsertDecision(decision);
         pushed += 1;
@@ -175,8 +180,6 @@
       }
     }
 
-    const remote = await fetchRecent(90);
-    const pulled = window.Rinlo2Decisions?.importDecisions?.(remote) || 0;
     window.dispatchEvent(new CustomEvent('rinlo2:sync', {
       detail: { status: 'synced', pushed, pulled }
     }));
