@@ -43,7 +43,10 @@ const schema = {
       type: "string",
       enum: ["fits_well", "fits_with_adjustment", "better_alternative", "needs_clarification"],
     },
-    verdict_title: { type: "string" },
+    verdict_title: {
+      type: "string",
+      enum: ["Можно брать", "Можно, но лучше аккуратнее", "Есть вариант лучше", "Нужно уточнить"],
+    },
     explanation: { type: "string" },
     context_label: { type: "string" },
     fit_text: { type: "string" },
@@ -88,6 +91,78 @@ function extractGeminiText(payload: any): string {
   return "";
 }
 
+
+const canonicalVerdicts: Record<string, string> = {
+  fits_well: "Можно брать",
+  fits_with_adjustment: "Можно, но лучше аккуратнее",
+  better_alternative: "Есть вариант лучше",
+  needs_clarification: "Нужно уточнить",
+};
+
+function normalizeAnalysis(raw: any) {
+  const analysis = raw && typeof raw === "object" ? raw : {};
+  const confidence = Math.max(0, Math.min(1, Number(analysis.confidence || 0)));
+  const alternative = analysis.alternative && typeof analysis.alternative === "object"
+    ? analysis.alternative
+    : { available: false, name: "", calorie_min: 0, calorie_max: 0, changes: [] };
+
+  let state = [
+    "fits_well",
+    "fits_with_adjustment",
+    "better_alternative",
+    "needs_clarification",
+  ].includes(analysis.decision_state)
+    ? analysis.decision_state
+    : "needs_clarification";
+
+  const modelAskedForClarification = analysis.status === "needs_clarification";
+  const weakRecognition = confidence < 0.58;
+  const missingCalories = Number(analysis.calorie_max || 0) <= 0;
+
+  if (modelAskedForClarification || weakRecognition || (analysis.status === "recognized" && missingCalories)) {
+    state = "needs_clarification";
+    analysis.status = "needs_clarification";
+  }
+
+  if (state === "better_alternative" && alternative.available !== true) {
+    state = "fits_with_adjustment";
+  }
+
+  if (state === "fits_well") {
+    alternative.available = false;
+    alternative.name = "";
+    alternative.calorie_min = 0;
+    alternative.calorie_max = 0;
+    alternative.changes = [];
+  }
+
+  analysis.confidence = confidence;
+  analysis.decision_state = state;
+  analysis.verdict_title = canonicalVerdicts[state];
+
+  if (state === "needs_clarification") {
+    analysis.status = "needs_clarification";
+    analysis.calorie_min = 0;
+    analysis.calorie_max = 0;
+    analysis.context_label = "нужно уточнение";
+    analysis.fit_text = "";
+    alternative.available = false;
+    alternative.name = "";
+    alternative.calorie_min = 0;
+    alternative.calorie_max = 0;
+    alternative.changes = [];
+    if (!String(analysis.clarifying_question || "").trim()) {
+      analysis.clarifying_question = "Что именно входит в блюдо или какого размера порция?";
+    }
+  } else {
+    analysis.status = "recognized";
+    analysis.clarifying_question = "";
+  }
+
+  analysis.alternative = alternative;
+  return analysis;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -127,7 +202,14 @@ Deno.serve(async (req: Request) => {
     "Если уверенность в блюде, составе или порции недостаточна, верни status=needs_clarification,",
     "decision_state=needs_clarification и задай ровно один полезный короткий вопрос.",
     "Если блюдо распознано достаточно уверенно, оцени реалистичный диапазон калорий.",
+    "Если по фото нельзя надёжно оценить порцию, скрытые соусы, масло, панировку или состав заметно меняет оценку — лучше попроси одно уточнение.",
     "Решение должно учитывать цель пользователя и уже сохранённый контекст дня.",
+    "Используй только четыре канонических статуса Rinlo и ровно такие заголовки:",
+    "fits_well = «Можно брать».",
+    "fits_with_adjustment = «Можно, но лучше аккуратнее».",
+    "better_alternative = «Есть вариант лучше».",
+    "needs_clarification = «Нужно уточнить».",
+    "Не придумывай другие verdict_title: никаких «вписывается в план», «хороший выбор» и похожих формулировок.",
     "fits_well = выбор спокойно вписывается.",
     "fits_with_adjustment = идея подходит, но небольшое изменение заметно улучшит выбор.",
     "better_alternative = есть очевидно более удобная версия той же идеи.",
@@ -200,7 +282,7 @@ Deno.serve(async (req: Request) => {
 
   let analysis;
   try {
-    analysis = JSON.parse(outputText);
+    analysis = normalizeAnalysis(JSON.parse(outputText));
   } catch {
     return json({ error: "invalid_vision_response" }, 502);
   }
