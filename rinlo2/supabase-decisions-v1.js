@@ -19,6 +19,9 @@
   }
 
   function decisionState(decision) {
+    if (['fits_well','fits_with_adjustment','better_alternative','needs_clarification'].includes(decision?.decisionState)) {
+      return decision.decisionState;
+    }
     if (/нужно уточнить/i.test(decision?.title || '')) return 'needs_clarification';
     if (decision?.tone === 'good') return 'fits_well';
     if (decision?.alternative) return 'fits_with_adjustment';
@@ -72,7 +75,8 @@
       calorie_max: range.max,
       source_metadata: {
         client: 'rinlo2-web-prototype',
-        decision_version: 'v2.2',
+        decision_version: 'v2.3',
+        vision: decision.vision || null,
       },
       created_at: decision.createdAt || new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -105,6 +109,8 @@
         ...selected,
         kind: row.selected_kind === 'alternative' ? 'alternative' : 'original',
       },
+      vision: row.source_metadata?.vision || null,
+      decisionState: row.decision_state || null,
     };
   }
 
@@ -186,7 +192,7 @@
   setTimeout(scheduleSync, 0);
 
   window.Rinlo2Supabase = {
-    version: 'v1',
+    version: 'v1.1-vision-metadata',
     enabled,
     localOnly,
     upsertDecision,
