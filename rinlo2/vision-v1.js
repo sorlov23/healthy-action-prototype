@@ -85,6 +85,9 @@
       body: JSON.stringify({
         imageDataUrl,
         goal: context.goal || 'weight_loss',
+        decisionStage: ['choosing','preparing','ready'].includes(context.decisionStage)
+          ? context.decisionStage
+          : 'ready',
         dailyTarget: Number(context.dailyTarget || 2000),
         dayCaloriesMin: Number(context.dayCaloriesMin || 0),
         dayCaloriesMax: Number(context.dayCaloriesMax || 0),
@@ -105,7 +108,7 @@
   }
 
   window.RinloVision = {
-    version: 'v1',
+    version: 'v1.1-stage-aware',
     enabled,
     localOnly,
     analyzeFile,
