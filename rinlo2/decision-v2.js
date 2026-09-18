@@ -44,6 +44,17 @@
   const photoDescription = document.getElementById('photoDescription');
   const analyzePhotoButton = document.getElementById('analyzePhoto');
   const photoVisionStatus = document.getElementById('photoVisionStatus');
+  const voiceRecordButton = document.getElementById('voiceRecordButton');
+  const voiceState = document.getElementById('voiceState');
+  const voiceStateTitle = document.getElementById('voiceStateTitle');
+  const voiceStateDetail = document.getElementById('voiceStateDetail');
+  const voiceTimer = document.getElementById('voiceTimer');
+  const voiceFileButton = document.getElementById('voiceFileButton');
+  const voiceFileInput = document.getElementById('voiceFileInput');
+  const voiceClarification = document.getElementById('voiceClarification');
+  const voiceClarificationQuestion = document.getElementById('voiceClarificationQuestion');
+  const voiceClarificationAnswer = document.getElementById('voiceClarificationAnswer');
+  const voiceClarificationSubmit = document.getElementById('voiceClarificationSubmit');
   const historyList = document.getElementById('historyList');
   const historyEmpty = document.getElementById('historyEmpty');
   const historyCount = document.getElementById('historyCount');
@@ -62,6 +73,14 @@
   let autoPhotoDescription = '';
   let textBaseQuestion = '';
   let pendingTextClarification = '';
+  let voiceRecorder = null;
+  let voiceStream = null;
+  let voiceChunks = [];
+  let voiceBlob = null;
+  let voiceTimerHandle = null;
+  let voiceStartedAt = 0;
+  let voiceAnalyzeOnStop = true;
+  let pendingVoiceClarification = '';
 
   const presets = {
     burger: {
@@ -207,9 +226,10 @@
 
   function visionDecision(description, analysis, source = 'photo') {
     const calorieText = formatEstimatedCalories(analysis.calorie_min, analysis.calorie_max);
+    const fallbackStage = source === 'photo' ? 'ready' : 'choosing';
     const stage = ['choosing','preparing','ready'].includes(analysis.decision_stage)
       ? analysis.decision_stage
-      : 'ready';
+      : fallbackStage;
     const alternative = stage !== 'ready' && analysis.alternative?.available ? {
       name: analysis.alternative.name || 'Более удобный вариант',
       calories: formatEstimatedCalories(
@@ -231,9 +251,9 @@
       title: analysis.verdict_title || (alternative ? 'Можно, но лучше аккуратнее' : 'Можно брать'),
       icon: '✓',
       tone: analysis.decision_state === 'fits_well' ? 'good' : 'caution',
-      explanation: analysis.explanation || (source === 'photo' ? 'Rinlo оценил блюдо по фото.' : 'Rinlo разобрал твой вопрос.'),
+      explanation: analysis.explanation || (source === 'photo' ? 'Rinlo оценил блюдо по фото.' : (source === 'voice' ? 'Rinlo разобрал голосовой вопрос.' : 'Rinlo разобрал твой вопрос.')),
       calories: calorieText,
-      context: analysis.context_label || (source === 'photo' ? 'оценка по фото' : 'оценка по описанию'),
+      context: analysis.context_label || (source === 'photo' ? 'оценка по фото' : (source === 'voice' ? 'оценка по голосовому запросу' : 'оценка по описанию')),
       fit: analysis.fit_text || 'Оценка учитывает твою цель и текущий контекст дня.',
       actionsNow: Array.isArray(analysis.actions_now)
         ? analysis.actions_now.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
@@ -437,6 +457,7 @@
   }
 
   function closeFlow() {
+    if (voiceRecorder?.state === 'recording') cancelVoiceRecording();
     flow.hidden = true;
     steps.forEach((step) => step.classList.remove('active'));
     document.body.style.overflow = '';
@@ -471,6 +492,196 @@
     if (!photoInput) return;
     photoInput.value = '';
     photoInput.click();
+  }
+
+
+  function setVoiceState(state, title, detail = '') {
+    if (voiceState) voiceState.dataset.state = state;
+    if (voiceStateTitle) voiceStateTitle.textContent = title;
+    if (voiceStateDetail) voiceStateDetail.textContent = detail;
+  }
+
+  function formatVoiceTime(seconds) {
+    const safe = Math.max(0, Math.floor(seconds));
+    return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
+  }
+
+  function stopVoiceTimer() {
+    if (voiceTimerHandle) clearInterval(voiceTimerHandle);
+    voiceTimerHandle = null;
+  }
+
+  function releaseVoiceStream() {
+    voiceStream?.getTracks?.().forEach((track) => track.stop());
+    voiceStream = null;
+  }
+
+  function resetVoiceFlow() {
+    if (voiceRecorder?.state === 'recording') {
+      voiceAnalyzeOnStop = false;
+      try { voiceRecorder.stop(); } catch {}
+    }
+    stopVoiceTimer();
+    releaseVoiceStream();
+    voiceRecorder = null;
+    voiceChunks = [];
+    voiceBlob = null;
+    pendingVoiceClarification = '';
+    if (voiceRecordButton) {
+      voiceRecordButton.dataset.recording = 'false';
+      voiceRecordButton.setAttribute('aria-label', 'Начать запись');
+      voiceRecordButton.disabled = false;
+    }
+    if (voiceTimer) voiceTimer.textContent = '0:00';
+    if (voiceClarification) voiceClarification.hidden = true;
+    if (voiceClarificationAnswer) voiceClarificationAnswer.value = '';
+    if (voiceClarificationSubmit) voiceClarificationSubmit.disabled = true;
+    setVoiceState('idle', 'Готов к записи', 'Нажми на микрофон');
+  }
+
+  function cancelVoiceRecording() {
+    voiceAnalyzeOnStop = false;
+    if (voiceRecorder?.state === 'recording') {
+      try { voiceRecorder.stop(); } catch {}
+    }
+    stopVoiceTimer();
+    releaseVoiceStream();
+    if (voiceRecordButton) {
+      voiceRecordButton.dataset.recording = 'false';
+      voiceRecordButton.setAttribute('aria-label', 'Начать запись');
+    }
+  }
+
+  function openVoice() {
+    currentDecision = null;
+    resetVoiceFlow();
+    showStep('voice');
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setVoiceState('error', 'Запись недоступна в этом браузере', 'Можно выбрать готовый аудиофайл ниже.');
+    }
+  }
+
+  function preferredVoiceMimeType() {
+    if (!window.MediaRecorder?.isTypeSupported) return '';
+    return [
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/aac',
+    ].find((type) => MediaRecorder.isTypeSupported(type)) || '';
+  }
+
+  async function analyzeVoiceAudio(blob, clarification = '') {
+    if (!blob) return;
+    const engine = window.RinloVision;
+    if (!engine?.enabled || typeof engine.analyzeAudio !== 'function') {
+      setVoiceState('error', 'Голосовой анализ сейчас недоступен', 'Попробуй текстом или выбери аудиофайл позже.');
+      return;
+    }
+
+    if (voiceRecordButton) voiceRecordButton.disabled = true;
+    setVoiceState('analyzing', 'Разбираю голос…', 'Понимаю блюдо, стадию решения и контекст.');
+    const foundation = window.Rinlo2Foundation?.getState?.() || {};
+    const day = sumCalories();
+
+    try {
+      const response = await engine.analyzeAudio(blob, {
+        clarification,
+        goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        decisionStage: 'auto',
+        dailyTarget: DAY_TARGET || 0,
+        dayCaloriesMin: day.min,
+        dayCaloriesMax: day.max,
+      });
+      const analysis = response?.analysis;
+      if (!analysis) throw new Error('empty_voice_analysis');
+
+      if (analysis.status === 'needs_clarification') {
+        pendingVoiceClarification = analysis.clarifying_question || 'Нужно одно уточнение';
+        if (voiceClarificationQuestion) voiceClarificationQuestion.textContent = pendingVoiceClarification;
+        if (voiceClarification) voiceClarification.hidden = false;
+        if (voiceClarificationAnswer) voiceClarificationAnswer.value = '';
+        if (voiceClarificationSubmit) voiceClarificationSubmit.disabled = true;
+        setVoiceState('clarify', 'Нужно уточнить', pendingVoiceClarification);
+        setTimeout(() => voiceClarificationAnswer?.focus({ preventScroll: true }), 80);
+        return;
+      }
+
+      pendingVoiceClarification = '';
+      const summary = String(analysis.request_summary || analysis.dish_name || 'Голосовой вопрос').trim();
+      currentDecision = visionDecision(summary, analysis, 'voice');
+      setVoiceState('done', 'Готово', summary);
+      renderResult(currentDecision);
+      showStep('result');
+    } catch (error) {
+      setVoiceState('error', 'Не получилось разобрать запись', 'Запиши ещё раз или выбери аудиофайл.');
+    } finally {
+      if (voiceRecordButton) voiceRecordButton.disabled = false;
+    }
+  }
+
+  async function startVoiceRecording() {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setVoiceState('error', 'Запись недоступна в этом браузере', 'Можно выбрать аудиофайл ниже.');
+      return;
+    }
+
+    try {
+      voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = preferredVoiceMimeType();
+      voiceRecorder = mimeType
+        ? new MediaRecorder(voiceStream, { mimeType })
+        : new MediaRecorder(voiceStream);
+      voiceChunks = [];
+      voiceAnalyzeOnStop = true;
+
+      voiceRecorder.addEventListener('dataavailable', (event) => {
+        if (event.data?.size) voiceChunks.push(event.data);
+      });
+
+      voiceRecorder.addEventListener('stop', async () => {
+        stopVoiceTimer();
+        const shouldAnalyze = voiceAnalyzeOnStop;
+        const type = voiceRecorder?.mimeType || mimeType || voiceChunks[0]?.type || 'audio/webm';
+        const blob = new Blob(voiceChunks, { type });
+        releaseVoiceStream();
+        if (voiceRecordButton) {
+          voiceRecordButton.dataset.recording = 'false';
+          voiceRecordButton.setAttribute('aria-label', 'Начать запись');
+        }
+        if (!shouldAnalyze || !blob.size) return;
+        voiceBlob = blob;
+        await analyzeVoiceAudio(blob);
+      }, { once: true });
+
+      voiceRecorder.start(250);
+      voiceStartedAt = Date.now();
+      if (voiceRecordButton) {
+        voiceRecordButton.dataset.recording = 'true';
+        voiceRecordButton.setAttribute('aria-label', 'Остановить запись');
+      }
+      setVoiceState('recording', 'Слушаю…', 'Нажми ещё раз, когда закончишь');
+      if (voiceTimer) voiceTimer.textContent = '0:00';
+
+      stopVoiceTimer();
+      voiceTimerHandle = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - voiceStartedAt) / 1000);
+        if (voiceTimer) voiceTimer.textContent = formatVoiceTime(elapsed);
+        if (elapsed >= 30 && voiceRecorder?.state === 'recording') {
+          voiceRecorder.stop();
+        }
+      }, 250);
+    } catch (error) {
+      releaseVoiceStream();
+      setVoiceState('error', 'Нет доступа к микрофону', 'Разреши микрофон в Safari или выбери аудиофайл.');
+    }
+  }
+
+  function stopVoiceRecording() {
+    if (voiceRecorder?.state === 'recording') {
+      voiceAnalyzeOnStop = true;
+      voiceRecorder.stop();
+    }
   }
 
   function updatePhotoState() {
@@ -844,7 +1055,35 @@
 
   document.querySelector('[data-action="text"]')?.addEventListener('click', openAsk);
   document.querySelector('[data-action="photo"]')?.addEventListener('click', openPhotoPicker);
-  document.querySelector('[data-action="voice"]')?.addEventListener('click', () => showToast('Голос подключим после основного decision flow.'));
+  document.querySelector('[data-action="voice"]')?.addEventListener('click', openVoice);
+
+  voiceRecordButton?.addEventListener('click', () => {
+    if (voiceRecorder?.state === 'recording') stopVoiceRecording();
+    else startVoiceRecording();
+  });
+  voiceFileButton?.addEventListener('click', () => {
+    if (!voiceFileInput) return;
+    voiceFileInput.value = '';
+    voiceFileInput.click();
+  });
+  voiceFileInput?.addEventListener('change', async () => {
+    const file = voiceFileInput.files?.[0];
+    if (!file) return;
+    voiceBlob = file;
+    if (voiceTimer) voiceTimer.textContent = '—';
+    await analyzeVoiceAudio(file);
+  });
+  voiceClarificationAnswer?.addEventListener('input', () => {
+    if (voiceClarificationSubmit) {
+      voiceClarificationSubmit.disabled = voiceClarificationAnswer.value.trim().length < 1;
+    }
+  });
+  voiceClarificationSubmit?.addEventListener('click', async () => {
+    const answer = voiceClarificationAnswer?.value.trim() || '';
+    if (!voiceBlob || !answer) return;
+    if (voiceClarification) voiceClarification.hidden = true;
+    await analyzeVoiceAudio(voiceBlob, answer);
+  });
 
   photoInput?.addEventListener('change', () => showPhoto(photoInput.files?.[0]));
   photoPreview?.addEventListener('click', openPhotoPicker);
@@ -963,8 +1202,12 @@
   document.getElementById('keepOriginal')?.addEventListener('click', () => saveChoice(false));
 
   flow.querySelectorAll('[data-flow-back]').forEach((button) => button.addEventListener('click', () => {
-    if (activeStep === 'ask' || activeStep === 'photo' || activeStep === 'detail') closeFlow();
-    else if (activeStep === 'result') showStep(currentDecision?.source === 'photo' ? 'photo' : 'ask');
+    if (activeStep === 'ask' || activeStep === 'photo' || activeStep === 'voice' || activeStep === 'detail') closeFlow();
+    else if (activeStep === 'result') {
+      if (currentDecision?.source === 'photo') showStep('photo');
+      else if (currentDecision?.source === 'voice') showStep('voice');
+      else showStep('ask');
+    }
     else if (activeStep === 'alternative') showStep('result');
   }));
 
@@ -989,7 +1232,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.8-honest-thumbnails',
+    version: 'decision-v2.9-voice',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
