@@ -31,12 +31,15 @@
   const photoPreview = document.getElementById('photoPreview');
   const photoDescription = document.getElementById('photoDescription');
   const analyzePhotoButton = document.getElementById('analyzePhoto');
+  const photoVisionStatus = document.getElementById('photoVisionStatus');
 
   let activeStep = 'ask';
   let currentDecision = null;
   let decisions = loadDecisions();
   let toastTimer = null;
   let photoObjectUrl = null;
+  let photoAnalysis = null;
+  let autoPhotoDescription = '';
 
   const presets = {
     burger: {
@@ -125,6 +128,73 @@
     if (!range.max) return 'Пока нет сохранённых решений';
     if (range.min === range.max) return `≈ ${range.min.toLocaleString('ru-RU')} ккал`;
     return `≈ ${range.min.toLocaleString('ru-RU')}–${range.max.toLocaleString('ru-RU')} ккал`;
+  }
+
+
+  function formatEstimatedCalories(min, max) {
+    const low = Number(min || 0);
+    const high = Number(max || low);
+    if (!low && !high) return 'оценка недоступна';
+    if (low === high) return `~ ${low.toLocaleString('ru-RU')} ккал`;
+    return `~ ${low.toLocaleString('ru-RU')}–${high.toLocaleString('ru-RU')} ккал`;
+  }
+
+  function thumbForDish(value = '') {
+    const text = String(value).toLowerCase();
+    if (/бургер|кола|фри|картош|шаурм|пицц/.test(text)) return 'food-burger';
+    if (/кофе|капуч|латте/.test(text)) return 'food-coffee';
+    if (/овсян|каша|ягод/.test(text)) return 'food-berries';
+    return 'food-salad';
+  }
+
+  function setPhotoVisionStatus(state, title, detail) {
+    if (!photoVisionStatus) return;
+    photoVisionStatus.dataset.state = state;
+    const titleNode = photoVisionStatus.querySelector('b');
+    const detailNode = photoVisionStatus.querySelector('small');
+    if (titleNode) titleNode.textContent = title;
+    if (detailNode) detailNode.textContent = detail;
+  }
+
+  function visionDecision(description, analysis) {
+    const calorieText = formatEstimatedCalories(analysis.calorie_min, analysis.calorie_max);
+    const alternative = analysis.alternative?.available ? {
+      name: analysis.alternative.name || 'Более удобный вариант',
+      calories: formatEstimatedCalories(
+        analysis.alternative.calorie_min,
+        analysis.alternative.calorie_max,
+      ),
+      diffs: Array.isArray(analysis.alternative.changes)
+        ? analysis.alternative.changes.slice(0, 4)
+        : [],
+    } : null;
+
+    return {
+      id: `d-${Date.now()}`,
+      source: 'photo',
+      question: description || analysis.dish_name || 'Фото блюда',
+      createdAt: new Date().toISOString(),
+      decisionState: analysis.decision_state || (alternative ? 'fits_with_adjustment' : 'fits_well'),
+      title: analysis.verdict_title || (alternative ? 'Можно, но аккуратнее' : 'Можно брать'),
+      icon: '✓',
+      tone: analysis.decision_state === 'fits_well' ? 'good' : 'caution',
+      explanation: analysis.explanation || 'Rinlo оценил блюдо по фото.',
+      calories: calorieText,
+      context: analysis.context_label || 'оценка по фото',
+      fit: analysis.fit_text || 'Оценка учитывает твою цель и текущий контекст дня.',
+      original: {
+        name: analysis.dish_name || description || 'Блюдо на фото',
+        calories: calorieText,
+        thumb: thumbForDish(analysis.dish_name || description),
+      },
+      alternative,
+      selected: null,
+      vision: {
+        confidence: Number(analysis.confidence || 0),
+        components: Array.isArray(analysis.components) ? analysis.components.slice(0, 12) : [],
+        portionAssumption: analysis.portion_assumption || '',
+      },
+    };
   }
 
   function injectCalorieContext() {
@@ -229,14 +299,76 @@
     analyzePhotoButton.disabled = photoDescription.value.trim().length < 2;
   }
 
-  function showPhoto(file) {
+  async function showPhoto(file) {
     if (!file || !photoPreview) return;
     if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
     photoObjectUrl = URL.createObjectURL(file);
     photoPreview.style.backgroundImage = `linear-gradient(180deg,rgba(17,19,21,.02),rgba(17,19,21,.18)),url("${photoObjectUrl}")`;
+    photoAnalysis = null;
+    autoPhotoDescription = '';
     photoDescription.value = '';
     updatePhotoState();
     showStep('photo');
+
+    const vision = window.RinloVision;
+    if (!vision?.enabled) {
+      setPhotoVisionStatus(
+        'fallback',
+        'Нужно одно уточнение',
+        'Опиши блюдо одной фразой — остальное Rinlo разберёт дальше.',
+      );
+      return;
+    }
+
+    setPhotoVisionStatus(
+      'analyzing',
+      'Разбираю фото…',
+      'Проверяю блюдо, порцию и примерную калорийность.',
+    );
+
+    const foundation = window.Rinlo2Foundation?.getState?.() || {};
+    const day = sumCalories();
+    try {
+      const response = await vision.analyzeFile(file, {
+        goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        dailyTarget: DAY_TARGET,
+        dayCaloriesMin: day.min,
+        dayCaloriesMax: day.max,
+      });
+      const analysis = response?.analysis;
+      if (!analysis) throw new Error('empty_photo_analysis');
+      photoAnalysis = analysis;
+
+      if (analysis.status === 'recognized') {
+        autoPhotoDescription = String(analysis.dish_name || '').trim();
+        photoDescription.value = autoPhotoDescription;
+        updatePhotoState();
+        setPhotoVisionStatus(
+          'recognized',
+          autoPhotoDescription ? `Похоже, это ${autoPhotoDescription}` : 'Блюдо распознано',
+          analysis.portion_assumption || 'Можно сразу перейти к решению.',
+        );
+        currentDecision = visionDecision(autoPhotoDescription, analysis);
+        renderResult(currentDecision);
+        showStep('result');
+        return;
+      }
+
+      setPhotoVisionStatus(
+        'clarify',
+        'Нужно уточнить',
+        analysis.clarifying_question || 'Что именно входит в блюдо?',
+      );
+      photoDescription.placeholder = analysis.clarifying_question || 'Коротко уточни блюдо или состав';
+      setTimeout(() => photoDescription?.focus({ preventScroll: true }), 80);
+    } catch (error) {
+      const unavailable = ['vision_not_configured', 'vision_disabled'].includes(error?.code);
+      setPhotoVisionStatus(
+        'fallback',
+        unavailable ? 'Автоанализ пока не подключён' : 'Не удалось разобрать фото',
+        'Опиши блюдо одной фразой — выбор не потеряется.',
+      );
+    }
   }
 
   function updateQuestionState() {
@@ -295,8 +427,13 @@
     originalCalories.textContent = decision.original.calories;
     alternativeName.textContent = decision.alternative.name;
     alternativeCalories.textContent = decision.alternative.calories;
-    originalPhoto.style.backgroundImage = decision.original.image;
-    alternativePhoto.style.backgroundImage = `linear-gradient(135deg,rgba(199,255,91,.12),rgba(255,255,255,.04)),${decision.alternative.image}`;
+    const originalBackground = decision.source === 'photo' && photoObjectUrl
+      ? `url("${photoObjectUrl}")`
+      : decision.original.image;
+    originalPhoto.style.backgroundImage = originalBackground || 'linear-gradient(135deg,#e7ece5,#f5f7f3)';
+    alternativePhoto.style.backgroundImage = decision.alternative.image
+      ? `linear-gradient(135deg,rgba(199,255,91,.12),rgba(255,255,255,.04)),${decision.alternative.image}`
+      : 'linear-gradient(135deg,#dfe8d4,#f7faef)';
     differenceList.replaceChildren(...decision.alternative.diffs.map((text) => {
       const li = document.createElement('li'); li.textContent = text; return li;
     }));
@@ -385,7 +522,12 @@
   analyzePhotoButton?.addEventListener('click', () => {
     const description = photoDescription?.value.trim() || '';
     if (description.length < 2) return;
-    currentDecision = classify(description);
+    const canReuseVision = photoAnalysis?.status === 'recognized'
+      && autoPhotoDescription
+      && description.localeCompare(autoPhotoDescription, 'ru', { sensitivity: 'base' }) === 0;
+    currentDecision = canReuseVision
+      ? visionDecision(description, photoAnalysis)
+      : classify(description);
     currentDecision.source = 'photo';
     currentDecision.question = description;
     renderResult(currentDecision);
@@ -434,7 +576,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.2-photo-flow',
+    version: 'decision-v2.3-vision',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
