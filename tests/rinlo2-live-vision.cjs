@@ -92,6 +92,41 @@ async function jsonResponse(response) {
     throw new Error(`noncanonical_verdict:${JSON.stringify(payload?.analysis || {})}`);
   }
 
+  const textDecision = await fetch(`${url}/functions/v1/analyze-food`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      apikey: key,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      question: 'Можно сегодня бургер и колу? Я ещё выбираю, что съесть.',
+      goal: 'weight_loss',
+      decisionStage: 'choosing',
+      dailyTarget: 0,
+      dayCaloriesMin: 0,
+      dayCaloriesMax: 0,
+    }),
+  });
+
+  const textPayload = await jsonResponse(textDecision);
+  if (!textDecision.ok) {
+    throw new Error(`text_decision_call_failed:${textDecision.status}:${JSON.stringify(textPayload)}`);
+  }
+  if (textPayload?.meta?.provider !== 'google-gemini') {
+    throw new Error(`text_unexpected_provider:${JSON.stringify(textPayload?.meta || {})}`);
+  }
+  if (textPayload?.analysis?.decision_stage !== 'choosing') {
+    throw new Error(`text_unexpected_stage:${JSON.stringify(textPayload?.analysis || {})}`);
+  }
+  if (!['recognized','needs_clarification'].includes(textPayload?.analysis?.status)) {
+    throw new Error(`text_invalid_status:${JSON.stringify(textPayload?.analysis || {})}`);
+  }
+  if (textPayload?.analysis?.verdict_title !== canonicalVerdicts[textPayload.analysis.decision_state]) {
+    throw new Error(`text_noncanonical_verdict:${JSON.stringify(textPayload?.analysis || {})}`);
+  }
+
   console.log('RINLO_LIVE_VISION_RESULT=PASS');
   console.log(JSON.stringify({
     provider: payload.meta.provider,
@@ -104,6 +139,11 @@ async function jsonResponse(response) {
     confidence: payload.analysis.confidence,
     dishName: payload.analysis.dish_name,
     clarifyingQuestion: payload.analysis.clarifying_question,
+    textProbe: {
+      status: textPayload.analysis.status,
+      decisionState: textPayload.analysis.decision_state,
+      verdict: textPayload.analysis.verdict_title,
+    },
   }, null, 2));
 })().catch((error) => {
   console.error(error);
