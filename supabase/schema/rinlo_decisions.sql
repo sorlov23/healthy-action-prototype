@@ -43,3 +43,7 @@ create policy "Users manage own Rinlo decisions"
   to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+
+revoke all on table public.rinlo_decisions from anon;
+grant select, insert, update, delete on table public.rinlo_decisions to authenticated;
