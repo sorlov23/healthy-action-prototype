@@ -10,9 +10,10 @@
 
   const defaultState = {
     onboardingDone: false,
-    currentWeight: 70.2,
-    targetWeight: 68,
-    goal: 'lose',
+    currentWeight: null,
+    targetWeight: null,
+    goal: null,
+    priorities: [],
     activeScreen: 'home'
   };
 
@@ -31,6 +32,83 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
+
+  const allowedGoals = new Set(['lose','maintain','aware']);
+  const allowedPriorities = new Set(['satiety','calories','familiar','simplicity']);
+
+  function optionalNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(String(value).replace(',', '.'));
+    return Number.isFinite(number) && number > 0 ? number : null;
+  }
+
+  function normalizeProfile(input = {}) {
+    const goal = allowedGoals.has(input.goal) ? input.goal : null;
+    const currentWeight = optionalNumber(input.currentWeight);
+    const targetWeight = optionalNumber(input.targetWeight);
+    const priorities = Array.isArray(input.priorities)
+      ? [...new Set(input.priorities.filter((item) => allowedPriorities.has(item)))].slice(0, 4)
+      : [];
+    return { goal, currentWeight, targetWeight, priorities };
+  }
+
+  function goalLabel(goal) {
+    if (goal === 'lose') return 'снизить вес';
+    if (goal === 'maintain') return 'удерживать вес';
+    if (goal === 'aware') return 'питаться осознаннее';
+    return '';
+  }
+
+  function renderProfile() {
+    const profile = normalizeProfile(state);
+    document.querySelectorAll('[data-profile-goal]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.profileGoal === profile.goal);
+    });
+    document.querySelectorAll('[data-profile-priority]').forEach((button) => {
+      button.classList.toggle('active', profile.priorities.includes(button.dataset.profilePriority));
+    });
+
+    const current = document.getElementById('profileCurrentWeight');
+    const target = document.getElementById('profileTargetWeight');
+    if (current && document.activeElement !== current) current.value = profile.currentWeight ?? '';
+    if (target && document.activeElement !== target) target.value = profile.targetWeight ?? '';
+
+    const title = document.getElementById('profileSummaryTitle');
+    const text = document.getElementById('profileSummaryText');
+    const parts = [];
+    if (profile.goal) parts.push(`Цель — ${goalLabel(profile.goal)}`);
+    if (profile.currentWeight && profile.targetWeight) {
+      parts.push(`${profile.currentWeight.toLocaleString('ru-RU')} → ${profile.targetWeight.toLocaleString('ru-RU')} кг`);
+    }
+    if (title) title.textContent = parts.length ? parts.join(' · ') : 'Контекст пока минимальный';
+
+    const priorityLabels = {
+      satiety: 'сытность',
+      calories: 'калорийность',
+      familiar: 'привычные продукты',
+      simplicity: 'простота',
+    };
+    const chosen = profile.priorities.map((item) => priorityLabels[item]).filter(Boolean);
+    if (text) {
+      text.textContent = chosen.length
+        ? `В спорных случаях учитывать: ${chosen.join(', ')}.`
+        : 'Можно оставить всё как есть или добавить пару ориентиров ниже.';
+    }
+  }
+
+  function applyDecisionProfile(profile, { silent = false } = {}) {
+    const normalized = normalizeProfile(profile);
+    state = { ...state, ...normalized };
+    saveState();
+    renderProfile();
+    if (!silent) {
+      window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
+        detail: { profile: { ...normalized } }
+      }));
+    }
+    return { ...normalized };
+  }
+
   function showScreen(name) {
     const target = screens.find((screen) => screen.dataset.screen === name) || screens[0];
     screens.forEach((screen) => screen.classList.toggle('active', screen === target));
@@ -40,6 +118,7 @@
     });
     state.activeScreen = target.dataset.screen;
     saveState();
+    if (target.dataset.screen === 'profile') renderProfile();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -74,11 +153,11 @@
     showScreen('home');
   });
 
-  document.querySelectorAll('.goal-choice button').forEach((button, index) => {
+  document.querySelectorAll('.goal-choice button').forEach((button) => {
     button.addEventListener('click', () => {
       document.querySelectorAll('.goal-choice button').forEach((item) => item.classList.remove('active'));
       button.classList.add('active');
-      state.goal = index === 0 ? 'lose' : 'maintain';
+      state.goal = button.dataset.setupGoal || null;
     });
   });
 
@@ -89,8 +168,15 @@
       showToast('Проверь значения веса');
       return;
     }
+    const activeGoal = document.querySelector('.goal-choice button.active')?.dataset.setupGoal || null;
     state.currentWeight = current;
     state.targetWeight = target;
+    state.goal = allowedGoals.has(activeGoal) ? activeGoal : 'lose';
+    state.priorities = Array.isArray(state.priorities) ? state.priorities : [];
+    saveState();
+    window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
+      detail: { profile: normalizeProfile(state) }
+    }));
     closeOnboarding();
     showScreen('home');
     showToast('Готово. Теперь можно принимать решения.');
@@ -109,9 +195,33 @@
     row.addEventListener('click', () => showToast('Карточка решения откроется в следующем slice'));
   });
 
-  document.querySelectorAll('.settings-list button').forEach((button) => {
-    button.addEventListener('click', () => showToast('Настройка пока показана как foundation-state'));
+
+  document.querySelectorAll('[data-profile-goal]').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('[data-profile-goal]').forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+    });
   });
+
+  document.querySelectorAll('[data-profile-priority]').forEach((button) => {
+    button.addEventListener('click', () => button.classList.toggle('active'));
+  });
+
+  document.getElementById('saveDecisionProfile')?.addEventListener('click', () => {
+    const goal = document.querySelector('[data-profile-goal].active')?.dataset.profileGoal || null;
+    const currentWeight = optionalNumber(document.getElementById('profileCurrentWeight')?.value || '');
+    const targetWeight = optionalNumber(document.getElementById('profileTargetWeight')?.value || '');
+    const priorities = [...document.querySelectorAll('[data-profile-priority].active')]
+      .map((button) => button.dataset.profilePriority)
+      .filter(Boolean);
+
+    const profile = applyDecisionProfile({ goal, currentWeight, targetWeight, priorities });
+    const status = document.getElementById('profileSaveState');
+    if (status) status.textContent = 'Сохранено';
+    showToast('Контекст для решений обновлён');
+    setTimeout(() => { if (status) status.textContent = ''; }, 1800);
+  });
+
 
   document.querySelectorAll('.filters button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -137,9 +247,13 @@
     showScreen(state.activeScreen || 'home');
   }
 
+  renderProfile();
+
   window.Rinlo2Foundation = {
-    version: 'foundation-v1',
+    version: 'foundation-v2-decision-profile',
     getState: () => ({ ...state }),
+    getDecisionProfile: () => normalizeProfile(state),
+    applyDecisionProfile: (profile, options = {}) => applyDecisionProfile(profile, options),
     navigate: showScreen,
     reset() {
       localStorage.removeItem(STORAGE_KEY);
