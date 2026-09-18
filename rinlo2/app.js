@@ -22,7 +22,21 @@
 
   function loadState() {
     try {
-      return { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') };
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const loaded = { ...defaultState, ...raw };
+
+      // Prototype migration: early Rinlo 2 builds shipped with demo values
+      // 70.2 → 68.0 kg. Do not treat them as real personalization unless
+      // the profile was explicitly saved in the new editor.
+      if (!raw.profileVersion
+        && Number(loaded.currentWeight) === 70.2
+        && Number(loaded.targetWeight) === 68
+        && loaded.goal === 'lose') {
+        loaded.currentWeight = null;
+        loaded.targetWeight = null;
+        loaded.goal = null;
+      }
+      return loaded;
     } catch {
       return { ...defaultState };
     }
@@ -98,7 +112,7 @@
 
   function applyDecisionProfile(profile, { silent = false } = {}) {
     const normalized = normalizeProfile(profile);
-    state = { ...state, ...normalized };
+    state = { ...state, ...normalized, profileVersion: 2 };
     saveState();
     renderProfile();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-applied', {
@@ -176,6 +190,7 @@
     state.targetWeight = target;
     state.goal = allowedGoals.has(activeGoal) ? activeGoal : 'lose';
     state.priorities = Array.isArray(state.priorities) ? state.priorities : [];
+    state.profileVersion = 2;
     saveState();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
       detail: { profile: normalizeProfile(state) }
