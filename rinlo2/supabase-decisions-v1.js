@@ -80,9 +80,13 @@
         actions_now: Array.isArray(decision.actionsNow) ? decision.actionsNow.slice(0, 3) : [],
         future_tip: decision.futureTip || '',
         vision: decision.vision || null,
+        memory_applied_count: Number(decision.memoryAppliedCount || 0),
+        memory_sources: Array.isArray(decision.memorySources)
+          ? decision.memorySources.slice(0, 4)
+          : [],
       },
       created_at: decision.createdAt || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      updated_at: decision.updatedAt || decision.createdAt || new Date().toISOString(),
     };
   }
 
@@ -118,6 +122,10 @@
         ? row.source_metadata.actions_now.slice(0, 3)
         : (row.source_metadata?.vision?.actionsNow || []),
       futureTip: row.source_metadata?.future_tip || row.source_metadata?.vision?.futureTip || '',
+      memoryAppliedCount: Number(row.source_metadata?.memory_applied_count || 0),
+      memorySources: Array.isArray(row.source_metadata?.memory_sources)
+        ? row.source_metadata.memory_sources.slice(0, 4)
+        : [],
       decisionState: row.decision_state || null,
     };
   }
@@ -203,7 +211,7 @@
   setTimeout(scheduleSync, 0);
 
   window.Rinlo2Supabase = {
-    version: 'v1.3-history-sync',
+    version: 'v1.4-full-state-sync',
     enabled,
     localOnly,
     upsertDecision,
