@@ -324,7 +324,8 @@ Deno.serve(async (req: Request) => {
       }))
       .filter((item: any) => allowedCorrectionTypes.has(item.type) && item.value)
     : [];
-  const recentCorrections = memoryQuery
+  const rawMultimodalInput = Boolean(imageDataUrl || audioDataUrl);
+  const recentCorrections = memoryQuery && (!rawMultimodalInput || memoryRefinement)
     ? suppliedCorrections
       .map((item: any) => ({ ...item, relevance: memoryRelevance(memoryQuery, item) }))
       .filter((item: any) => item.relevance >= 4)
