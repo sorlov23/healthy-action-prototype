@@ -16,6 +16,11 @@
   const resultCalories = document.getElementById('resultCalories');
   const resultContext = document.getElementById('resultContext');
   const resultFit = document.getElementById('resultFit');
+  const fitCard = document.getElementById('fitCard');
+  const actionNowCard = document.getElementById('actionNowCard');
+  const actionNowList = document.getElementById('actionNowList');
+  const futureTipCard = document.getElementById('futureTipCard');
+  const futureTip = document.getElementById('futureTip');
   const showAlternativeButton = document.getElementById('showAlternative');
   const saveOriginalButton = document.getElementById('saveOriginal');
   const originalName = document.getElementById('originalName');
@@ -147,6 +152,14 @@
     return 'food-salad';
   }
 
+
+  function inferDecisionStage(question = '') {
+    const text = String(question).toLowerCase();
+    if (/уже\s+(приготов|свар|пожар|сделал|сделала)|приготовил|приготовила|сварил|сварила|готовая\s+порц|готовое\s+блюд|на\s+тарелк/.test(text)) return 'ready';
+    if (/готовлю|варю|жарю|запекаю|собираю|режу|мешаю/.test(text)) return 'preparing';
+    return 'choosing';
+  }
+
   function setPhotoVisionStatus(state, title, detail) {
     if (!photoVisionStatus) return;
     photoVisionStatus.dataset.state = state;
@@ -158,7 +171,10 @@
 
   function visionDecision(description, analysis) {
     const calorieText = formatEstimatedCalories(analysis.calorie_min, analysis.calorie_max);
-    const alternative = analysis.alternative?.available ? {
+    const stage = ['choosing','preparing','ready'].includes(analysis.decision_stage)
+      ? analysis.decision_stage
+      : 'ready';
+    const alternative = stage !== 'ready' && analysis.alternative?.available ? {
       name: analysis.alternative.name || 'Более удобный вариант',
       calories: formatEstimatedCalories(
         analysis.alternative.calorie_min,
@@ -172,6 +188,7 @@
     return {
       id: `d-${Date.now()}`,
       source: 'photo',
+      stage,
       question: description || analysis.dish_name || 'Фото блюда',
       createdAt: new Date().toISOString(),
       decisionState: analysis.decision_state || (alternative ? 'fits_with_adjustment' : 'fits_well'),
@@ -182,6 +199,10 @@
       calories: calorieText,
       context: analysis.context_label || 'оценка по фото',
       fit: analysis.fit_text || 'Оценка учитывает твою цель и текущий контекст дня.',
+      actionsNow: Array.isArray(analysis.actions_now)
+        ? analysis.actions_now.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+        : [],
+      futureTip: String(analysis.future_tip || '').trim(),
       original: {
         name: analysis.dish_name || description || 'Блюдо на фото',
         calories: calorieText,
@@ -193,6 +214,9 @@
         confidence: Number(analysis.confidence || 0),
         components: Array.isArray(analysis.components) ? analysis.components.slice(0, 12) : [],
         portionAssumption: analysis.portion_assumption || '',
+        stage,
+        actionsNow: Array.isArray(analysis.actions_now) ? analysis.actions_now.slice(0, 3) : [],
+        futureTip: String(analysis.future_tip || '').trim(),
       },
     };
   }
@@ -331,6 +355,7 @@
     try {
       const response = await vision.analyzeFile(file, {
         goal: foundation.goal === 'maintain' ? 'maintain_weight' : 'weight_loss',
+        decisionStage: 'ready',
         dailyTarget: DAY_TARGET,
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
@@ -386,8 +411,10 @@
   }
 
   function structuredDecision(question, preset) {
+    const stage = inferDecisionStage(question);
     return {
       id: `d-${Date.now()}`,
+      stage,
       question,
       createdAt: new Date().toISOString(),
       title: preset.title,
@@ -397,8 +424,12 @@
       calories: preset.calories,
       context: preset.context,
       fit: preset.fit,
+      actionsNow: [],
+      futureTip: '',
       original: { ...preset.original },
-      alternative: preset.alternative ? { ...preset.alternative, diffs: [...preset.alternative.diffs] } : null,
+      alternative: stage === 'ready'
+        ? null
+        : (preset.alternative ? { ...preset.alternative, diffs: [...preset.alternative.diffs] } : null),
       selected: null
     };
   }
@@ -410,10 +441,27 @@
     resultExplanation.textContent = decision.explanation;
     resultCalories.textContent = decision.calories;
     resultContext.textContent = decision.context;
-    resultFit.textContent = decision.fit;
+    resultFit.textContent = decision.fit || '';
+    if (fitCard) fitCard.hidden = !String(decision.fit || '').trim();
     resultCard.classList.toggle('good', decision.tone === 'good');
 
-    const hasAlternative = Boolean(decision.alternative);
+    const actions = Array.isArray(decision.actionsNow)
+      ? decision.actionsNow.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+      : [];
+    if (actionNowList) {
+      actionNowList.replaceChildren(...actions.map((text) => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        return li;
+      }));
+    }
+    if (actionNowCard) actionNowCard.hidden = actions.length === 0;
+
+    const future = String(decision.futureTip || '').trim();
+    if (futureTip) futureTip.textContent = future;
+    if (futureTipCard) futureTipCard.hidden = !future;
+
+    const hasAlternative = decision.stage !== 'ready' && Boolean(decision.alternative);
     showAlternativeButton.hidden = !hasAlternative;
     saveOriginalButton.textContent = hasAlternative ? 'Оставить как есть' : 'Сохранить решение';
     saveOriginalButton.classList.toggle('primary', !hasAlternative);
@@ -529,6 +577,8 @@
       ? visionDecision(description, photoAnalysis)
       : classify(description);
     currentDecision.source = 'photo';
+    currentDecision.stage = 'ready';
+    if (!canReuseVision) currentDecision.alternative = null;
     currentDecision.question = description;
     renderResult(currentDecision);
     showStep('result');
@@ -576,7 +626,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.4-canonical-copy',
+    version: 'decision-v2.5-stage-aware',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
