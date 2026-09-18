@@ -168,7 +168,81 @@
           <p>Вес и цель не превращаются в «точную норму калорий». Rinlo использует их только как контекст решения.</p>
         </article>
 
+        <button class="settings-entry-card" type="button" data-nav="settings">
+          <div>
+            <small>НАСТРОЙКИ И ДАННЫЕ</small>
+            <b>Синхронизация, облако и приватность</b>
+            <span id="profileSyncSummary">Проверяю состояние…</span>
+          </div>
+          <strong aria-hidden="true">›</strong>
+        </button>
+
         <article class="brand-card"><img src="./logo-v2.svg" alt="" /><div><b>Меньше сомнений.<br>Больше нормальных решений.</b><small>Rinlo Decisions · prototype</small></div></article>
+      </section>
+
+      <section class="screen settings-screen" data-screen="settings">
+        <button class="settings-back" type="button" data-nav="profile">← Профиль</button>
+        <p class="eyebrow dark">RINLO НА ТВОИХ УСТРОЙСТВАХ</p>
+        <h1 class="page-title">Настройки</h1>
+
+        <article class="sync-hero-card" id="syncHeroCard" data-state="checking">
+          <div class="sync-hero-head">
+            <span class="sync-cloud-mark" id="syncCloudMark">↻</span>
+            <div>
+              <small>АККАУНТ И СИНХРОНИЗАЦИЯ</small>
+              <strong id="syncStatusTitle">Проверяю облако…</strong>
+              <p id="syncStatusText">Локальные данные уже доступны, соединение проверяется.</p>
+            </div>
+          </div>
+          <div class="sync-meta">
+            <span><small>Последняя синхронизация</small><b id="syncLastAt">—</b></span>
+            <span><small>Режим</small><b id="syncAccountMode">На этом устройстве</b></span>
+          </div>
+          <button class="btn primary wide" type="button" id="syncNowButton">Синхронизировать сейчас</button>
+          <span class="sync-action-status" id="syncActionStatus" aria-live="polite"></span>
+        </article>
+
+        <article class="settings-section-card">
+          <div class="settings-section-head">
+            <div><small>ЧТО ХРАНИТСЯ</small><b>Данные Rinlo</b></div>
+            <span>local-first</span>
+          </div>
+          <div class="settings-data-list">
+            <div><span>Профиль и цель</span><b id="settingsProfileState">—</b></div>
+            <div><span>История решений</span><b id="settingsDecisionCount">0</b></div>
+            <div><span>Память по поправкам</span><b id="settingsMemoryCount">0</b></div>
+            <div><span>Оценки ответов</span><b id="settingsFeedbackCount">0</b></div>
+          </div>
+          <p>Изменения сначала сохраняются на устройстве. Когда облако доступно, Rinlo синхронизирует более свежую версию.</p>
+        </article>
+
+        <article class="settings-section-card account-protection-card">
+          <div class="settings-section-head">
+            <div><small>ВОССТАНОВЛЕНИЕ</small><b>Защитить аккаунт</b></div>
+            <span id="settingsAccountBadge">Временный</span>
+          </div>
+          <p id="settingsAccountText">Сейчас Rinlo использует временный аккаунт без регистрации. Если очистить данные браузера или сменить устройство, этот аккаунт нельзя будет восстановить.</p>
+          <button class="settings-disabled-action" type="button" disabled>Сохранить аккаунт Rinlo · следующий этап</button>
+        </article>
+
+        <article class="settings-section-card">
+          <div class="settings-section-head">
+            <div><small>ПРОЗРАЧНОСТЬ</small><b>Память и приватность</b></div>
+          </div>
+          <p>Rinlo хранит только явные поправки, решения и выбранный тобой контекст. Управлять сохранённой памятью можно прямо в Профиле.</p>
+          <button class="settings-link-action" type="button" data-nav="profile">Открыть память в Профиле →</button>
+        </article>
+
+        <article class="settings-section-card about-settings-card">
+          <div class="settings-section-head">
+            <div><small>О ПРИЛОЖЕНИИ</small><b>Rinlo Decisions</b></div>
+            <span>prototype</span>
+          </div>
+          <div class="settings-data-list">
+            <div><span>Decision flow</span><b id="settingsDecisionVersion">—</b></div>
+            <div><span>Sync layer</span><b id="settingsSyncVersion">v1</b></div>
+          </div>
+        </article>
       </section>
     </main>
 
@@ -394,5 +468,6 @@
   <script src="./vision-v1.js"></script>
   <script src="./decision-v2.js"></script>
   <script src="./supabase-decisions-v1.js"></script>
+  <script src="./sync-center-v1.js"></script>
 </body>
 </html>
