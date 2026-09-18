@@ -178,7 +178,7 @@ jobs:
 
       - name: Verify Rinlo Decisions profile ownership
         run: |
-          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'lose|calories,satiety'
+          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'lose|satiety,calories'
           begin;
           insert into auth.users(id) values
             ('77777777-7777-4777-8777-777777777777'),
