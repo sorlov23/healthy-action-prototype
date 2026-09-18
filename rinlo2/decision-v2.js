@@ -309,6 +309,9 @@
     currentDecision.selected = { ...selected, kind: useAlternative ? 'alternative' : 'original' };
     decisions.unshift(currentDecision);
     saveDecisions();
+    window.dispatchEvent(new CustomEvent('rinlo2:decision-saved', {
+      detail: { decision: JSON.parse(JSON.stringify(currentDecision)) }
+    }));
     savedName.textContent = selected.name;
     savedCalories.textContent = selected.calories;
     renderDecisionRow(currentDecision, true);
@@ -348,6 +351,23 @@
 
   function renderStoredDecisions() {
     [...decisions].reverse().forEach((decision) => renderDecisionRow(decision, true));
+  }
+
+  function importDecisions(incoming = []) {
+    const existing = new Set(decisions.map((item) => item?.id).filter(Boolean));
+    let added = 0;
+    incoming.forEach((decision) => {
+      if (!decision?.id || existing.has(decision.id)) return;
+      decisions.push(decision);
+      existing.add(decision.id);
+      added += 1;
+    });
+    if (!added) return 0;
+    decisions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    saveDecisions();
+    renderStoredDecisions();
+    renderDayContext();
+    return added;
   }
 
   document.querySelector('[data-action="text"]')?.addEventListener('click', openAsk);
@@ -417,7 +437,8 @@
     version: 'decision-v2.2-photo-flow',
     openAsk,
     openPhoto: openPhotoPicker,
-    getDecisions: () => decisions.map((item) => ({ ...item })),
+    getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
+    importDecisions,
     getDayContext: () => ({ target: DAY_TARGET, decisions: todayDecisions().length, calories: sumCalories() }),
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
   };
