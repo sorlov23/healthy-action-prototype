@@ -199,6 +199,41 @@
       <div class="flow-footer"><button class="btn primary wide" id="analyzeDecision" disabled>Получить ответ →</button></div>
     </section>
 
+    <section class="flow-step" data-flow-step="voice">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Спросить голосом</b><span></span></header>
+      <div class="flow-body voice-body">
+        <p class="eyebrow dark">СКАЖИ КАК ЕСТЬ</p>
+        <h1>Что собираешься съесть?</h1>
+        <p class="flow-lead">Нажми на микрофон и скажи вопрос одной фразой. Rinlo разберёт смысл, а не только расшифровку.</p>
+
+        <button class="voice-record-button" id="voiceRecordButton" type="button" aria-label="Начать запись">
+          <span class="voice-record-core">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="4" width="6" height="10" rx="3"></rect>
+              <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3M9 20h6"></path>
+            </svg>
+          </span>
+        </button>
+
+        <div class="voice-state" id="voiceState" data-state="idle" aria-live="polite">
+          <b id="voiceStateTitle">Готов к записи</b>
+          <span id="voiceStateDetail">Нажми на микрофон</span>
+          <strong id="voiceTimer">0:00</strong>
+        </div>
+
+        <div class="voice-clarification" id="voiceClarification" hidden>
+          <label>
+            <span id="voiceClarificationQuestion">Нужно одно уточнение</span>
+            <input id="voiceClarificationAnswer" maxlength="120" placeholder="Ответь коротко" />
+          </label>
+          <button class="btn primary wide" id="voiceClarificationSubmit" disabled>Продолжить →</button>
+        </div>
+
+        <button class="voice-file-link" id="voiceFileButton" type="button">Выбрать аудиофайл</button>
+        <input type="file" id="voiceFileInput" accept="audio/*" hidden />
+      </div>
+    </section>
+
     <section class="flow-step" data-flow-step="result">
       <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Результат</b><span></span></header>
       <div class="flow-body">
