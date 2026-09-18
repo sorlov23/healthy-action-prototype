@@ -107,11 +107,57 @@
     return data;
   }
 
+
+  async function analyzeText(question, context = {}) {
+    if (!enabled) throw error('decision_ai_disabled', 'decision_ai_disabled');
+    if (providerUnavailable) throw error('decision_ai_not_configured', 'decision_ai_not_configured', 503);
+
+    const text = String(question || '').trim();
+    if (text.length < 3) throw error('question_too_short', 'question_too_short', 400);
+
+    const session = await auth.ensureSession();
+    if (!session?.access_token) throw error('no_supabase_session', 'no_supabase_session', 401);
+
+    const response = await fetch(`${base}/functions/v1/analyze-food`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        question: text,
+        goal: context.goal || 'weight_loss',
+        decisionStage: ['choosing','preparing','ready'].includes(context.decisionStage)
+          ? context.decisionStage
+          : 'choosing',
+        dailyTarget: Number(context.dailyTarget || 0),
+        dayCaloriesMin: Number(context.dayCaloriesMin || 0),
+        dayCaloriesMax: Number(context.dayCaloriesMax || 0),
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (data?.error === 'vision_not_configured') providerUnavailable = true;
+      throw error(
+        data?.message || data?.error || `decision_${response.status}`,
+        data?.error || data?.code || null,
+        response.status,
+      );
+    }
+    if (!data?.analysis) throw error('empty_decision_analysis', 'empty_decision_analysis', 502);
+    return data;
+  }
+
   window.RinloVision = {
-    version: 'v1.1-stage-aware',
+    version: 'v1.2-multimodal-decisions',
     enabled,
     localOnly,
     analyzeFile,
+    analyzeText,
     compressImage,
     isProviderAvailable: () => !providerUnavailable,
   };
