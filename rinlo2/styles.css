@@ -201,3 +201,26 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(199,255,91,.58);
 .account-protection-card{background:linear-gradient(145deg,#fbffe9,#fff)}
 .about-settings-card{margin-bottom:18px}
 @media(max-width:380px){.sync-meta{grid-template-columns:1fr}.settings-entry-card{padding:14px}.settings-section-card,.sync-hero-card{padding:15px}}
+
+
+/* Account Protection v1 */
+.account-protection-form{display:grid;gap:10px;margin-top:14px}
+.account-protection-form label{display:grid;gap:6px}
+.account-protection-form label>span{font-size:9px;font-weight:800;color:#707980}
+.account-protection-form input{width:100%;min-height:48px;border:1px solid rgba(17,19,21,.09);border-radius:14px;background:#f7f8f8;padding:0 13px;color:#111315;font:inherit;font-size:12px;outline:none}
+.account-protection-form input:focus{border-color:rgba(132,197,44,.55);box-shadow:0 0 0 3px rgba(199,255,91,.16)}
+.account-protection-form>small{color:#858d92;font-size:9px;line-height:1.5}
+.account-protection-pending{margin-top:14px;padding-top:2px}
+.account-protection-mail{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;padding:12px;border-radius:15px;background:#f4f7ef}
+.account-protection-mail>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--rinlo-lime);font-size:17px}
+.account-protection-mail small,.account-protection-done small{display:block;color:#858d92;font-size:8px;letter-spacing:.1em;font-weight:850}
+.account-protection-mail b,.account-protection-done b{display:block;margin-top:4px;font-size:12px;overflow-wrap:anywhere}
+.account-protection-pending>p{margin:10px 0;color:#717a80;font-size:10px;line-height:1.55}
+.account-protection-pending .settings-link-action{margin-top:8px}
+.account-protection-done{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:start;margin-top:14px;padding:14px;border-radius:17px;background:linear-gradient(145deg,#f4ffd7,#fbfff3);border:1px solid rgba(132,197,44,.18)}
+.account-protection-success{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:var(--rinlo-lime);color:#111315;font-size:21px;font-weight:950}
+.account-protection-done p{margin:7px 0 0;color:#6f787e;font-size:9px;line-height:1.5}
+.account-protection-status{display:block;min-height:14px;margin-top:9px;color:#778087;font-size:9px;line-height:1.45;text-align:center;font-weight:700}
+.account-protection-status[data-state="success"]{color:#69813d}
+.account-protection-status[data-state="error"]{color:#a74a4a}
+.account-protection-status[data-state="pending"]{color:#8c7436}
