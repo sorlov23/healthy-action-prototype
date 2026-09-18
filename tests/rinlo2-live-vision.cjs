@@ -52,7 +52,7 @@ async function jsonResponse(response) {
       imageDataUrl,
       goal: 'weight_loss',
       decisionStage: 'ready',
-      dailyTarget: 2000,
+      dailyTarget: 0,
       dayCaloriesMin: 0,
       dayCaloriesMax: 0,
     }),
