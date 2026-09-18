@@ -210,7 +210,11 @@ try {
   assert((await page.locator('#settingsMemoryCount').textContent())?.trim() === '0', 'settings_memory_count_wrong');
   assert((await page.locator('#settingsFeedbackCount').textContent())?.trim() === '1', 'settings_feedback_count_wrong');
   assert((await page.locator('#settingsProfileState').textContent())?.includes('Настроен'), 'settings_profile_state_wrong');
-  assert((await page.locator('#settingsAccountText').textContent())?.length > 20, 'settings_account_explanation_missing');
+  assert((await page.locator('#settingsAccountText').textContent())?.includes('локальном режиме'), 'settings_account_local_explanation_missing');
+  assert(await page.locator('#accountProtectionForm').isHidden(), 'account_protection_form_should_be_hidden_local_only');
+  assert((await page.locator('#settingsAccountBadge').textContent())?.includes('Локальный'), 'account_protection_badge_wrong_local_only');
+  const localAuthSession = await page.evaluate(() => localStorage.getItem('rinlo_supabase_session_v1'));
+  assert(localAuthSession === null, 'local_only_should_not_create_auth_session');
   await page.getByRole('button', { name: '← Профиль', exact: true }).click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
 
