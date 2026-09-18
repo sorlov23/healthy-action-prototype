@@ -52,7 +52,7 @@
       current_weight_kg: profile.currentWeight || null,
       target_weight_kg: profile.targetWeight || null,
       priorities: Array.isArray(profile.priorities) ? profile.priorities : [],
-      updated_at: new Date().toISOString(),
+      updated_at: profile.updatedAt || new Date().toISOString(),
     };
   }
 
@@ -62,6 +62,7 @@
       currentWeight: row?.current_weight_kg == null ? null : Number(row.current_weight_kg),
       targetWeight: row?.target_weight_kg == null ? null : Number(row.target_weight_kg),
       priorities: Array.isArray(row?.priorities) ? row.priorities : [],
+      updatedAt: row?.updated_at || null,
     };
   }
 
@@ -83,25 +84,71 @@
     return Array.isArray(data) ? fromRow(data[0]) : profile;
   }
 
+  function timeOf(value) {
+    const time = new Date(value || 0).getTime();
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  function emitSync(detail) {
+    window.dispatchEvent(new CustomEvent('rinlo2:profile-sync', { detail }));
+  }
+
   async function syncNow() {
-    if (!enabled) return { status: 'local-only' };
+    if (!enabled) {
+      const result = { status: 'local-only' };
+      emitSync(result);
+      return result;
+    }
     if (syncing) return syncing;
     syncing = (async () => {
       const local = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
       const remote = await fetchProfile();
 
-      if (remote) {
-        window.Rinlo2Foundation?.applyDecisionProfile?.(remote, { silent: true });
-        return { status: 'pulled', profile: remote };
+      if (remote && meaningful(local)) {
+        const localTime = timeOf(local.updatedAt);
+        const remoteTime = timeOf(remote.updatedAt);
+
+        if (localTime > remoteTime) {
+          const saved = await upsertProfile(local);
+          const result = { status: 'pushed', profile: saved, reason: 'local-newer' };
+          emitSync(result);
+          return result;
+        }
+
+        window.Rinlo2Foundation?.applyDecisionProfile?.(remote, {
+          silent: true,
+          updatedAt: remote.updatedAt || null,
+        });
+        const result = { status: remoteTime > localTime ? 'pulled' : 'synced', profile: remote, reason: 'remote-newer-or-equal' };
+        emitSync(result);
+        return result;
       }
+
+      if (remote) {
+        window.Rinlo2Foundation?.applyDecisionProfile?.(remote, {
+          silent: true,
+          updatedAt: remote.updatedAt || null,
+        });
+        const result = { status: 'pulled', profile: remote, reason: 'remote-only' };
+        emitSync(result);
+        return result;
+      }
+
       if (meaningful(local)) {
         const saved = await upsertProfile(local);
-        return { status: 'pushed', profile: saved };
+        const result = { status: 'pushed', profile: saved, reason: 'local-only' };
+        emitSync(result);
+        return result;
       }
-      return { status: 'empty' };
+
+      const result = { status: 'empty' };
+      emitSync(result);
+      return result;
     })().catch((error) => {
       console.warn('Rinlo profile sync failed', error);
-      return { status: 'offline', error };
+      const result = { status: 'offline', error };
+      emitSync({ status: 'offline', error: String(error?.message || error) });
+      return result;
     }).finally(() => {
       syncing = null;
     });
@@ -119,7 +166,7 @@
   setTimeout(syncNow, 0);
 
   window.Rinlo2ProfileSync = {
-    version: 'v1',
+    version: 'v2-conflict-aware',
     enabled,
     localOnly,
     fetchProfile,
