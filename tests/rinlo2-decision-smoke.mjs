@@ -201,6 +201,19 @@ try {
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
 
+  await page.locator('[data-nav="profile"]').last().click();
+  await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: /Синхронизация, облако и приватность/ }).click();
+  await page.getByRole('heading', { name: 'Настройки', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#syncStatusTitle').textContent())?.includes('Только на этом устройстве'), 'settings_local_mode_missing');
+  assert((await page.locator('#settingsDecisionCount').textContent())?.trim() === '1', 'settings_decision_count_wrong');
+  assert((await page.locator('#settingsMemoryCount').textContent())?.trim() === '0', 'settings_memory_count_wrong');
+  assert((await page.locator('#settingsFeedbackCount').textContent())?.trim() === '1', 'settings_feedback_count_wrong');
+  assert((await page.locator('#settingsProfileState').textContent())?.includes('Настроен'), 'settings_profile_state_wrong');
+  assert((await page.locator('#settingsAccountText').textContent())?.length > 20, 'settings_account_explanation_missing');
+  await page.getByRole('button', { name: '← Профиль', exact: true }).click();
+  await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
+
   if (errors.length) throw new Error(`Runtime errors:\n${errors.join('\n')}`);
   console.log(`RINLO2_DECISION_CONTEXT=${JSON.stringify({ homeGeometry, visionState, api })}`);
   console.log('RINLO2_DECISION_RESULT=PASS');
