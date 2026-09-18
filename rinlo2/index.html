@@ -180,6 +180,16 @@
         <h1>Что хочешь съесть?</h1>
         <p class="flow-lead">Напиши как есть — Rinlo даст короткий ответ с учётом твоей цели.</p>
         <label class="question-box"><textarea id="decisionQuestion" maxlength="220" placeholder="Например: Можно сегодня бургер и колу?"></textarea><small><span id="questionCount">0</span>/220</small></label>
+        <div class="text-ai-status" id="textAiStatus" data-state="idle" hidden aria-live="polite">
+          <span class="text-ai-dot"></span>
+          <div><b id="textAiTitle">Разбираю вопрос…</b><small id="textAiDetail">Учитываю блюдо, твою цель и контекст.</small></div>
+        </div>
+        <div class="text-clarification" id="textClarification" hidden>
+          <label>
+            <span id="textClarificationQuestion">Нужно одно уточнение</span>
+            <input id="textClarificationAnswer" maxlength="120" placeholder="Ответь коротко" />
+          </label>
+        </div>
         <div class="quick-questions">
           <button data-question="Можно сегодня бургер и колу?">Можно сегодня бургер и колу?</button>
           <button data-question="Можно роллы на ужин?">Можно роллы на ужин?</button>
