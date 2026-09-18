@@ -126,6 +126,22 @@
     });
   }
 
+  async function resendEmailChange(email, options = {}) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error('invalid_email');
+    }
+    await authFetch('POST', '/resend', {
+      body: {
+        email: normalized,
+        type: 'email_change',
+        gotrue_meta_security: { captcha_token: null },
+      },
+      redirectTo: options.emailRedirectTo || '',
+    });
+    return { email: normalized };
+  }
+
   async function createAnonymousSession() {
     const data = await authRequest('/signup', {
       data: { client: 'rinlo-pwa', schema_version: 1 },
@@ -189,6 +205,7 @@
     getUser,
     updateUser,
     requestEmailProtection,
+    resendEmailChange,
     getUserId: () => readSession()?.user?.id || null,
     clearLocalSession: clearSession,
   };
