@@ -39,6 +39,9 @@ const schema = {
     calorie_min: { type: "integer", minimum: 0 },
     calorie_max: { type: "integer", minimum: 0 },
     portion_assumption: { type: "string" },
+    decision_stage: { type: "string", enum: ["choosing", "preparing", "ready"] },
+    actions_now: { type: "array", items: { type: "string" }, maxItems: 3 },
+    future_tip: { type: "string" },
     decision_state: {
       type: "string",
       enum: ["fits_well", "fits_with_adjustment", "better_alternative", "needs_clarification"],
@@ -72,6 +75,9 @@ const schema = {
     "calorie_min",
     "calorie_max",
     "portion_assumption",
+    "decision_stage",
+    "actions_now",
+    "future_tip",
     "decision_state",
     "verdict_title",
     "explanation",
@@ -99,8 +105,11 @@ const canonicalVerdicts: Record<string, string> = {
   needs_clarification: "Нужно уточнить",
 };
 
-function normalizeAnalysis(raw: any) {
+function normalizeAnalysis(raw: any, requestedStage = "ready") {
   const analysis = raw && typeof raw === "object" ? raw : {};
+  const stage = ["choosing", "preparing", "ready"].includes(requestedStage)
+    ? requestedStage
+    : "ready";
   const confidence = Math.max(0, Math.min(1, Number(analysis.confidence || 0)));
   const alternative = analysis.alternative && typeof analysis.alternative === "object"
     ? analysis.alternative
@@ -128,6 +137,20 @@ function normalizeAnalysis(raw: any) {
     state = "fits_with_adjustment";
   }
 
+  // A photo of a plated/prepared meal means the major choice is already made.
+  // Do not turn a theoretical replacement into the primary CTA.
+  if (stage === "ready" && state === "better_alternative") {
+    state = "fits_with_adjustment";
+  }
+
+  if (stage === "ready") {
+    alternative.available = false;
+    alternative.name = "";
+    alternative.calorie_min = 0;
+    alternative.calorie_max = 0;
+    alternative.changes = [];
+  }
+
   if (state === "fits_well") {
     alternative.available = false;
     alternative.name = "";
@@ -137,6 +160,11 @@ function normalizeAnalysis(raw: any) {
   }
 
   analysis.confidence = confidence;
+  analysis.decision_stage = stage;
+  analysis.actions_now = Array.isArray(analysis.actions_now)
+    ? analysis.actions_now.map((item: unknown) => String(item || "").trim()).filter(Boolean).slice(0, 3)
+    : [];
+  analysis.future_tip = String(analysis.future_tip || "").trim();
   analysis.decision_state = state;
   analysis.verdict_title = canonicalVerdicts[state];
 
@@ -146,6 +174,8 @@ function normalizeAnalysis(raw: any) {
     analysis.calorie_max = 0;
     analysis.context_label = "нужно уточнение";
     analysis.fit_text = "";
+    analysis.actions_now = [];
+    analysis.future_tip = "";
     alternative.available = false;
     alternative.name = "";
     alternative.calorie_min = 0;
@@ -189,6 +219,9 @@ Deno.serve(async (req: Request) => {
   const mimeType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
   const imageBase64 = match[2];
   const goal = String(body?.goal || "weight_loss");
+  const decisionStage = ["choosing", "preparing", "ready"].includes(String(body?.decisionStage || ""))
+    ? String(body.decisionStage)
+    : "ready";
   const dailyTarget = Number(body?.dailyTarget || 2000);
   const dayCaloriesMin = Number(body?.dayCaloriesMin || 0);
   const dayCaloriesMax = Number(body?.dayCaloriesMax || 0);
@@ -203,7 +236,14 @@ Deno.serve(async (req: Request) => {
     "decision_state=needs_clarification и задай ровно один полезный короткий вопрос.",
     "Если блюдо распознано достаточно уверенно, оцени реалистичный диапазон калорий.",
     "Если по фото нельзя надёжно оценить порцию, скрытые соусы, масло, панировку или состав заметно меняет оценку — лучше попроси одно уточнение.",
-    "Решение должно учитывать цель пользователя и уже сохранённый контекст дня.",
+    "Решение должно учитывать цель пользователя, уже сохранённый контекст дня и стадию решения.",
+    "decision_stage=choosing: человек ещё выбирает еду — можно предлагать другую версию блюда, напиток, гарнир, размер порции.",
+    "decision_stage=preparing: еда готовится — можно менять только то, что ещё реально изменить во время приготовления.",
+    "decision_stage=ready: еда уже приготовлена или стоит перед человеком — НЕ предлагай выбрасывать, заменять или заново готовить основной компонент.",
+    "Для ready рекомендуй только реально доступные сейчас действия: размер порции, не брать добавку, соус, хлеб, напиток, десерт или другой ещё не совершённый выбор.",
+    "Если есть полезная идея вроде заменить сосиску мясом в следующий раз, помести её только в future_tip, а не в alternative.",
+    "actions_now — максимум три коротких действия, которые человек действительно может сделать прямо сейчас.",
+    "future_tip — необязательная одна короткая идея на следующий похожий приём пищи.",
     "Используй только четыре канонических статуса Rinlo и ровно такие заголовки:",
     "fits_well = «Можно брать».",
     "fits_with_adjustment = «Можно, но лучше аккуратнее».",
@@ -219,6 +259,7 @@ Deno.serve(async (req: Request) => {
 
   const userText = [
     `Цель: ${goal}.`,
+    `Стадия решения: ${decisionStage}.`,
     `Ориентир дня: около ${dailyTarget} ккал.`,
     `По уже сохранённым решениям Rinlo сегодня: примерно ${dayCaloriesMin}–${dayCaloriesMax} ккал.`,
     "Проанализируй фото предполагаемой еды и верни решение строго по JSON-схеме.",
@@ -282,7 +323,7 @@ Deno.serve(async (req: Request) => {
 
   let analysis;
   try {
-    analysis = normalizeAnalysis(JSON.parse(outputText));
+    analysis = normalizeAnalysis(JSON.parse(outputText), decisionStage);
   } catch {
     return json({ error: "invalid_vision_response" }, 502);
   }
