@@ -37,9 +37,17 @@
   const photoDescription = document.getElementById('photoDescription');
   const analyzePhotoButton = document.getElementById('analyzePhoto');
   const photoVisionStatus = document.getElementById('photoVisionStatus');
+  const historyList = document.getElementById('historyList');
+  const historyEmpty = document.getElementById('historyEmpty');
+  const historyCount = document.getElementById('historyCount');
+  const historySearch = document.getElementById('historySearch');
+  const historyFilters = [...document.querySelectorAll('[data-history-filter]')];
+  const homeRecentList = document.getElementById('homeRecentList');
+  const homeRecentEmpty = document.getElementById('homeRecentEmpty');
 
   let activeStep = 'ask';
   let currentDecision = null;
+  let historyFilter = 'all';
   let decisions = loadDecisions();
   let toastTimer = null;
   let photoObjectUrl = null;
@@ -600,44 +608,165 @@
     }));
     savedName.textContent = selected.name;
     savedCalories.textContent = selected.calories;
-    renderDecisionRow(currentDecision, true);
+    renderDecisionSurfaces();
     renderDayContext();
     renderProgress();
     showStep('saved');
   }
 
+  function formatDecisionDate(value) {
+    const date = new Date(value || 0);
+    if (!Number.isFinite(date.getTime())) return '';
+    const now = new Date();
+    const sameDay = sameLocalDay(date.toISOString(), now);
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const isYesterday = sameLocalDay(date.toISOString(), yesterday);
+    const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    if (sameDay) return `Сегодня · ${time}`;
+    if (isYesterday) return `Вчера · ${time}`;
+    return `${date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} · ${time}`;
+  }
+
+  function stageLabel(stage) {
+    if (stage === 'ready') return 'еда уже была готова';
+    if (stage === 'preparing') return 'еда ещё готовилась';
+    if (stage === 'choosing') return 'выбор ещё был открыт';
+    return 'стадия не сохранена';
+  }
+
+  function stageNote(stage) {
+    if (stage === 'ready') return 'Еда уже была готова — Rinlo ограничил рекомендации только тем, что ещё реально можно было изменить.';
+    if (stage === 'preparing') return 'Решение было принято во время приготовления — Rinlo учитывал только ещё доступные изменения.';
+    if (stage === 'choosing') return 'Решение было принято до еды — поэтому Rinlo мог сравнивать варианты шире.';
+    return 'Это более раннее решение: стадия выбора ещё не сохранялась.';
+  }
+
   function createRow(decision, large = false) {
     const row = document.createElement('article');
-    row.className = `decision-row${large ? ' large' : ''} is-new`;
+    row.className = `decision-row${large ? ' large' : ''}`;
     row.dataset.decisionId = decision.id;
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+
     const thumb = document.createElement('div');
-    thumb.className = `thumb ${decision.original.thumb || 'food-salad'}`;
-    const copy = document.createElement('div'); copy.className = 'row-copy';
-    const name = document.createElement('b'); name.textContent = decision.selected?.name || decision.original.name;
-    const verdict = document.createElement('span'); verdict.className = `verdict ${decision.selected?.kind === 'alternative' || decision.tone === 'good' ? 'good' : 'neutral'}`;
-    verdict.textContent = decision.selected?.kind === 'alternative' ? '● Выбран вариант с корректировкой' : `● ${decision.title}`;
+    thumb.className = `thumb ${decision.original?.thumb || thumbForDish(decision.selected?.name || decision.original?.name || decision.question)}`;
+
+    const copy = document.createElement('div');
+    copy.className = 'row-copy';
+    const name = document.createElement('b');
+    name.textContent = decision.selected?.name || decision.original?.name || decision.question || 'Решение';
+
+    const verdict = document.createElement('span');
+    const adjusted = decision.selected?.kind === 'alternative';
+    verdict.className = `verdict ${adjusted || decision.tone === 'good' ? 'good' : 'neutral'}`;
+    verdict.textContent = adjusted ? '● Выбран вариант с корректировкой' : `● ${decision.title || 'Решение сохранено'}`;
+
     const time = document.createElement('small');
-    time.textContent = `Сегодня · ${new Date(decision.createdAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`;
-    const arrow = document.createElement('span'); arrow.textContent = '›';
-    copy.append(name, verdict, time); row.append(thumb, copy, arrow);
-    row.addEventListener('click', () => showToast('Детали сохранённого решения добавим следующим слоем'));
+    time.textContent = formatDecisionDate(decision.createdAt);
+
+    const arrow = document.createElement('span');
+    arrow.textContent = '›';
+    copy.append(name, verdict, time);
+    row.append(thumb, copy, arrow);
+
+    const open = () => showDecisionDetail(decision);
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        open();
+      }
+    });
     return row;
   }
 
-  function renderDecisionRow(decision, prepend = false) {
-    const home = document.getElementById('homeRecentList');
-    const history = document.getElementById('todayHistoryList');
-    if (!home || !history || document.querySelector(`[data-decision-id="${decision.id}"]`)) return;
-    const homeRow = createRow(decision, false);
-    const historyRow = createRow(decision, true);
-    prepend ? home.prepend(homeRow) : home.append(homeRow);
-    prepend ? history.prepend(historyRow) : history.append(historyRow);
-    const count = document.getElementById('todayCount');
-    if (count) count.textContent = `${2 + decisions.length} решения`;
+  function matchesHistoryFilter(decision) {
+    if (historyFilter === 'fits') {
+      return decision.decisionState === 'fits_well' || decision.title === 'Можно брать';
+    }
+    if (historyFilter === 'adjusted') {
+      return ['fits_with_adjustment', 'better_alternative'].includes(decision.decisionState)
+        || decision.selected?.kind === 'alternative';
+    }
+    return true;
+  }
+
+  function matchesHistorySearch(decision) {
+    const query = String(historySearch?.value || '').trim().toLowerCase();
+    if (!query) return true;
+    const haystack = [
+      decision.question,
+      decision.title,
+      decision.explanation,
+      decision.original?.name,
+      decision.selected?.name,
+      decision.futureTip,
+      ...(decision.actionsNow || []),
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(query);
+  }
+
+  function renderDecisionSurfaces() {
+    const ordered = [...decisions].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    if (homeRecentList) {
+      homeRecentList.replaceChildren(...ordered.slice(0, 3).map((decision) => createRow(decision, false)));
+      if (homeRecentEmpty) homeRecentEmpty.hidden = ordered.length > 0;
+    }
+
+    if (historyList) {
+      const visible = ordered.filter((decision) => matchesHistoryFilter(decision) && matchesHistorySearch(decision));
+      historyList.replaceChildren(...visible.map((decision) => createRow(decision, true)));
+      if (historyEmpty) historyEmpty.hidden = visible.length > 0;
+      if (historyCount) historyCount.textContent = `${visible.length} ${decisionWord(visible.length)}`;
+    }
+  }
+
+  function showDecisionDetail(decision) {
+    const selected = decision.selected || decision.original || {};
+    const setText = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = value || '—';
+    };
+
+    const sourceLabels = { photo: 'Фото', text: 'Текст', voice: 'Голос' };
+    setText('detailSource', sourceLabels[decision.source] || 'Решение');
+    setText('detailDate', formatDecisionDate(decision.createdAt));
+    setText('detailName', selected.name || decision.original?.name || decision.question || 'Сохранённое решение');
+    setText('detailTitle', decision.title || 'Решение сохранено');
+    setText('detailExplanation', decision.explanation || 'Описание этого решения не сохранилось.');
+    setText('detailCalories', selected.calories || decision.calories || '—');
+    setText('detailContext', decision.context || stageLabel(decision.stage));
+    setText('detailSelectedName', selected.name || decision.original?.name || 'Исходный вариант');
+    setText('detailSelectedCalories', selected.calories || decision.calories || '—');
+    setText('detailStageNote', stageNote(decision.stage));
+
+    const actions = Array.isArray(decision.actionsNow)
+      ? decision.actionsNow.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+      : [];
+    const actionsList = document.getElementById('detailActions');
+    if (actionsList) {
+      actionsList.replaceChildren(...actions.map((text) => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        return li;
+      }));
+    }
+    const actionsCard = document.getElementById('detailActionsCard');
+    if (actionsCard) actionsCard.hidden = actions.length === 0;
+
+    const future = String(decision.futureTip || '').trim();
+    setText('detailFuture', future);
+    const futureCard = document.getElementById('detailFutureCard');
+    if (futureCard) futureCard.hidden = !future;
+
+    const verdict = document.getElementById('detailVerdict');
+    verdict?.classList.toggle('good', decision.tone === 'good' || decision.decisionState === 'fits_well');
+    showStep('detail');
   }
 
   function renderStoredDecisions() {
-    [...decisions].reverse().forEach((decision) => renderDecisionRow(decision, true));
+    renderDecisionSurfaces();
   }
 
   function importDecisions(incoming = []) {
@@ -652,7 +781,7 @@
     if (!added) return 0;
     decisions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     saveDecisions();
-    renderStoredDecisions();
+    renderDecisionSurfaces();
     renderDayContext();
     renderProgress();
     return added;
@@ -712,7 +841,7 @@
   document.getElementById('keepOriginal')?.addEventListener('click', () => saveChoice(false));
 
   flow.querySelectorAll('[data-flow-back]').forEach((button) => button.addEventListener('click', () => {
-    if (activeStep === 'ask' || activeStep === 'photo') closeFlow();
+    if (activeStep === 'ask' || activeStep === 'photo' || activeStep === 'detail') closeFlow();
     else if (activeStep === 'result') showStep(currentDecision?.source === 'photo' ? 'photo' : 'ask');
     else if (activeStep === 'alternative') showStep('result');
   }));
@@ -722,6 +851,14 @@
     window.Rinlo2Foundation?.navigate?.('history');
   });
   document.getElementById('askAgain')?.addEventListener('click', openAsk);
+  document.getElementById('detailDone')?.addEventListener('click', closeFlow);
+
+  historySearch?.addEventListener('input', renderDecisionSurfaces);
+  historyFilters.forEach((button) => button.addEventListener('click', () => {
+    historyFilter = button.dataset.historyFilter || 'all';
+    historyFilters.forEach((item) => item.classList.toggle('active', item === button));
+    renderDecisionSurfaces();
+  }));
 
   injectCalorieContext();
   renderStoredDecisions();
@@ -730,7 +867,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.5-stage-aware',
+    version: 'decision-v2.6-history-detail',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
