@@ -155,6 +155,58 @@
   }
 
 
+  async function refineAnalysis(priorAnalysis, context = {}) {
+    if (!enabled) throw error('decision_ai_disabled', 'decision_ai_disabled');
+    if (providerUnavailable) throw error('decision_ai_not_configured', 'decision_ai_not_configured', 503);
+    if (!priorAnalysis || typeof priorAnalysis !== 'object') {
+      throw error('prior_analysis_required', 'prior_analysis_required', 400);
+    }
+
+    const recentCorrections = Array.isArray(context.profile?.recentCorrections)
+      ? context.profile.recentCorrections
+      : [];
+    if (!recentCorrections.length) return { analysis: priorAnalysis, meta: { memoryRefined: false } };
+
+    const session = await auth.ensureSession();
+    if (!session?.access_token) throw error('no_supabase_session', 'no_supabase_session', 401);
+
+    const response = await fetch(`${base}/functions/v1/analyze-food`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        question: String(context.query || priorAnalysis.request_summary || priorAnalysis.dish_name || '').trim(),
+        priorAnalysis,
+        memoryRefinement: true,
+        goal: context.goal || 'weight_loss',
+        decisionStage: ['choosing','preparing','ready'].includes(context.decisionStage)
+          ? context.decisionStage
+          : (priorAnalysis.decision_stage || 'choosing'),
+        dailyTarget: Number(context.dailyTarget || 0),
+        dayCaloriesMin: Number(context.dayCaloriesMin || 0),
+        dayCaloriesMax: Number(context.dayCaloriesMax || 0),
+        profile: context.profile || {},
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw error(
+        data?.message || data?.error || `memory_refine_${response.status}`,
+        data?.error || data?.code || null,
+        response.status,
+      );
+    }
+    if (!data?.analysis) throw error('empty_memory_refinement', 'empty_memory_refinement', 502);
+    return data;
+  }
+
+
   async function analyzeAudio(audioBlob, context = {}) {
     if (!enabled) throw error('decision_ai_disabled', 'decision_ai_disabled');
     if (providerUnavailable) throw error('decision_ai_not_configured', 'decision_ai_not_configured', 503);
@@ -205,12 +257,13 @@
   }
 
   window.RinloVision = {
-    version: 'v1.4-personalized-decisions',
+    version: 'v1.5-relevant-memory',
     enabled,
     localOnly,
     analyzeFile,
     analyzeText,
     analyzeAudio,
+    refineAnalysis,
     compressImage,
     isProviderAvailable: () => !providerUnavailable,
   };
