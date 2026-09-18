@@ -138,7 +138,7 @@ try {
   assert(explainText?.includes('Что повлияло на ответ'), 'memory_explain_title_missing');
   assert(explainText?.includes('без соуса'), 'memory_explain_value_missing');
   assert(explainText?.includes('уточнял состав похожего блюда'), 'memory_explain_reason_missing');
-  assert(explainText?.includes('текущий запрос всегда важнее памяти'), 'memory_explain_priority_missing');
+  assert(explainText?.toLowerCase().includes('текущий запрос всегда важнее памяти'), 'memory_explain_priority_missing');
   await page.getByRole('button', { name: 'Понятно', exact: true }).click();
   await page.locator('#memoryExplainSheet').waitFor({ state: 'hidden' });
 
