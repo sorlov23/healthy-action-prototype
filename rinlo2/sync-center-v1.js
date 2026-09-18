@@ -70,7 +70,7 @@
   }
 
   async function accountInfo() {
-    if (!auth?.enabled) return { enabled: false, anonymous: true };
+    if (!cloudEnabled() || !auth?.enabled) return { enabled: false, anonymous: true };
     try {
       const session = auth.getSession?.() || await auth.ensureSession?.();
       const user = session?.user || {};
