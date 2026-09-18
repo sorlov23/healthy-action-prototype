@@ -88,7 +88,7 @@
         decisionStage: ['choosing','preparing','ready'].includes(context.decisionStage)
           ? context.decisionStage
           : 'ready',
-        dailyTarget: Number(context.dailyTarget || 2000),
+        dailyTarget: Number(context.dailyTarget || 0),
         dayCaloriesMin: Number(context.dayCaloriesMin || 0),
         dayCaloriesMax: Number(context.dayCaloriesMax || 0),
       }),
