@@ -50,19 +50,20 @@
       </section>
 
       <section class="screen" data-screen="history">
-        <p class="eyebrow dark">ТВОИ ПРЕДЫДУЩИЕ ВЫБОРЫ</p><h1 class="page-title">История решений</h1>
-        <div class="filters"><button class="active">Все</button><button>Подошло</button><button>С корректировкой</button></div>
-        <label class="search"><span>⌕</span><input placeholder="Найти блюдо или решение" /></label>
-        <div class="section-head"><h2>Сегодня</h2><span id="todayCount">2 решения</span></div>
-        <div class="decision-list" id="todayHistoryList">
-          <article class="decision-row large"><div class="thumb food-berries"></div><div class="row-copy"><b>Овсянка с ягодами</b><span class="verdict good">● Можно брать</span><small>Сытный завтрак без лишней сложности.</small></div><span>›</span></article>
-          <article class="decision-row large"><div class="thumb food-salad"></div><div class="row-copy"><b>Салат с курицей</b><span class="verdict neutral">● Вписывается</span><small>Соус лучше оставить отдельно.</small></div><span>›</span></article>
+        <p class="eyebrow dark">ТВОИ ПРЕДЫДУЩИЕ ВЫБОРЫ</p>
+        <h1 class="page-title">История решений</h1>
+        <div class="filters" id="historyFilters">
+          <button class="active" data-history-filter="all">Все</button>
+          <button data-history-filter="fits">Можно брать</button>
+          <button data-history-filter="adjusted">С корректировкой</button>
         </div>
-        <div class="section-head"><h2>Вчера</h2><span>2 решения</span></div>
-        <div class="decision-list">
-          <article class="decision-row large"><div class="thumb food-burger"></div><div class="row-copy"><b>Бургер с картошкой</b><span class="verdict adjust">● Есть вариант лучше</span><small>Выбран бургер без большого комбо.</small></div><span>›</span></article>
-          <article class="decision-row large"><div class="thumb food-coffee"></div><div class="row-copy"><b>Капучино</b><span class="verdict good">● Можно брать</span><small>Без сиропа — проще вписать в день.</small></div><span>›</span></article>
-        </div>
+        <label class="search"><span>⌕</span><input id="historySearch" placeholder="Найти блюдо или решение" /></label>
+        <div class="section-head"><h2>Недавние</h2><span id="historyCount">0 решений</span></div>
+        <div class="decision-list" id="historyList"></div>
+        <article class="history-empty" id="historyEmpty">
+          <strong>Здесь появятся решения, которые ты принимаешь с Rinlo.</strong>
+          <p>Никакого ручного дневника — достаточно сохранить выбор после ответа.</p>
+        </article>
       </section>
 
       <section class="screen" data-screen="progress">
@@ -212,6 +213,43 @@
         <article class="difference-card"><b>В чём разница?</b><ul id="differenceList"><li>примерно на 280 ккал меньше</li><li>меньше сахара</li><li>проще вписать в текущий темп</li></ul></article>
       </div>
       <div class="flow-footer stacked"><button class="btn primary wide" id="chooseAlternative">Выбрать этот вариант</button><button class="btn secondary wide" id="keepOriginal">Оставить исходный</button></div>
+    </section>
+
+    <section class="flow-step" data-flow-step="detail">
+      <header class="flow-header"><button data-flow-back aria-label="Закрыть">←</button><b>Решение</b><span></span></header>
+      <div class="flow-body detail-body">
+        <div class="detail-meta"><span id="detailSource">Фото</span><span id="detailDate">Сегодня · 19:30</span></div>
+        <h1 id="detailName">Сохранённое решение</h1>
+        <div class="detail-verdict" id="detailVerdict"><span>✓</span><b id="detailTitle">Можно брать</b></div>
+
+        <article class="detail-section">
+          <small>ЧТО БЫЛО В МОМЕНТ РЕШЕНИЯ</small>
+          <p id="detailExplanation"></p>
+          <div class="detail-facts">
+            <span><small>Оценка</small><b id="detailCalories">—</b></span>
+            <span><small>Контекст</small><b id="detailContext">—</b></span>
+          </div>
+        </article>
+
+        <article class="detail-section" id="detailActionsCard" hidden>
+          <small>МОЖНО БЫЛО СДЕЛАТЬ ТОГДА</small>
+          <ul id="detailActions"></ul>
+        </article>
+
+        <article class="detail-section selected-detail">
+          <small>ЧТО ТЫ ВЫБРАЛ</small>
+          <b id="detailSelectedName">—</b>
+          <p id="detailSelectedCalories">—</p>
+        </article>
+
+        <article class="detail-section future-detail" id="detailFutureCard" hidden>
+          <small>НА БУДУЩЕЕ</small>
+          <p id="detailFuture"></p>
+        </article>
+
+        <p class="detail-stage-note" id="detailStageNote"></p>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" id="detailDone">Готово</button></div>
     </section>
 
     <section class="flow-step saved-step" data-flow-step="saved">
