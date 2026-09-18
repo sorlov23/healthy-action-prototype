@@ -12,6 +12,23 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+
+function authenticatedUserId(req: Request): string | null {
+  const header = req.headers.get("Authorization") || "";
+  const token = header.replace(/^Bearer\s+/i, "");
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+    const claims = JSON.parse(atob(padded));
+    if (claims?.role !== "authenticated" || !claims?.sub) return null;
+    return String(claims.sub);
+  } catch {
+    return null;
+  }
+}
+
 const schema = {
   type: "object",
   additionalProperties: false,
@@ -78,6 +95,9 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  const userId = authenticatedUserId(req);
+  if (!userId) return json({ error: "authenticated_session_required" }, 401);
 
   const apiKey = Deno.env.get("OPENAI_API_KEY") || "";
   if (!apiKey) {
