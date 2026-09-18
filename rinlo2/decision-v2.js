@@ -43,10 +43,10 @@
 
   const presets = {
     burger: {
-      title: 'Можно, но аккуратнее', icon: '✓', tone: 'caution',
+      title: 'Можно, но лучше аккуратнее', icon: '✓', tone: 'caution',
       explanation: 'Бургер и кола — нормальный выбор иногда, но вместе это довольно калорийно. Не нужно отказываться от идеи целиком — достаточно немного облегчить комбинацию.',
       calories: '~ 820 ккал', context: 'плотный выбор',
-      fit: 'Если хочется сохранить текущий темп, лучше убрать то, что почти не добавляет удовольствия, но заметно увеличивает калорийность.',
+      fit: 'Если хочется сохранить текущий темп, проще уменьшить калорийность напитка или соуса, не меняя саму идею.',
       original: { name: 'Бургер + кола', calories: '~ 820 ккал', thumb: 'food-burger', image: "url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=85')" },
       alternative: { name: 'Бургер без соуса + Cola Zero', calories: '~ 540 ккал', diffs: ['примерно на 280 ккал меньше', 'меньше сахара', 'проще вписать в текущий темп'], image: "url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=85')" }
     },
@@ -56,7 +56,7 @@
       calories: '~ 560 ккал', context: 'нормально для ужина',
       fit: 'Одна обычная порция без темпуры и лишнего соуса выглядит спокойно для твоей текущей цели.',
       original: { name: 'Роллы на ужин', calories: '~ 560 ккал', thumb: 'food-salad', image: "url('https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=500&q=85')" },
-      alternative: { name: 'Роллы без темпуры + соус отдельно', calories: '~ 430 ккал', diffs: ['меньше масла', 'проще контролировать соус', 'та же идея ужина'], image: "url('https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=500&q=85')" }
+      alternative: null
     },
     oatmeal: {
       title: 'Можно брать', icon: '✓', tone: 'good',
@@ -67,7 +67,7 @@
       alternative: null
     },
     generic: {
-      title: 'Можно, если вписывается в день', icon: '✓', tone: 'caution',
+      title: 'Можно, но лучше аккуратнее', icon: '✓', tone: 'caution',
       explanation: 'По одному названию нельзя делать вид, что всё известно точно. Для первого решения Rinlo даёт ориентир, а не выдуманную точность.',
       calories: '~ 500–650 ккал', context: 'нужен контекст порции',
       fit: 'Если порция обычная, это можно оставить. В следующем slice добавим уточняющие вопросы и реальный анализ состава.',
@@ -175,7 +175,7 @@
       question: description || analysis.dish_name || 'Фото блюда',
       createdAt: new Date().toISOString(),
       decisionState: analysis.decision_state || (alternative ? 'fits_with_adjustment' : 'fits_well'),
-      title: analysis.verdict_title || (alternative ? 'Можно, но аккуратнее' : 'Можно брать'),
+      title: analysis.verdict_title || (alternative ? 'Можно, но лучше аккуратнее' : 'Можно брать'),
       icon: '✓',
       tone: analysis.decision_state === 'fits_well' ? 'good' : 'caution',
       explanation: analysis.explanation || 'Rinlo оценил блюдо по фото.',
@@ -465,7 +465,7 @@
     const copy = document.createElement('div'); copy.className = 'row-copy';
     const name = document.createElement('b'); name.textContent = decision.selected?.name || decision.original.name;
     const verdict = document.createElement('span'); verdict.className = `verdict ${decision.selected?.kind === 'alternative' || decision.tone === 'good' ? 'good' : 'neutral'}`;
-    verdict.textContent = decision.selected?.kind === 'alternative' ? '● Выбран лучший вариант' : `● ${decision.title}`;
+    verdict.textContent = decision.selected?.kind === 'alternative' ? '● Выбран вариант с корректировкой' : `● ${decision.title}`;
     const time = document.createElement('small');
     time.textContent = `Сегодня · ${new Date(decision.createdAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`;
     const arrow = document.createElement('span'); arrow.textContent = '›';
@@ -576,7 +576,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.3-vision',
+    version: 'decision-v2.4-canonical-copy',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
