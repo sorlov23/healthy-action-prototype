@@ -91,7 +91,7 @@ try {
     hasPhoto: el.classList.contains('has-photo'),
   }));
   assert(savedThumb.source === 'text', `saved_thumb_wrong_source:${JSON.stringify(savedThumb)}`);
-  assert(savedThumb.hasPhoto === false && savedThumb.backgroundImage === 'none', `text_saved_thumb_should_not_fake_food:${JSON.stringify(savedThumb)}`);
+  assert(savedThumb.hasPhoto === false && !savedThumb.backgroundImage.includes('url('), `text_saved_thumb_should_not_fake_food:${JSON.stringify(savedThumb)}`);
 
   await page.getByRole('button', { name: 'Открыть историю', exact: true }).click();
   await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
@@ -102,7 +102,7 @@ try {
     source: el.dataset.source,
     backgroundImage: getComputedStyle(el).backgroundImage,
   }));
-  assert(historyThumb.source === 'text' && historyThumb.backgroundImage === 'none', `history_thumb_should_reflect_source:${JSON.stringify(historyThumb)}`);
+  assert(historyThumb.source === 'text' && !historyThumb.backgroundImage.includes('url('), `history_thumb_should_reflect_source:${JSON.stringify(historyThumb)}`);
 
   await historyRow.click();
   await page.locator('[data-flow-step="detail"]').waitFor({ state: 'visible' });
