@@ -161,18 +161,25 @@
     }
 
     if (account) {
+      const protectionOwnsAccountUi = Boolean(window.Rinlo2AccountProtection);
       if (!account.enabled) {
         setText('syncAccountMode', 'Локальный режим');
-        setText('settingsAccountBadge', 'Локальный');
-        setText('settingsAccountText', 'Облачная сессия сейчас недоступна. Данные на устройстве продолжают работать.');
+        if (!protectionOwnsAccountUi) {
+          setText('settingsAccountBadge', 'Локальный');
+          setText('settingsAccountText', 'Облачная сессия сейчас недоступна. Данные на устройстве продолжают работать.');
+        }
       } else if (account.anonymous) {
         setText('syncAccountMode', 'Временный аккаунт');
-        setText('settingsAccountBadge', 'Временный');
-        setText('settingsAccountText', 'Сейчас Rinlo использует временный аккаунт без регистрации. Если очистить данные браузера или сменить устройство, этот аккаунт нельзя будет восстановить.');
+        if (!protectionOwnsAccountUi) {
+          setText('settingsAccountBadge', 'Временный');
+          setText('settingsAccountText', 'Сейчас Rinlo использует временный аккаунт без регистрации. Если очистить данные браузера или сменить устройство, этот аккаунт нельзя будет восстановить.');
+        }
       } else {
         setText('syncAccountMode', 'Защищённый аккаунт');
-        setText('settingsAccountBadge', 'Защищён');
-        setText('settingsAccountText', 'Аккаунт можно восстановить на другом устройстве. Данные Rinlo остаются привязаны к этой учётной записи.');
+        if (!protectionOwnsAccountUi) {
+          setText('settingsAccountBadge', 'Защищён');
+          setText('settingsAccountText', 'Email подтверждён. Данные Rinlo остаются привязаны к этой учётной записи.');
+        }
       }
     }
   }
