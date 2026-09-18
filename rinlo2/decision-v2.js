@@ -289,6 +289,109 @@
     target.textContent = formatCalories(future);
   }
 
+
+  function decisionsSince(days = 7) {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return decisions.filter((decision) => {
+      const time = new Date(decision.createdAt || 0).getTime();
+      return Number.isFinite(time) && time >= cutoff;
+    });
+  }
+
+  function decisionWord(count) {
+    const n10 = count % 10;
+    const n100 = count % 100;
+    if (n10 === 1 && n100 !== 11) return 'решение';
+    if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return 'решения';
+    return 'решений';
+  }
+
+  function progressPattern(items) {
+    const corpus = items.map((decision) => [
+      decision.question,
+      decision.selected?.name,
+      decision.original?.name,
+      decision.alternative?.name,
+      ...(decision.alternative?.diffs || []),
+      ...(decision.actionsNow || []),
+      decision.futureTip,
+    ].filter(Boolean).join(' ')).join(' ').toLowerCase();
+
+    const patterns = [
+      {
+        score: (corpus.match(/напит|кола|zero|сок|лимонад|кофе/g) || []).length,
+        title: 'Чаще всего помогает корректировать напиток.',
+        text: 'Основную идею еды можно оставить, а заметную разницу часто даёт напиток без сахара или более простой вариант.',
+      },
+      {
+        score: (corpus.match(/соус|майон|масл|заправ/g) || []).length,
+        title: 'Чаще всего разница — в соусе или добавках.',
+        text: 'Rinlo будет сначала искать небольшую корректировку, а не предлагать полностью менять блюдо.',
+      },
+      {
+        score: (corpus.match(/порц|добавк|втор(ая|ую)|ещ[её]/g) || []).length,
+        title: 'Самый частый рычаг — порция и добавка.',
+        text: 'Для готовой еды это особенно полезно: менять приготовленное не нужно, важнее то, что ещё можно сделать сейчас.',
+      },
+      {
+        score: (corpus.match(/гарнир|фри|картош|хлеб/g) || []).length,
+        title: 'Чаще всего можно сохранить основное блюдо.',
+        text: 'Изменение гарнира или необязательной добавки нередко даёт больше пользы, чем полная замена еды.',
+      },
+    ].sort((a, b) => b.score - a.score);
+
+    if (patterns[0]?.score > 0) return patterns[0];
+    return {
+      title: 'Ты чаще улучшаешь выбор без полной замены блюда.',
+      text: 'Rinlo будет продолжать искать небольшие действия, которые реально доступны в момент решения.',
+    };
+  }
+
+  function renderProgress() {
+    const countNode = document.getElementById('progressDecisionCount');
+    const adjustedNode = document.getElementById('progressAdjustedCount');
+    const chosenNode = document.getElementById('progressChosenAdjustmentCount');
+    const patternTitle = document.getElementById('progressPatternTitle');
+    const patternText = document.getElementById('progressPatternText');
+    const weightNode = document.getElementById('progressWeightContext');
+    if (!countNode) return;
+
+    const recent = decisionsSince(7);
+    const adjusted = recent.filter((decision) =>
+      ['fits_with_adjustment', 'better_alternative'].includes(decision.decisionState)
+      || Boolean(decision.alternative)
+    ).length;
+    const chosenAdjustment = recent.filter((decision) =>
+      decision.selected?.kind === 'alternative'
+    ).length;
+
+    countNode.textContent = recent.length
+      ? `${recent.length} ${decisionWord(recent.length)}`
+      : 'Пока нет решений';
+    if (adjustedNode) adjustedNode.textContent = String(adjusted);
+    if (chosenNode) chosenNode.textContent = String(chosenAdjustment);
+
+    if (patternTitle && patternText) {
+      if (recent.length < 3) {
+        const missing = 3 - recent.length;
+        patternTitle.textContent = 'Нужно ещё несколько решений.';
+        patternText.textContent = `Ещё ${missing} ${decisionWord(missing)} — и Rinlo сможет показать первый повторяющийся паттерн без догадок.`;
+      } else {
+        const pattern = progressPattern(recent);
+        patternTitle.textContent = pattern.title;
+        patternText.textContent = pattern.text;
+      }
+    }
+
+    const foundation = window.Rinlo2Foundation?.getState?.() || {};
+    const current = Number(foundation.currentWeight);
+    const target = Number(foundation.targetWeight);
+    if (weightNode && Number.isFinite(current) && Number.isFinite(target)) {
+      const fmt = (value) => value.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      weightNode.textContent = `${fmt(current)} → ${fmt(target)} кг`;
+    }
+  }
+
   function showStep(name) {
     activeStep = name;
     steps.forEach((step) => step.classList.toggle('active', step.dataset.flowStep === name));
@@ -501,6 +604,7 @@
     savedCalories.textContent = selected.calories;
     renderDecisionRow(currentDecision, true);
     renderDayContext();
+    renderProgress();
     showStep('saved');
   }
 
@@ -552,6 +656,7 @@
     saveDecisions();
     renderStoredDecisions();
     renderDayContext();
+    renderProgress();
     return added;
   }
 
@@ -623,6 +728,7 @@
   injectCalorieContext();
   renderStoredDecisions();
   renderDayContext();
+  renderProgress();
   updateQuestionState();
 
   window.Rinlo2Decisions = {
