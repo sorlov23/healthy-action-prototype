@@ -58,7 +58,7 @@
   function isProtectedUser(user) {
     if (!user?.id) return false;
     if (user.is_anonymous === false) return true;
-    if (user.email_confirmed_at || user.confirmed_at) return true;
+    if (user.email_confirmed_at) return true;
     return Array.isArray(user.identities) && user.identities.some((identity) =>
       identity?.provider === 'email'
       && identity?.identity_data?.email_verified === true
