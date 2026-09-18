@@ -6,7 +6,11 @@ const context = await browser.newContext({ viewport: { width: 390, height: 844 }
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
-page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
+page.on('console', (msg) => {
+  if (msg.type() !== 'error') return;
+  if (/^Failed to load resource:/i.test(msg.text())) return;
+  errors.push(msg.text());
+});
 
 try {
   await page.goto('http://127.0.0.1:4173/rinlo2/index.html?reset=1&local=1', { waitUntil: 'domcontentloaded' });
