@@ -39,8 +39,9 @@ try {
   assert(homeGeometry.buttons[0].bottom < homeGeometry.buttons[1].top, `home_ctas_not_stacked:${JSON.stringify(homeGeometry)}`);
 
   await page.locator('[data-action="voice"]').click();
-  await page.getByRole('heading', { name: 'Что собираешься съесть?', exact: true }).waitFor({ state: 'visible' });
-  await page.locator('[data-flow-step="voice"]').waitFor({ state: 'visible' });
+  const voiceStep = page.locator('[data-flow-step="voice"]');
+  await voiceStep.waitFor({ state: 'visible' });
+  await voiceStep.getByRole('heading', { name: 'Что собираешься съесть?', exact: true }).waitFor({ state: 'visible' });
   assert(await page.locator('#voiceRecordButton').isVisible(), 'voice_record_button_missing');
   assert((await page.locator('#voiceStateTitle').textContent())?.length > 0, 'voice_state_missing');
   await page.locator('[data-flow-step="voice"] [data-flow-back]').click();
