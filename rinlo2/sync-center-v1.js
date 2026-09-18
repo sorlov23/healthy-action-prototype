@@ -74,9 +74,14 @@
     try {
       const session = auth.getSession?.() || await auth.ensureSession?.();
       const user = session?.user || {};
-      const anonymous = user.is_anonymous !== false
-        && !(Array.isArray(user.identities) && user.identities.length > 0);
-      return { enabled: Boolean(session?.user?.id), anonymous, user };
+      const verifiedEmailIdentity = Array.isArray(user.identities)
+        && user.identities.some((identity) =>
+          identity?.provider === 'email'
+          && identity?.identity_data?.email_verified === true
+        );
+      const protectedAccount = user.is_anonymous === false
+        || Boolean(user.email_confirmed_at || user.confirmed_at || verifiedEmailIdentity);
+      return { enabled: Boolean(session?.user?.id), anonymous: !protectedAccount, user };
     } catch {
       return { enabled: false, anonymous: true };
     }
