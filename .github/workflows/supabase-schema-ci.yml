@@ -4,12 +4,12 @@ on:
   push:
     paths:
       - 'supabase/schema/**'
-      - 'supabase/migrations/*rinlo_decision_correction*.sql'
+      - 'supabase/migrations/*rinlo_decision_*.sql'
       - '.github/workflows/supabase-schema-ci.yml'
   pull_request:
     paths:
       - 'supabase/schema/**'
-      - 'supabase/migrations/*rinlo_decision_correction*.sql'
+      - 'supabase/migrations/*rinlo_decision_*.sql'
       - '.github/workflows/supabase-schema-ci.yml'
 
 jobs:
@@ -82,6 +82,9 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260918195449_rinlo_decision_corrections_v1.sql
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260918201000_rinlo_decision_correction_memory_control.sql
 
+      - name: Apply Rinlo decision feedback
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20260918205913_rinlo_decision_feedback_v1.sql
+
       - name: Verify security invariants
         run: |
           psql -v ON_ERROR_STOP=1 <<'SQL'
@@ -95,12 +98,12 @@ jobs:
             select count(*) into table_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r';
-            if table_count <> 15 then raise exception 'expected 15 public tables, got %', table_count; end if;
+            if table_count <> 16 then raise exception 'expected 16 public tables, got %', table_count; end if;
 
             select count(*) into rls_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity;
-            if rls_count <> 15 then raise exception 'expected RLS on 15 public tables, got %', rls_count; end if;
+            if rls_count <> 16 then raise exception 'expected RLS on 16 public tables, got %', rls_count; end if;
 
             if to_regclass('public.app_users') is not null or to_regclass('public.auth_sessions') is not null then
               raise exception 'legacy auth tables must not exist';
@@ -287,6 +290,63 @@ jobs:
             exit 1
           else
             echo "cross-user correction write correctly blocked by RLS"
+          fi
+
+      - name: Verify Rinlo feedback ownership and upsert
+        run: |
+          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'not_helpful'
+          begin;
+          insert into auth.users(id) values
+            ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+            ('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+          insert into public.rinlo_decision_feedback(
+            user_id, client_decision_id, feedback, decision_source, decision_stage, decision_state
+          ) values (
+            'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            'ci-feedback-decision',
+            'helpful',
+            'text',
+            'choosing',
+            'fits_with_adjustment'
+          )
+          on conflict(user_id, client_decision_id)
+          do update set feedback=excluded.feedback, updated_at=now();
+
+          insert into public.rinlo_decision_feedback(
+            user_id, client_decision_id, feedback
+          ) values (
+            'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            'ci-feedback-decision',
+            'not_helpful'
+          )
+          on conflict(user_id, client_decision_id)
+          do update set feedback=excluded.feedback, updated_at=now();
+
+          select feedback
+          from public.rinlo_decision_feedback
+          where user_id=auth.uid() and client_decision_id='ci-feedback-decision';
+          rollback;
+          SQL
+
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          insert into auth.users(id) values
+            ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+            ('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+          insert into public.rinlo_decision_feedback(user_id, client_decision_id, feedback)
+          values('cccccccc-cccc-4ccc-8ccc-cccccccccccc','ci-cross-feedback','helpful');
+          rollback;
+          SQL
+          then
+            echo "cross-user feedback write unexpectedly succeeded"
+            exit 1
+          else
+            echo "cross-user feedback write correctly blocked by RLS"
           fi
 
       - name: Verify catalogue is read-only
