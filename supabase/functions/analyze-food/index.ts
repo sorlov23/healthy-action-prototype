@@ -34,6 +34,7 @@ const schema = {
   properties: {
     status: { type: "string", enum: ["recognized", "needs_clarification"] },
     dish_name: { type: "string" },
+    request_summary: { type: "string" },
     confidence: { type: "number", minimum: 0, maximum: 1 },
     clarifying_question: { type: "string" },
     calorie_min: { type: "integer", minimum: 0 },
@@ -70,6 +71,7 @@ const schema = {
   required: [
     "status",
     "dish_name",
+    "request_summary",
     "confidence",
     "clarifying_question",
     "calorie_min",
@@ -107,9 +109,12 @@ const canonicalVerdicts: Record<string, string> = {
 
 function normalizeAnalysis(raw: any, requestedStage = "ready") {
   const analysis = raw && typeof raw === "object" ? raw : {};
-  const stage = ["choosing", "preparing", "ready"].includes(requestedStage)
-    ? requestedStage
-    : "ready";
+  const modelStage = ["choosing", "preparing", "ready"].includes(analysis.decision_stage)
+    ? analysis.decision_stage
+    : "choosing";
+  const stage = requestedStage === "auto"
+    ? modelStage
+    : (["choosing", "preparing", "ready"].includes(requestedStage) ? requestedStage : "ready");
   const confidence = Math.max(0, Math.min(1, Number(analysis.confidence || 0)));
   const alternative = analysis.alternative && typeof analysis.alternative === "object"
     ? analysis.alternative
@@ -213,20 +218,29 @@ Deno.serve(async (req: Request) => {
   const body = await req.json().catch(() => null);
   const question = String(body?.question || "").trim();
   const imageDataUrl = String(body?.imageDataUrl || "");
-  const match = imageDataUrl
+  const audioDataUrl = String(body?.audioDataUrl || "");
+
+  const imageMatch = imageDataUrl
     ? /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=]+)$/i.exec(imageDataUrl)
     : null;
+  const audioMatch = audioDataUrl
+    ? /^data:(audio\/(?:wav|wave|x-wav|mp3|mpeg|mp4|m4a|aac|ogg|flac|webm|opus));base64,([A-Za-z0-9+/=]+)$/i.exec(audioDataUrl)
+    : null;
 
-  if (!question && !imageDataUrl) return json({ error: "input_required" }, 400);
-  if (imageDataUrl && !match) return json({ error: "invalid_image" }, 400);
+  if (!question && !imageDataUrl && !audioDataUrl) return json({ error: "input_required" }, 400);
+  if (imageDataUrl && !imageMatch) return json({ error: "invalid_image" }, 400);
+  if (audioDataUrl && !audioMatch) return json({ error: "invalid_audio" }, 400);
   if (imageDataUrl.length > 9_000_000) return json({ error: "image_too_large" }, 413);
+  if (audioDataUrl.length > 16_000_000) return json({ error: "audio_too_large" }, 413);
 
-  const mimeType = match
-    ? (match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase())
+  const imageMimeType = imageMatch
+    ? (imageMatch[1].toLowerCase() === "image/jpg" ? "image/jpeg" : imageMatch[1].toLowerCase())
     : "";
-  const imageBase64 = match ? match[2] : "";
+  const imageBase64 = imageMatch ? imageMatch[2] : "";
+  const audioMimeType = audioMatch ? audioMatch[1].toLowerCase() : "";
+  const audioBase64 = audioMatch ? audioMatch[2] : "";
   const goal = String(body?.goal || "weight_loss");
-  const decisionStage = ["choosing", "preparing", "ready"].includes(String(body?.decisionStage || ""))
+  const decisionStage = ["choosing", "preparing", "ready", "auto"].includes(String(body?.decisionStage || ""))
     ? String(body.decisionStage)
     : "ready";
   const dailyTarget = Number(body?.dailyTarget || 0);
@@ -253,6 +267,8 @@ Deno.serve(async (req: Request) => {
     "Если есть полезная идея вроде заменить сосиску мясом в следующий раз, помести её только в future_tip, а не в alternative.",
     "actions_now — максимум три коротких действия, которые человек действительно может сделать прямо сейчас.",
     "future_tip — необязательная одна короткая идея на следующий похожий приём пищи.",
+    "request_summary — коротко и естественно сформулируй, что пользователь собирается съесть или о чём спрашивает; для аудио передай смысл речи без слов-паразитов.",
+    "Если стадия передана как auto, определи choosing/preparing/ready из смысла речи. Явные слова «уже приготовил», «уже ем», «стоит передо мной» означают ready.",
     "Используй только четыре канонических статуса Rinlo и ровно такие заголовки:",
     "fits_well = «Можно брать».",
     "fits_with_adjustment = «Можно, но лучше аккуратнее».",
@@ -268,11 +284,11 @@ Deno.serve(async (req: Request) => {
 
   const userText = [
     `Цель: ${goal}.`,
-    `Стадия решения: ${decisionStage}.`,
+    decisionStage === "auto" ? "Стадию решения определи из запроса пользователя." : `Стадия решения: ${decisionStage}.`,
     dailyTarget > 0 ? `Персональный ориентир дня: около ${dailyTarget} ккал.` : "Персональный калорийный ориентир пока не задан.",
     `По уже сохранённым решениям Rinlo сегодня: примерно ${dayCaloriesMin}–${dayCaloriesMax} ккал.`,
-    question ? `Вопрос пользователя: ${question}` : "Пользователь прислал фото еды.",
-    imageDataUrl ? "Если фото и текст расходятся, не угадывай: попроси одно уточнение." : "Проанализируй текстовый запрос без выдуманной точности.",
+    question ? `Вопрос пользователя: ${question}` : (audioDataUrl ? "Пользователь прислал голосовой вопрос о еде." : "Пользователь прислал фото еды."),
+    imageDataUrl ? "Если фото и текст расходятся, не угадывай: попроси одно уточнение." : (audioDataUrl ? "Пойми смысл речи и проанализируй запрос без выдуманной точности." : "Проанализируй текстовый запрос без выдуманной точности."),
     "Верни решение строго по JSON-схеме.",
   ].join(" ");
 
@@ -296,8 +312,14 @@ Deno.serve(async (req: Request) => {
             { text: userText },
             ...(imageDataUrl ? [{
               inlineData: {
-                mimeType,
+                mimeType: imageMimeType,
                 data: imageBase64,
+              },
+            }] : []),
+            ...(audioDataUrl ? [{
+              inlineData: {
+                mimeType: audioMimeType,
+                data: audioBase64,
               },
             }] : []),
           ],
