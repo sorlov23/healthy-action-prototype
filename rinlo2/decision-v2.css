@@ -243,3 +243,24 @@
 .correction-trust-note{margin:13px 1px 15px;color:#7b848c;font-size:10px;line-height:1.45}
 .correction-sheet-panel>#saveCorrection{min-height:54px;border-radius:17px}
 @media(max-width:380px){.correction-types{grid-template-columns:1fr}.correction-sheet-panel{padding-left:16px;padding-right:16px}.correction-sheet-head h2{font-size:24px}}
+
+
+/* Transparent correction memory */
+.profile-memory-card{margin-top:10px;padding:17px;border-radius:22px;background:#fff;border:1px solid rgba(17,19,21,.055);box-shadow:0 9px 28px rgba(17,19,21,.04)}
+.profile-memory-head{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:12px;align-items:start}
+.profile-memory-head small{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8a9298;font-weight:850}
+.profile-memory-head h2{margin:5px 0 5px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
+.profile-memory-head p{margin:0;color:#747d84;font-size:10px;line-height:1.4}
+.profile-memory-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:var(--rinlo-lime);font-size:20px;font-weight:900}
+.profile-memory-explain{margin:12px 0 10px;color:#7b848c;font-size:10px;line-height:1.5}
+.profile-memory-list{display:grid;gap:8px}
+.profile-memory-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:1px solid rgba(17,19,21,.06);border-radius:16px;background:#f7f8f9}
+.profile-memory-copy{min-width:0}
+.profile-memory-copy small{display:block;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#90979d;font-weight:800}
+.profile-memory-copy b{display:block;margin-top:4px;font-size:12px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-memory-copy p{margin:4px 0 0;color:#667078;font-size:10px;line-height:1.4}
+.profile-memory-row>button{align-self:center;border:1px solid rgba(17,19,21,.08);border-radius:999px;background:#fff;padding:8px 10px;color:#6f777e;font-size:9px;font-weight:800}
+.profile-memory-row>button:disabled{opacity:.55}
+.profile-memory-empty{margin:0;padding:14px;border:1px dashed rgba(17,19,21,.11);border-radius:15px;color:#7b848c;font-size:10px;line-height:1.45;text-align:center;background:#fafbfb}
+.profile-memory-more{display:block;margin-top:9px;color:#8b9399;font-size:9px;text-align:center}
+.profile-memory-status{display:block;min-height:16px;margin-top:8px;color:#62882b;font-size:9px;font-weight:750;text-align:center}
