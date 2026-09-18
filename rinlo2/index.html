@@ -122,16 +122,52 @@
       </section>
 
       <section class="screen" data-screen="profile">
-        <p class="eyebrow dark">КОНТЕКСТ ДЛЯ РЕШЕНИЙ</p><h1 class="page-title">Профиль</h1>
-        <article class="goal-card">
-          <div><small>Сейчас</small><strong>70,2 кг</strong></div><div class="goal-line"><span style="width:44%"></span></div><div><small>Цель</small><strong>68,0 кг</strong></div>
+        <p class="eyebrow dark">КОНТЕКСТ ДЛЯ РЕШЕНИЙ</p>
+        <h1 class="page-title">Профиль</h1>
+
+        <article class="profile-summary-card">
+          <small>Rinlo использует только то, что реально меняет ответ</small>
+          <strong id="profileSummaryTitle">Контекст пока минимальный</strong>
+          <p id="profileSummaryText">Можно оставить всё как есть или добавить пару ориентиров ниже.</p>
         </article>
-        <div class="settings-list">
-          <button><span>◎</span><div><b>Цель и вес</b><small>Снижение веса · умеренный темп</small></div><i>›</i></button>
-          <button><span>◌</span><div><b>Предпочтения в еде</b><small>Без жёстких ограничений</small></div><i>›</i></button>
-          <button><span>⌁</span><div><b>Что учитывать</b><small>Сытность, калорийность, привычные замены</small></div><i>›</i></button>
-          <button><span>◐</span><div><b>Приватность и данные</b><small>Аккаунт, синхронизация, экспорт</small></div><i>›</i></button>
-        </div>
+
+        <article class="profile-editor-card">
+          <small class="profile-label">Цель</small>
+          <div class="profile-goal-options">
+            <button type="button" data-profile-goal="lose">Снизить вес</button>
+            <button type="button" data-profile-goal="maintain">Удерживать</button>
+            <button type="button" data-profile-goal="aware">Осознаннее</button>
+          </div>
+
+          <div class="profile-weight-grid">
+            <label>
+              <span>Сейчас</span>
+              <div><input id="profileCurrentWeight" inputmode="decimal" placeholder="—" /><b>кг</b></div>
+            </label>
+            <label>
+              <span>Цель</span>
+              <div><input id="profileTargetWeight" inputmode="decimal" placeholder="—" /><b>кг</b></div>
+            </label>
+          </div>
+
+          <small class="profile-label priorities-label">Что важнее в спорных случаях</small>
+          <div class="profile-priorities">
+            <button type="button" data-profile-priority="satiety">Сытность</button>
+            <button type="button" data-profile-priority="calories">Калорийность</button>
+            <button type="button" data-profile-priority="familiar">Привычные продукты</button>
+            <button type="button" data-profile-priority="simplicity">Простота</button>
+          </div>
+          <p class="profile-hint">Можно выбрать несколько. Это не жёсткие правила, а подсказка Rinlo, что предпочесть при равных вариантах.</p>
+
+          <button class="btn primary wide" id="saveDecisionProfile">Сохранить контекст</button>
+          <span class="profile-save-state" id="profileSaveState" aria-live="polite"></span>
+        </article>
+
+        <article class="profile-trust-card">
+          <b>Без скрытой математики</b>
+          <p>Вес и цель не превращаются в «точную норму калорий». Rinlo использует их только как контекст решения.</p>
+        </article>
+
         <article class="brand-card"><img src="./logo-v2.svg" alt="" /><div><b>Меньше сомнений.<br>Больше нормальных решений.</b><small>Rinlo Decisions · prototype</small></div></article>
       </section>
     </main>
@@ -340,10 +376,10 @@
       <h1>К какой цели идём?</h1>
       <p class="lead">Никаких анкет про настроение и привычки. Для foundation достаточно базового контекста.</p>
       <div class="form-grid">
-        <label>Текущий вес<input id="currentWeight" inputmode="decimal" value="70.2" /><span>кг</span></label>
-        <label>Цель<input id="targetWeight" inputmode="decimal" value="68.0" /><span>кг</span></label>
+        <label>Текущий вес<input id="currentWeight" inputmode="decimal" placeholder="Например, 80" /><span>кг</span></label>
+        <label>Цель<input id="targetWeight" inputmode="decimal" placeholder="Например, 72" /><span>кг</span></label>
       </div>
-      <div class="goal-choice"><button class="active">Снизить вес</button><button>Удерживать</button></div>
+      <div class="goal-choice"><button class="active" data-setup-goal="lose">Снизить вес</button><button data-setup-goal="maintain">Удерживать</button><button data-setup-goal="aware">Питаться осознаннее</button></div>
       <button class="btn primary wide" id="finishOnboarding">Готово →</button>
     </section>
   </div>
@@ -352,6 +388,7 @@
   <script src="../runtime-config.js"></script>
   <script src="../rinlo-supabase-auth-v1.js"></script>
   <script src="./app.js"></script>
+  <script src="./supabase-profile-v1.js"></script>
   <script src="./vision-v1.js"></script>
   <script src="./decision-v2.js"></script>
   <script src="./supabase-decisions-v1.js"></script>
