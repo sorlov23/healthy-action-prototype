@@ -138,18 +138,31 @@
     return (Array.isArray(data) ? data : []).map(fromRow).filter(Boolean);
   }
 
+  function correctionTime(item) {
+    const time = new Date(item?.revokedAt || item?.createdAt || 0).getTime();
+    return Number.isFinite(time) ? time : 0;
+  }
+
   function mergeCorrections(incoming = []) {
     const byId = new Map(corrections.map((item) => [item.id, item]));
-    let added = 0;
+    let changed = 0;
     incoming.forEach((item) => {
       const normalized = normalize(item);
       if (!normalized) return;
-      if (!byId.has(normalized.id)) added += 1;
-      byId.set(normalized.id, normalized);
+      const local = byId.get(normalized.id);
+      if (!local) {
+        byId.set(normalized.id, normalized);
+        changed += 1;
+        return;
+      }
+      if (correctionTime(normalized) > correctionTime(local)) {
+        byId.set(normalized.id, normalized);
+        changed += 1;
+      }
     });
     corrections = [...byId.values()];
     saveLocal();
-    return added;
+    return changed;
   }
 
   function record(input = {}) {
@@ -396,6 +409,11 @@
 
   async function syncLocal() {
     if (!enabled) return { pushed: 0, pulled: 0 };
+
+    // Pull first so a remote revoke cannot be undone by a stale device.
+    const remote = await fetchRecent(90);
+    const pulled = mergeCorrections(remote);
+
     let pushed = 0;
     for (const correction of corrections) {
       try {
@@ -406,8 +424,6 @@
       }
     }
 
-    const remote = await fetchRecent(90);
-    const pulled = mergeCorrections(remote);
     renderMemory();
     window.dispatchEvent(new CustomEvent('rinlo2:corrections-sync', {
       detail: { status: 'synced', pushed, pulled },
@@ -440,7 +456,7 @@
   }, 0);
 
   window.Rinlo2Corrections = {
-    version: 'v3-relevant-memory',
+    version: 'v4-sync-safe-memory',
     enabled,
     localOnly,
     record,
