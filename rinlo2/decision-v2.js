@@ -427,6 +427,7 @@
         dayCaloriesMax: day.max,
       });
       const refined = response?.analysis || analysis;
+      if (refined.status !== 'recognized') return analysis;
       refined.__memoryAppliedCount = correctionCount;
       return refined;
     } catch (error) {
@@ -1626,6 +1627,7 @@
       });
       const analysis = response?.analysis;
       if (!analysis) throw new Error('empty_text_analysis');
+      analysis.__memoryAppliedCount = profile.recentCorrections.length;
 
       if (analysis.status === 'needs_clarification') {
         pendingTextClarification = analysis.clarifying_question || 'Нужно одно уточнение';
