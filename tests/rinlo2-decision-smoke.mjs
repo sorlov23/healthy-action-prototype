@@ -85,12 +85,24 @@ try {
   await page.getByRole('button', { name: 'Выбрать этот вариант', exact: true }).click();
   await page.getByRole('heading', { name: 'Запомнил.', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#savedCalories').textContent())?.includes('540'), 'saved_calories_missing');
+  const savedThumb = await page.locator('#savedThumb').evaluate((el) => ({
+    source: el.dataset.source,
+    backgroundImage: getComputedStyle(el).backgroundImage,
+    hasPhoto: el.classList.contains('has-photo'),
+  }));
+  assert(savedThumb.source === 'text', `saved_thumb_wrong_source:${JSON.stringify(savedThumb)}`);
+  assert(savedThumb.hasPhoto === false && savedThumb.backgroundImage === 'none', `text_saved_thumb_should_not_fake_food:${JSON.stringify(savedThumb)}`);
 
   await page.getByRole('button', { name: 'Открыть историю', exact: true }).click();
   await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
   const historyRow = page.locator('#historyList').getByRole('button').filter({ hasText: 'Бургер без соуса + Cola Zero' });
   await historyRow.waitFor({ state: 'visible' });
   assert((await page.locator('#historyCount').textContent())?.includes('1'), 'history_count_wrong');
+  const historyThumb = await historyRow.locator('.decision-source-thumb').evaluate((el) => ({
+    source: el.dataset.source,
+    backgroundImage: getComputedStyle(el).backgroundImage,
+  }));
+  assert(historyThumb.source === 'text' && historyThumb.backgroundImage === 'none', `history_thumb_should_reflect_source:${JSON.stringify(historyThumb)}`);
 
   await historyRow.click();
   await page.locator('[data-flow-step="detail"]').waitFor({ state: 'visible' });
