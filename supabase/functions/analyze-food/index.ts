@@ -222,7 +222,7 @@ Deno.serve(async (req: Request) => {
   const decisionStage = ["choosing", "preparing", "ready"].includes(String(body?.decisionStage || ""))
     ? String(body.decisionStage)
     : "ready";
-  const dailyTarget = Number(body?.dailyTarget || 2000);
+  const dailyTarget = Number(body?.dailyTarget || 0);
   const dayCaloriesMin = Number(body?.dayCaloriesMin || 0);
   const dayCaloriesMax = Number(body?.dayCaloriesMax || 0);
   const model = Deno.env.get("RINLO_VISION_MODEL") || "gemini-3.1-flash-lite";
@@ -260,7 +260,7 @@ Deno.serve(async (req: Request) => {
   const userText = [
     `Цель: ${goal}.`,
     `Стадия решения: ${decisionStage}.`,
-    `Ориентир дня: около ${dailyTarget} ккал.`,
+    dailyTarget > 0 ? `Персональный ориентир дня: около ${dailyTarget} ккал.` : "Персональный калорийный ориентир пока не задан.",
     `По уже сохранённым решениям Rinlo сегодня: примерно ${dayCaloriesMin}–${dayCaloriesMax} ккал.`,
     "Проанализируй фото предполагаемой еды и верни решение строго по JSON-схеме.",
   ].join(" ");
