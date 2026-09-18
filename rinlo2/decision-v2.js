@@ -918,6 +918,7 @@
     } catch (error) {
       setTextAiStatus('error', 'Не получилось получить ответ', 'Попробуй ещё раз — вопрос останется на месте.');
       analyzeButton.textContent = 'Попробовать снова →';
+      analyzeButton.disabled = false;
     } finally {
       if (!pendingTextClarification) analyzeButton.disabled = questionInput.value.trim().length < 3;
     }
