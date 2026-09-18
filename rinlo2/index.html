@@ -216,13 +216,42 @@
           <p>Изменения сначала сохраняются на устройстве. Когда облако доступно, Rinlo синхронизирует более свежую версию.</p>
         </article>
 
-        <article class="settings-section-card account-protection-card">
+        <article class="settings-section-card account-protection-card" id="accountProtectionCard">
           <div class="settings-section-head">
-            <div><small>ВОССТАНОВЛЕНИЕ</small><b>Защитить аккаунт</b></div>
+            <div><small>ВОССТАНОВЛЕНИЕ</small><b id="accountProtectionTitle">Защитить аккаунт</b></div>
             <span id="settingsAccountBadge">Временный</span>
           </div>
-          <p id="settingsAccountText">Сейчас Rinlo использует временный аккаунт без регистрации. Если очистить данные браузера или сменить устройство, этот аккаунт нельзя будет восстановить.</p>
-          <button class="settings-disabled-action" type="button" disabled>Сохранить аккаунт Rinlo · следующий этап</button>
+          <p id="settingsAccountText">Сейчас Rinlo использует временный аккаунт без регистрации. Привяжи email, чтобы этот же аккаунт перестал быть одноразовым.</p>
+
+          <div class="account-protection-form" id="accountProtectionForm">
+            <label>
+              <span>Email для защиты аккаунта</span>
+              <input id="accountProtectionEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+            </label>
+            <button class="btn primary wide" type="button" id="accountProtectionSend" disabled>Отправить письмо</button>
+            <small>Никакого нового профиля: email привяжется к текущему Rinlo user и не изменит владельца истории.</small>
+          </div>
+
+          <div class="account-protection-pending" id="accountProtectionPending" hidden>
+            <div class="account-protection-mail">
+              <span aria-hidden="true">✉</span>
+              <div><small>ПИСЬМО ОТПРАВЛЕНО</small><b id="accountProtectionPendingEmail">—</b></div>
+            </div>
+            <p>Открой письмо Supabase и подтверди email. После этого вернись в Rinlo и нажми кнопку ниже.</p>
+            <button class="btn primary wide" type="button" id="accountProtectionCheck">Я подтвердил email</button>
+            <button class="settings-link-action" type="button" id="accountProtectionResend">Отправить письмо ещё раз</button>
+          </div>
+
+          <div class="account-protection-done" id="accountProtectionDone" hidden>
+            <div class="account-protection-success" aria-hidden="true">✓</div>
+            <div>
+              <small>АККАУНТ ЗАЩИЩЁН</small>
+              <b id="accountProtectionEmailValue">—</b>
+              <p>Этот Rinlo user теперь привязан к подтверждённому email. Данные и RLS-владелец остались прежними.</p>
+            </div>
+          </div>
+
+          <span class="account-protection-status" id="accountProtectionStatus" aria-live="polite"></span>
         </article>
 
         <article class="settings-section-card">
@@ -469,5 +498,6 @@
   <script src="./decision-v2.js"></script>
   <script src="./supabase-decisions-v1.js"></script>
   <script src="./sync-center-v1.js"></script>
+  <script src="./account-protection-v1.js"></script>
 </body>
 </html>
