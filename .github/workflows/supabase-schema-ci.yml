@@ -71,6 +71,9 @@ jobs:
       - name: Apply Rinlo Decisions persistence
         run: psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_decisions.sql
 
+      - name: Apply Rinlo Decisions profile
+        run: psql -v ON_ERROR_STOP=1 -f supabase/schema/rinlo_decision_profiles.sql
+
       - name: Verify security invariants
         run: |
           psql -v ON_ERROR_STOP=1 <<'SQL'
@@ -84,12 +87,12 @@ jobs:
             select count(*) into table_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r';
-            if table_count <> 13 then raise exception 'expected 13 public tables, got %', table_count; end if;
+            if table_count <> 14 then raise exception 'expected 14 public tables, got %', table_count; end if;
 
             select count(*) into rls_count
             from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity;
-            if rls_count <> 13 then raise exception 'expected RLS on 13 public tables, got %', rls_count; end if;
+            if rls_count <> 14 then raise exception 'expected RLS on 14 public tables, got %', rls_count; end if;
 
             if to_regclass('public.app_users') is not null or to_regclass('public.auth_sessions') is not null then
               raise exception 'legacy auth tables must not exist';
@@ -171,6 +174,51 @@ jobs:
             exit 1
           else
             echo "cross-user decision write correctly blocked by RLS"
+          fi
+
+      - name: Verify Rinlo Decisions profile ownership
+        run: |
+          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'lose|calories,satiety'
+          begin;
+          insert into auth.users(id) values
+            ('77777777-7777-4777-8777-777777777777'),
+            ('88888888-8888-4888-8888-888888888888');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = '77777777-7777-4777-8777-777777777777';
+          insert into public.rinlo_decision_profiles(user_id, goal, current_weight_kg, target_weight_kg, priorities)
+          values(
+            '77777777-7777-4777-8777-777777777777',
+            'lose',
+            80,
+            72,
+            array['satiety','calories']
+          )
+          on conflict(user_id) do update set
+            goal=excluded.goal,
+            priorities=excluded.priorities,
+            updated_at=now();
+          select goal || '|' || array_to_string(priorities, ',')
+          from public.rinlo_decision_profiles
+          where user_id=auth.uid();
+          rollback;
+          SQL
+
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          insert into auth.users(id) values
+            ('77777777-7777-4777-8777-777777777777'),
+            ('88888888-8888-4888-8888-888888888888');
+          set local role authenticated;
+          set local "request.jwt.claim.sub" = '77777777-7777-4777-8777-777777777777';
+          insert into public.rinlo_decision_profiles(user_id, goal)
+          values('88888888-8888-4888-8888-888888888888','maintain');
+          rollback;
+          SQL
+          then
+            echo "cross-user profile write unexpectedly succeeded"
+            exit 1
+          else
+            echo "cross-user profile write correctly blocked by RLS"
           fi
 
       - name: Verify catalogue is read-only
