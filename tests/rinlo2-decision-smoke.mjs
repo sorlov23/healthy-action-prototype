@@ -117,6 +117,21 @@ try {
   assert((await page.locator('#detailName').textContent())?.includes('Бургер без соуса + Cola Zero'), 'detail_selected_name_missing');
   assert((await page.locator('#detailTitle').textContent())?.includes('Можно, но лучше аккуратнее'), 'detail_verdict_missing');
   assert((await page.locator('#detailStageNote').textContent())?.includes('до еды'), 'detail_stage_context_missing');
+
+  await page.getByRole('button', { name: 'Исправить данные решения', exact: true }).click();
+  await page.getByRole('button', { name: 'Неточный состав', exact: true }).click();
+  await page.locator('#correctionInput').fill('без соуса');
+  await page.getByRole('button', { name: 'Сохранить поправку', exact: true }).click();
+  await page.locator('#detailCorrectionHistory').waitFor({ state: 'visible' });
+  assert((await page.locator('#detailCorrectionHistory').textContent())?.includes('без соуса'), 'detail_correction_missing');
+
+  const memoryMatchBeforeRevoke = await page.evaluate(() => ({
+    burger: window.Rinlo2Corrections?.getRelevantContext?.('Бургер без соуса', 30, 4) || [],
+    oatmeal: window.Rinlo2Corrections?.getRelevantContext?.('Овсянка с ягодами', 30, 4) || [],
+  }));
+  assert(memoryMatchBeforeRevoke.burger.length === 1, `burger_memory_should_match:${JSON.stringify(memoryMatchBeforeRevoke)}`);
+  assert(memoryMatchBeforeRevoke.oatmeal.length === 0, `oatmeal_memory_should_not_match:${JSON.stringify(memoryMatchBeforeRevoke)}`);
+
   await page.getByRole('button', { name: 'Готово', exact: true }).click();
 
   await page.locator('[data-nav="progress"]').last().click();
@@ -139,6 +154,15 @@ try {
 
   await page.locator('[data-nav="profile"]').last().click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
+
+  await page.locator('#rinloMemoryCard').waitFor({ state: 'visible' });
+  assert((await page.locator('#rinloMemoryCard').textContent())?.includes('без соуса'), 'profile_memory_missing');
+  await page.getByRole('button', { name: /Не учитывать поправку:/ }).click();
+  await page.locator('#rinloMemoryEmpty').waitFor({ state: 'visible' });
+  const memoryAfterRevoke = await page.evaluate(() =>
+    window.Rinlo2Corrections?.getRelevantContext?.('Бургер без соуса', 30, 4) || []
+  );
+  assert(memoryAfterRevoke.length === 0, `revoked_memory_should_not_match:${JSON.stringify(memoryAfterRevoke)}`);
   await page.locator('[data-profile-goal="aware"]').click();
   await page.locator('#profileCurrentWeight').fill('80');
   await page.locator('#profileTargetWeight').fill('72');
