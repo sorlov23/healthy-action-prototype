@@ -827,7 +827,11 @@
 
     $('#cookOutcomePrepared')?.addEventListener('click', () => {
       saveOutcome('prepared');
-      persistCookDecision('');
+      try {
+        persistCookDecision('');
+      } catch (error) {
+        console.error('Cook history save failed', error);
+      }
       $('#cookOutcomeQuestion').hidden = true;
       $('#cookOutcomeFeedback').hidden = false;
     });
