@@ -286,7 +286,7 @@ try {
   await page.getByRole('button', { name: /Синхронизация, облако и приватность/ }).click();
   await page.getByRole('heading', { name: 'Настройки', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#syncStatusTitle').textContent())?.includes('Только на этом устройстве'), 'settings_local_mode_missing');
-  assert((await page.locator('#settingsDecisionCount').textContent())?.trim() === '1', 'settings_decision_count_wrong');
+  assert((await page.locator('#settingsDecisionCount').textContent())?.trim() === '2', 'settings_decision_count_wrong');
   assert((await page.locator('#settingsMemoryCount').textContent())?.trim() === '0', 'settings_memory_count_wrong');
   assert((await page.locator('#settingsFeedbackCount').textContent())?.trim() === '1', 'settings_feedback_count_wrong');
   assert((await page.locator('#settingsProfileState').textContent())?.includes('Настроен'), 'settings_profile_state_wrong');
