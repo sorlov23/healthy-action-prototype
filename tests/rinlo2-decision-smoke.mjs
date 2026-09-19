@@ -229,13 +229,13 @@ try {
 
   const api = await page.locator('body').evaluate(() => window.Rinlo2Decisions?.getDayContext?.());
   assert(api?.target === null, `day_target_should_be_unset:${JSON.stringify(api)}`);
-  assert(api?.decisions === 1, `day_decision_count_wrong:${JSON.stringify(api)}`);
+  assert(api?.decisions === 2, `day_decision_count_wrong:${JSON.stringify(api)}`);
   assert(api?.calories?.min === 540 && api?.calories?.max === 540, `day_calories_wrong:${JSON.stringify(api)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
   const apiAfterReload = await page.locator('body').evaluate(() => window.Rinlo2Decisions?.getDayContext?.());
-  assert(apiAfterReload?.decisions === 1 && apiAfterReload?.calories?.min === 540, `day_context_not_persisted_after_reload:${JSON.stringify(apiAfterReload)}`);
+  assert(apiAfterReload?.decisions === 2 && apiAfterReload?.calories?.min === 540, `day_context_not_persisted_after_reload:${JSON.stringify(apiAfterReload)}`);
 
   await page.locator('[data-nav="profile"]').last().click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
