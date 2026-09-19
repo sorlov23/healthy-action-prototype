@@ -90,6 +90,85 @@ const schema = {
   ],
 };
 
+
+const cookStepSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    title: { type: "string" },
+    instruction: { type: "string" },
+    minutes: { type: "integer", minimum: 0, maximum: 60 },
+  },
+  required: ["title", "instruction", "minutes"],
+};
+
+const cookRecipeSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    name: { type: "string" },
+    duration_minutes: { type: "integer", minimum: 5, maximum: 120 },
+    reason: { type: "string" },
+    ingredients_used: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 20 },
+    assumed_staples: { type: "array", items: { type: "string" }, maxItems: 10 },
+    steps: { type: "array", items: cookStepSchema, minItems: 3, maxItems: 8 },
+  },
+  required: ["name", "duration_minutes", "reason", "ingredients_used", "assumed_staples", "steps"],
+};
+
+const cookSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    summary: { type: "string" },
+    primary: cookRecipeSchema,
+    alternatives: { type: "array", items: cookRecipeSchema, minItems: 2, maxItems: 2 },
+  },
+  required: ["summary", "primary", "alternatives"],
+};
+
+function cleanStringList(value: unknown, max = 20): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))].slice(0, max);
+}
+
+function normalizeCookRecipe(raw: any, allowedIngredients: string[], allowedStaples: string[]) {
+  const recipe = raw && typeof raw === "object" ? raw : {};
+  const allowedIngredientSet = new Set(allowedIngredients.map((item) => item.toLowerCase()));
+  const allowedStapleSet = new Set(allowedStaples.map((item) => item.toLowerCase()));
+  const ingredientsUsed = cleanStringList(recipe.ingredients_used)
+    .filter((item) => allowedIngredientSet.has(item.toLowerCase()));
+  const assumedStaples = cleanStringList(recipe.assumed_staples, 10)
+    .filter((item) => allowedStapleSet.has(item.toLowerCase()));
+  const steps = Array.isArray(recipe.steps)
+    ? recipe.steps.map((step: any) => ({
+        title: String(step?.title || "").trim().slice(0, 100),
+        instruction: String(step?.instruction || "").trim().slice(0, 600),
+        minutes: Math.max(0, Math.min(60, Number(step?.minutes || 0))),
+      })).filter((step: any) => step.title && step.instruction).slice(0, 8)
+    : [];
+
+  return {
+    name: String(recipe.name || "").trim().slice(0, 140),
+    duration_minutes: Math.max(5, Math.min(120, Number(recipe.duration_minutes || 20))),
+    reason: String(recipe.reason || "").trim().slice(0, 500),
+    ingredients_used: ingredientsUsed,
+    assumed_staples: assumedStaples,
+    steps,
+  };
+}
+
+function normalizeCookPlan(raw: any, ingredients: string[], staples: string[]) {
+  const value = raw && typeof raw === "object" ? raw : {};
+  return {
+    summary: String(value.summary || "").trim().slice(0, 500),
+    primary: normalizeCookRecipe(value.primary, ingredients, staples),
+    alternatives: (Array.isArray(value.alternatives) ? value.alternatives : [])
+      .slice(0, 2)
+      .map((item: any) => normalizeCookRecipe(item, ingredients, staples)),
+  };
+}
+
 function extractGeminiText(payload: any): string {
   for (const candidate of payload?.candidates || []) {
     for (const part of candidate?.content?.parts || []) {
@@ -256,6 +335,117 @@ Deno.serve(async (req: Request) => {
   }
 
   const body = await req.json().catch(() => null);
+
+  if (body?.mode === "cook") {
+    const ingredients = cleanStringList(body?.ingredients, 24);
+    const staples = cleanStringList(body?.staples, 16);
+    if (ingredients.length < 2) return json({ error: "cook_ingredients_required" }, 400);
+
+    const allowedPriorities = new Set(["fast", "satiety", "light", "use", "none"]);
+    const priority = allowedPriorities.has(String(body?.priority || "")) ? String(body.priority) : "none";
+    const rawProfile = body?.profile && typeof body.profile === "object" ? body.profile : {};
+    const recentCookOutcomes = Array.isArray(body?.recentCookOutcomes)
+      ? body.recentCookOutcomes.slice(0, 6).map((item: any) => ({
+          recipe: String(item?.recipe || "").slice(0, 120),
+          priority: String(item?.priority || "").slice(0, 30),
+          outcome: String(item?.outcome || "").slice(0, 30),
+          feedback: String(item?.feedback || "").slice(0, 30),
+        }))
+      : [];
+
+    const model = Deno.env.get("RINLO_DECISION_MODEL")
+      || Deno.env.get("RINLO_VISION_MODEL")
+      || "gemini-3.1-flash-lite";
+
+    const priorityLabels: Record<string, string> = {
+      fast: "приготовить максимально быстро",
+      satiety: "получить сытное полноценное блюдо",
+      light: "получить более лёгкий вариант без жёстких ограничений",
+      use: "максимально использовать указанные продукты",
+      none: "выбрать наиболее практичный вариант",
+    };
+
+    const profileGoal = ["lose", "maintain", "aware"].includes(String(rawProfile.goal || ""))
+      ? String(rawProfile.goal)
+      : "";
+    const profilePriorities = Array.isArray(rawProfile.priorities)
+      ? rawProfile.priorities.map((item: unknown) => String(item)).slice(0, 4)
+      : [];
+
+    const cookSystemPrompt = [
+      "Ты — Cook Decision Engine приложения Rinlo.",
+      "Твоя задача — не перечислять идеи, а выбрать одно конкретное практичное блюдо, которое пользователь реально может приготовить прямо сейчас.",
+      "Пиши по-русски, ясно и бытовым языком.",
+      "Используй только продукты из списка пользователя и базовые продукты из отдельного списка 'обычно есть дома'.",
+      "Нельзя делать обязательным ингредиент, которого нет ни в одном из этих списков.",
+      "Каждый выбранный основной ингредиент должен реально участвовать в рецепте, а не упоминаться для галочки.",
+      "Шаги должны быть конкретными: что нарезать, что нагреть, что добавить, сколько примерно готовить и на каком огне, если это важно.",
+      "Запрещены пустые инструкции вроде 'подготовь продукты', 'начни с основы', 'добавь остальное', 'доведи до готовности' без конкретного действия.",
+      "Не требуй точных граммов, если пользователь их не сообщил. Используй бытовые ориентиры и диапазоны.",
+      "Если нужно масло, соль, перец или другая базовая вещь, она допустима только если есть в списке staples; перечисли её в assumed_staples.",
+      "Основной рецепт должен быть самым подходящим под приоритет пользователя. Две альтернативы должны заметно отличаться по способу или характеру блюда.",
+      "Не морализируй, не называй еду хорошей/плохой, не ставь диагнозы и не обещай снижение веса.",
+      "Цель профиля — слабый контекст, а не медицинское основание.",
+      "Для сырого мяса и птицы обязательно давай безопасную инструкцию: приготовить полностью; не советуй пробовать сырое мясо.",
+      "Верни строго JSON по схеме.",
+    ].join(" ");
+
+    const cookUserText = [
+      `Продукты пользователя: ${ingredients.join(", ")}.`,
+      staples.length ? `Базовые продукты, которые можно считать доступными: ${staples.join(", ")}.` : "Базовые продукты не указаны — не предполагай их наличие.",
+      `Главный приоритет: ${priorityLabels[priority]}.`,
+      profileGoal ? `Цель профиля: ${profileGoal}.` : "",
+      profilePriorities.length ? `Дополнительные предпочтения профиля: ${profilePriorities.join(", ")}.` : "",
+      recentCookOutcomes.length ? `Последние результаты Cook Flow: ${JSON.stringify(recentCookOutcomes)}.` : "",
+      "Сформируй одно основное блюдо и ровно две альтернативы.",
+    ].filter(Boolean).join(" ");
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const cookResponse = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: cookSystemPrompt }] },
+        contents: [{ role: "user", parts: [{ text: cookUserText }] }],
+        generationConfig: {
+          temperature: 0.25,
+          maxOutputTokens: 2200,
+          responseMimeType: "application/json",
+          responseJsonSchema: cookSchema,
+        },
+      }),
+    });
+
+    const cookPayload = await cookResponse.json().catch(() => ({}));
+    if (!cookResponse.ok) {
+      console.error("Gemini cook request failed", cookResponse.status, cookPayload?.error?.status || cookPayload?.error?.code || "");
+      return json({
+        error: "cook_provider_error",
+        status: cookResponse.status,
+        code: cookPayload?.error?.status || cookPayload?.error?.code || null,
+      }, 502);
+    }
+
+    const outputText = extractGeminiText(cookPayload);
+    if (!outputText) return json({ error: "empty_cook_response" }, 502);
+
+    try {
+      const cook = normalizeCookPlan(JSON.parse(outputText), ingredients, staples);
+      if (!cook.primary.name || cook.primary.steps.length < 3 || cook.alternatives.length !== 2) {
+        return json({ error: "invalid_cook_response" }, 502);
+      }
+      return json({
+        cook,
+        meta: { model, provider: "google-gemini", userId, mode: "cook" },
+      });
+    } catch {
+      return json({ error: "invalid_cook_response" }, 502);
+    }
+  }
+
   const question = String(body?.question || "").trim();
   const imageDataUrl = String(body?.imageDataUrl || "");
   const audioDataUrl = String(body?.audioDataUrl || "");
