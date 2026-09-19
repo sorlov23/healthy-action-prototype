@@ -197,6 +197,42 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
   }
 
 
+
+  const ingredientPhotoProbe = await fetch(`${url}/functions/v1/analyze-food`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      apikey: key,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      mode: 'cook_ingredients_photo',
+      imageDataUrl,
+    }),
+  });
+
+  const ingredientPhotoPayload = await jsonResponse(ingredientPhotoProbe);
+  if (!ingredientPhotoProbe.ok) {
+    throw new Error(`ingredient_photo_call_failed:${ingredientPhotoProbe.status}:${JSON.stringify(ingredientPhotoPayload)}`);
+  }
+  if (ingredientPhotoPayload?.meta?.mode !== 'cook_ingredients_photo'
+      || ingredientPhotoPayload?.meta?.provider !== 'google-gemini') {
+    throw new Error(`ingredient_photo_unexpected_meta:${JSON.stringify(ingredientPhotoPayload?.meta || {})}`);
+  }
+  const ingredientPhoto = ingredientPhotoPayload?.ingredientPhoto;
+  if (!ingredientPhoto || !['recognized','needs_review'].includes(ingredientPhoto.status)
+      || !Array.isArray(ingredientPhoto.ingredients)) {
+    throw new Error(`ingredient_photo_invalid_shape:${JSON.stringify(ingredientPhoto || {})}`);
+  }
+  for (const item of ingredientPhoto.ingredients) {
+    if (!String(item?.name || '').trim()
+        || !['high','medium','low'].includes(item?.confidence)
+        || typeof item?.detail !== 'string') {
+      throw new Error(`ingredient_photo_invalid_item:${JSON.stringify(item || {})}`);
+    }
+  }
+
   const cookDecision = await fetch(`${url}/functions/v1/analyze-food`, {
     method: 'POST',
     headers: {
@@ -275,6 +311,10 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
       decisionStage: audioPayload.analysis.decision_stage,
       requestSummary: audioPayload.analysis.request_summary,
       verdict: audioPayload.analysis.verdict_title,
+    },
+    ingredientPhotoProbe: {
+      status: ingredientPhotoPayload.ingredientPhoto.status,
+      ingredients: ingredientPhotoPayload.ingredientPhoto.ingredients,
     },
     cookProbe: {
       name: cookPayload.cook.primary.name,
