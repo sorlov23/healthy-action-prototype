@@ -1,8 +1,14 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v1-prototype';
+  const VERSION = 'v2-ai';
   const STORAGE_KEY = 'rinlo2-cook-v1';
+  const config = window.HEALTHY_ACTION_CONFIG || {};
+  const auth = window.RinloSupabaseAuth;
+  const base = String(config.supabaseUrl || '').replace(/\/+$/, '');
+  const publishableKey = String(config.supabasePublishableKey || '');
+  const localOnly = new URLSearchParams(location.search).get('local') === '1';
+  const aiEnabled = !localOnly && Boolean(auth?.enabled && base && publishableKey);
   const COMMON = [
     'Яйца','Куриное филе','Свинина','Говядина','Фарш','Сыр','Творог',
     'Помидоры','Огурцы','Картофель','Лук','Морковь','Шампиньоны',
@@ -237,6 +243,73 @@
     };
   }
 
+
+  function normalizeAiRecipe(recipe = {}) {
+    return {
+      name: String(recipe.name || '').trim(),
+      duration: Math.max(5, Number(recipe.duration_minutes || 20)),
+      note: String(recipe.reason || '').trim(),
+      ingredients: Array.isArray(recipe.ingredients_used) ? recipe.ingredients_used.map(String) : [],
+      staples: Array.isArray(recipe.assumed_staples) ? recipe.assumed_staples.map(String) : [],
+      steps: Array.isArray(recipe.steps)
+        ? recipe.steps.map((step) => [
+            String(step?.title || '').trim(),
+            String(step?.instruction || '').trim(),
+            Math.max(0, Number(step?.minutes || 0)),
+          ]).filter((step) => step[0] && step[1])
+        : [],
+    };
+  }
+
+  async function requestCookPlan() {
+    if (!aiEnabled) return null;
+    const session = await auth.ensureSession();
+    if (!session?.access_token) throw new Error('no_supabase_session');
+
+    const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
+    const state = readState();
+    const recentCookOutcomes = (state.outcomes || []).slice(0, 6);
+
+    const response = await fetch(`${base}/functions/v1/analyze-food`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        mode: 'cook',
+        ingredients: [...selected],
+        staples: [],
+        priority,
+        profile,
+        recentCookOutcomes,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data?.error || `cook_${response.status}`);
+      error.code = data?.error || null;
+      error.status = response.status;
+      throw error;
+    }
+    if (!data?.cook?.primary || !Array.isArray(data?.cook?.alternatives)) {
+      throw new Error('empty_cook_plan');
+    }
+
+    return {
+      summary: String(data.cook.summary || ''),
+      recipes: [
+        normalizeAiRecipe(data.cook.primary),
+        ...data.cook.alternatives.map(normalizeAiRecipe),
+      ].filter((recipe) => recipe.name && recipe.steps.length >= 3).slice(0, 3),
+      meta: data.meta || {},
+    };
+  }
+
   function buildRecommendations() {
     const names = [...selected];
     const available = new Set(names);
@@ -296,8 +369,8 @@
     renderRecent();
   }
 
-  function renderResult() {
-    recommendations = buildRecommendations();
+  function renderResult(plan = null) {
+    recommendations = plan?.recipes?.length === 3 ? plan.recipes : buildRecommendations();
     activeRecipe = recommendations[0];
     const title = $('#cookResultTitle');
     const duration = $('#cookResultDuration');
@@ -306,7 +379,14 @@
     if (title) title.textContent = activeRecipe.name;
     if (duration) duration.textContent = activeRecipe.duration + ' минут';
     if (note) note.textContent = activeRecipe.note;
-    if (context) context.textContent = priorityLabel(priority) + ' · ' + profileHint();
+    if (context) context.textContent = activeRecipe.note || (priorityLabel(priority) + ' · ' + profileHint());
+
+    const assumptions = $('#cookResultAssumptions');
+    if (assumptions) {
+      const staples = Array.isArray(activeRecipe.staples) ? activeRecipe.staples.filter(Boolean) : [];
+      assumptions.hidden = !staples.length;
+      assumptions.textContent = staples.length ? 'Также предполагаю, что дома есть: ' + staples.join(', ') + '.' : '';
+    }
 
     const alt = $('#cookAlternatives');
     if (alt) {
@@ -324,7 +404,13 @@
     $('#cookResultTitle').textContent = activeRecipe.name;
     $('#cookResultDuration').textContent = activeRecipe.duration + ' минут';
     $('#cookResultNote').textContent = activeRecipe.note;
-    $$('[data-cook-alt-index]').forEach((button) => button.classList.toggle('active', Number(button.dataset.cookAltIndex) === index));
+    const assumptions = $('#cookResultAssumptions');
+    if (assumptions) {
+      const staples = Array.isArray(activeRecipe.staples) ? activeRecipe.staples.filter(Boolean) : [];
+      assumptions.hidden = !staples.length;
+      assumptions.textContent = staples.length ? 'Также предполагаю, что дома есть: ' + staples.join(', ') + '.' : '';
+    }
+    $('[data-cook-alt-index]').forEach((button) => button.classList.toggle('active', Number(button.dataset.cookAltIndex) === index));
   }
 
   function renderCookStep() {
@@ -333,7 +419,7 @@
     const item = steps[stepIndex] || steps[0];
     $('#cookStepCounter').textContent = (stepIndex + 1) + ' из ' + steps.length;
     $('#cookStepTitle').textContent = item[0];
-    $('#cookStepText').textContent = item[1];
+    $('#cookStepText').textContent = item[2] > 0 ? item[1] + ' · примерно ' + item[2] + ' мин.' : item[1];
     $('#cookStepPrev').disabled = stepIndex === 0;
     $('#cookStepNext').textContent = stepIndex >= steps.length - 1 ? 'Готово →' : 'Далее →';
     const bar = $('#cookStepBar');
@@ -440,9 +526,26 @@
       });
     });
 
-    $('#cookPriorityNext')?.addEventListener('click', () => {
-      renderResult();
-      showFlow('result');
+    $('#cookPriorityNext')?.addEventListener('click', async () => {
+      const button = $('#cookPriorityNext');
+      const status = $('#cookAiStatus');
+      if (!button) return;
+      button.disabled = true;
+      const previousLabel = button.textContent;
+      button.textContent = aiEnabled ? 'Rinlo подбирает блюдо…' : 'Подбираю…';
+      if (status) status.textContent = aiEnabled ? 'Учитываю продукты, приоритет и твой контекст.' : '';
+
+      try {
+        const plan = await requestCookPlan();
+        renderResult(plan);
+        showFlow('result');
+      } catch (error) {
+        console.error('Cook AI failed', error);
+        if (status) status.textContent = 'Не получилось получить рецепт от Rinlo. Попробуй ещё раз.';
+      } finally {
+        button.textContent = previousLabel;
+        button.disabled = false;
+      }
     });
 
     $('#cookStartCooking')?.addEventListener('click', () => {
