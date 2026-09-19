@@ -48,11 +48,18 @@ async function fetchMock(url, options = {}) {
     const body = JSON.parse(options.body || '{}');
     assert.ok(body.refresh_token, 'refresh request must include the refresh token');
     return response(200, {
-      access_token: 'access-refreshed',
-      refresh_token: 'refresh-rotated',
+      access_token: protectedUser ? 'access-protected' : 'access-refreshed',
+      refresh_token: protectedUser ? 'refresh-protected' : 'refresh-rotated',
       token_type: 'bearer',
       expires_in: 3600,
-      user: { id: 'user-1', is_anonymous: true },
+      user: protectedUser
+        ? {
+            id: 'user-2',
+            is_anonymous: false,
+            email: 'owner@example.com',
+            email_confirmed_at: '2026-09-19T00:00:00Z',
+          }
+        : { id: 'user-1', is_anonymous: true },
     });
   }
   if (String(url).includes('/auth/v1/user') && options.method === 'PUT') {
@@ -182,6 +189,15 @@ assert.equal(verified.is_anonymous, false);
 assert.equal(verified.email, 'owner@example.com');
 assert.equal(auth.getSession().user.email_confirmed_at, '2026-09-19T00:00:00Z');
 assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
+
+rejectRefresh = false;
+const protectedSession = await auth.refreshCurrentSession();
+assert.equal(refreshCount, 3);
+assert.equal(protectedSession.user.id, 'user-2');
+assert.equal(protectedSession.user.is_anonymous, false);
+assert.equal(protectedSession.access_token, 'access-protected');
+assert.equal(auth.getSession().user.is_anonymous, false);
+assert.equal(events.at(-1)?.detail?.event, 'TOKEN_REFRESHED');
 
 auth.clearLocalSession();
 assert.equal(auth.getSession(), null);
