@@ -18,6 +18,7 @@
 
   let pending = loadPending();
   let busy = false;
+  let startupRefreshAttempted = false;
 
   function cloudEnabled() {
     return Boolean(
@@ -284,9 +285,12 @@
 
   render();
 
-  // If an email-change request is pending, verify it on load and refresh
-  // the JWT immediately after confirmation so is_anonymous is fresh too.
-  if (cloudEnabled() && pending) {
+  // On startup, re-check pending protection. If an earlier app version already
+  // cleared the pending marker but cached the confirmed user, refresh the JWT
+  // once as well so the access token immediately carries is_anonymous=false.
+  const cachedStartupUser = auth?.getSession?.()?.user || null;
+  if (cloudEnabled() && (pending || isProtectedUser(cachedStartupUser))) {
+    startupRefreshAttempted = true;
     setTimeout(() => {
       auth.getUser()
         .then(async (user) => {
