@@ -251,6 +251,19 @@
       note: String(recipe.reason || '').trim(),
       ingredients: Array.isArray(recipe.ingredients_used) ? recipe.ingredients_used.map(String) : [],
       staples: Array.isArray(recipe.assumed_staples) ? recipe.assumed_staples.map(String) : [],
+      nutrition: recipe?.nutrition && typeof recipe.nutrition === 'object'
+        ? {
+            calorieMin: Math.max(0, Number(recipe.nutrition.calorie_min || 0)),
+            calorieMax: Math.max(0, Number(recipe.nutrition.calorie_max || 0)),
+            proteinMin: Math.max(0, Number(recipe.nutrition.protein_min || 0)),
+            proteinMax: Math.max(0, Number(recipe.nutrition.protein_max || 0)),
+            fatMin: Math.max(0, Number(recipe.nutrition.fat_min || 0)),
+            fatMax: Math.max(0, Number(recipe.nutrition.fat_max || 0)),
+            carbsMin: Math.max(0, Number(recipe.nutrition.carbs_min || 0)),
+            carbsMax: Math.max(0, Number(recipe.nutrition.carbs_max || 0)),
+            assumption: String(recipe.nutrition.assumption || '').trim(),
+          }
+        : null,
       steps: Array.isArray(recipe.steps)
         ? recipe.steps.map((step) => [
             String(step?.title || '').trim(),
@@ -369,6 +382,34 @@
     renderRecent();
   }
 
+  function nutritionRange(min, max, suffix = '') {
+    const a = Math.round(Number(min || 0));
+    const b = Math.round(Number(max || 0));
+    if (!a && !b) return '—';
+    if (!a || a === b) return String(b || a) + suffix;
+    return a + '–' + b + suffix;
+  }
+
+  function renderNutrition(recipe) {
+    const box = $('#cookResultNutrition');
+    const assumption = $('#cookNutritionAssumption');
+    const n = recipe?.nutrition;
+    const hasNutrition = Boolean(n && (n.calorieMax || n.proteinMax || n.fatMax || n.carbsMax));
+    if (box) box.hidden = !hasNutrition;
+    if (!hasNutrition) {
+      if (assumption) assumption.hidden = true;
+      return;
+    }
+    $('#cookNutritionCalories').textContent = nutritionRange(n.calorieMin, n.calorieMax);
+    $('#cookNutritionProtein').textContent = nutritionRange(n.proteinMin, n.proteinMax, ' г');
+    $('#cookNutritionFat').textContent = nutritionRange(n.fatMin, n.fatMax, ' г');
+    $('#cookNutritionCarbs').textContent = nutritionRange(n.carbsMin, n.carbsMax, ' г');
+    if (assumption) {
+      assumption.hidden = !n.assumption;
+      assumption.textContent = n.assumption ? 'Оценка на порцию: ' + n.assumption : '';
+    }
+  }
+
   function renderResult(plan = null) {
     recommendations = plan?.recipes?.length === 3 ? plan.recipes : buildRecommendations();
     activeRecipe = recommendations[0];
@@ -379,6 +420,7 @@
     if (title) title.textContent = activeRecipe.name;
     if (duration) duration.textContent = activeRecipe.duration + ' минут';
     if (note) note.textContent = activeRecipe.note;
+    renderNutrition(activeRecipe);
     if (context) context.textContent = activeRecipe.note || (priorityLabel(priority) + ' · ' + profileHint());
 
     const assumptions = $('#cookResultAssumptions');
@@ -393,7 +435,14 @@
       alt.innerHTML = recommendations.slice(1).map((recipe, idx) =>
         '<button type="button" data-cook-alt-index="' + (idx + 1) + '"><span>' +
         (idx === 0 ? 'Ещё вариант' : 'Альтернатива') +
-        '</span><b>' + escapeHtml(recipe.name) + '</b><small>' + recipe.duration + ' минут</small></button>'
+        '</span><b>' + escapeHtml(recipe.name) + '</b><small>' +
+        recipe.duration + ' минут' +
+        (recipe.nutrition?.calorieMax ? ' · ≈ ' + nutritionRange(recipe.nutrition.calorieMin, recipe.nutrition.calorieMax) + ' ккал' : '') +
+        '</small>' +
+        (recipe.nutrition?.proteinMax ? '<em>Б ' + nutritionRange(recipe.nutrition.proteinMin, recipe.nutrition.proteinMax) +
+          ' · Ж ' + nutritionRange(recipe.nutrition.fatMin, recipe.nutrition.fatMax) +
+          ' · У ' + nutritionRange(recipe.nutrition.carbsMin, recipe.nutrition.carbsMax) + ' г</em>' : '') +
+        '</button>'
       ).join('');
     }
   }
@@ -404,6 +453,7 @@
     $('#cookResultTitle').textContent = activeRecipe.name;
     $('#cookResultDuration').textContent = activeRecipe.duration + ' минут';
     $('#cookResultNote').textContent = activeRecipe.note;
+    renderNutrition(activeRecipe);
     const assumptions = $('#cookResultAssumptions');
     if (assumptions) {
       const staples = Array.isArray(activeRecipe.staples) ? activeRecipe.staples.filter(Boolean) : [];
