@@ -18,25 +18,60 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' });
 
   await page.getByRole('button', { name: 'Посмотреть демо без настройки', exact: true }).click();
-  await page.getByRole('heading', { name: 'Что собираешься съесть?', exact: false }).waitFor({ state: 'visible' });
+  await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
 
   const homeGeometry = await page.locator('body').evaluate(() => {
     const root = document.documentElement;
     const body = document.body;
-    const buttons = [...document.querySelectorAll('.hero-actions .btn')].map((el) => {
+    const cards = [...document.querySelectorAll('.home-mode-card')].map((el) => {
       const r = el.getBoundingClientRect();
       return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height };
     });
     return {
       viewportWidth: root.clientWidth,
       documentWidth: Math.max(root.scrollWidth, body.scrollWidth),
-      buttons,
+      cards,
     };
   });
   assert(homeGeometry.documentWidth <= homeGeometry.viewportWidth + 1, `home_horizontal_overflow:${JSON.stringify(homeGeometry)}`);
-  assert(homeGeometry.buttons.length === 2, `home_cta_count:${JSON.stringify(homeGeometry)}`);
-  assert(homeGeometry.buttons.every((button) => button.height >= 54 && button.left >= 0 && button.right <= 390), `home_cta_geometry:${JSON.stringify(homeGeometry)}`);
-  assert(homeGeometry.buttons[0].bottom < homeGeometry.buttons[1].top, `home_ctas_not_stacked:${JSON.stringify(homeGeometry)}`);
+  assert(homeGeometry.cards.length === 2, `home_mode_card_count:${JSON.stringify(homeGeometry)}`);
+  assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
+  assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
+
+  assert(window.RinloCook?.version === 'v1-prototype', 'cook_bridge_missing');
+  await page.locator('#cookStart').click();
+  await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
+
+  await page.locator('[data-cook-ingredient="Куриное филе"]').click();
+  await page.locator('[data-cook-ingredient="Шампиньоны"]').click();
+  await page.locator('[data-cook-ingredient="Рис"]').click();
+  assert(!(await page.locator('#cookIngredientsNext').isDisabled()), 'cook_ingredients_next_disabled');
+  assert((await page.locator('#cookIngredientCount').textContent()) === '3', 'cook_ingredient_count_wrong');
+
+  await page.locator('#cookIngredientsNext').click();
+  await page.getByRole('heading', { name: 'Что сейчас важнее?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-cook-priority="fast"]').click();
+  await page.locator('#cookPriorityNext').click();
+
+  await page.getByRole('heading', { name: 'Курица с грибами и рисом', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#cookResultDuration').textContent())?.includes('20'), 'cook_result_duration_missing');
+  assert((await page.locator('#cookAlternatives button').count()) === 2, 'cook_alternatives_count_wrong');
+
+  await page.locator('#cookStartCooking').click();
+  await page.getByRole('heading', { name: 'Подготовь продукты', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#cookStepCounter').textContent()) === '1 из 5', 'cook_step_counter_wrong');
+  for (let i = 0; i < 5; i += 1) await page.locator('#cookStepNext').click();
+
+  await page.locator('#cookOutcomePrepared').waitFor({ state: 'visible' });
+  await page.locator('#cookOutcomePrepared').click();
+  await page.getByRole('button', { name: '👍 Хорошо', exact: true }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '👍 Хорошо', exact: true }).click();
+  await page.locator('#cookFlow').waitFor({ state: 'hidden' });
+
+  const cookState = await page.evaluate(() => window.RinloCook?.getState?.());
+  assert(cookState?.recent?.includes('Куриное филе') && cookState?.recent?.includes('Рис'), `cook_recent_not_saved:${JSON.stringify(cookState)}`);
+  assert((cookState?.outcomes?.length || 0) >= 1, `cook_outcome_not_saved:${JSON.stringify(cookState)}`);
+  assert(await page.locator('#cookRecentHome').isVisible(), 'cook_recent_home_missing');
 
   await page.locator('[data-action="voice"]').click();
   const voiceStep = page.locator('[data-flow-step="voice"]');
