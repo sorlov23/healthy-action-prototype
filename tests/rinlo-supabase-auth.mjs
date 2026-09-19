@@ -9,6 +9,12 @@ let signupCount = 0;
 let refreshCount = 0;
 let rejectRefresh = false;
 let nextUser = 1;
+let userFetchCount = 0;
+let userUpdateCount = 0;
+let passwordUpdateCount = 0;
+let resendCount = 0;
+let passwordLoginCount = 0;
+let protectedUser = false;
 
 const localStorage = {
   getItem(key) { return values.has(key) ? values.get(key) : null; },
@@ -44,11 +50,80 @@ async function fetchMock(url, options = {}) {
     const body = JSON.parse(options.body || '{}');
     assert.ok(body.refresh_token, 'refresh request must include the refresh token');
     return response(200, {
-      access_token: 'access-refreshed',
-      refresh_token: 'refresh-rotated',
+      access_token: protectedUser ? 'access-protected' : 'access-refreshed',
+      refresh_token: protectedUser ? 'refresh-protected' : 'refresh-rotated',
       token_type: 'bearer',
       expires_in: 3600,
-      user: { id: 'user-1', is_anonymous: true },
+      user: protectedUser
+        ? {
+            id: 'user-2',
+            is_anonymous: false,
+            email: 'owner@example.com',
+            email_confirmed_at: '2026-09-19T00:00:00Z',
+          }
+        : { id: 'user-1', is_anonymous: true },
+    });
+  }
+  if (String(url).includes('/auth/v1/user') && options.method === 'PUT') {
+    const body = JSON.parse(options.body || '{}');
+    if (body.email) {
+      userUpdateCount += 1;
+      assert.equal(body.email, 'owner@example.com');
+      return response(200, {
+        id: 'user-2',
+        is_anonymous: true,
+        email_change: body.email,
+        identities: [],
+      });
+    }
+    if (body.password) {
+      passwordUpdateCount += 1;
+      assert.equal(body.password, 'StrongPass123!');
+      return response(200, {
+        id: 'user-2',
+        is_anonymous: false,
+        email: 'owner@example.com',
+        email_confirmed_at: '2026-09-19T00:00:00Z',
+        identities: [{ provider: 'email', identity_data: { email_verified: true } }],
+      });
+    }
+    throw new Error('Unexpected user update payload');
+  }
+  if (String(url).endsWith('/auth/v1/user') && options.method === 'GET') {
+    userFetchCount += 1;
+    return response(200, protectedUser
+      ? {
+          id: 'user-2',
+          is_anonymous: false,
+          email: 'owner@example.com',
+          email_confirmed_at: '2026-09-19T00:00:00Z',
+          identities: [{ provider: 'email', identity_data: { email_verified: true } }],
+        }
+      : { id: 'user-2', is_anonymous: true, identities: [] });
+  }
+  if (String(url).endsWith('/auth/v1/resend') && options.method === 'POST') {
+    resendCount += 1;
+    const body = JSON.parse(options.body || '{}');
+    assert.equal(body.type, 'email_change');
+    assert.equal(body.email, 'owner@example.com');
+    return response(200, {});
+  }
+  if (String(url).includes('/auth/v1/token?grant_type=password') && options.method === 'POST') {
+    passwordLoginCount += 1;
+    const body = JSON.parse(options.body || '{}');
+    assert.equal(body.email, 'owner@example.com');
+    assert.equal(body.password, 'StrongPass123!');
+    return response(200, {
+      access_token: 'access-recovered',
+      refresh_token: 'refresh-recovered',
+      token_type: 'bearer',
+      expires_in: 3600,
+      user: {
+        id: 'user-2',
+        is_anonymous: false,
+        email: 'owner@example.com',
+        email_confirmed_at: '2026-09-19T00:00:00Z',
+      },
     });
   }
   throw new Error(`Unexpected fetch ${url}`);
@@ -91,7 +166,7 @@ const context = vm.createContext({
 vm.runInContext(source, context, { filename: 'rinlo-supabase-auth-v1.js' });
 
 const auth = window.RinloSupabaseAuth;
-assert.equal(auth.version, 'v1');
+assert.equal(auth.version, 'v3-recovery-password');
 assert.equal(auth.enabled, true);
 assert.equal(signupCount, 0, 'loading the bridge must not create an anonymous user');
 
@@ -130,7 +205,49 @@ assert.equal(auth.getUserId(), 'user-2');
 const accessToken = await auth.getAccessToken();
 assert.equal(accessToken, 'access-user-2');
 
+const pendingUser = await auth.requestEmailProtection('OWNER@example.com');
+assert.equal(userUpdateCount, 1);
+assert.equal(pendingUser.id, 'user-2');
+assert.equal(pendingUser.is_anonymous, true);
+assert.equal(pendingUser.email_change, 'owner@example.com');
+assert.equal(auth.getSession().user.email_change, 'owner@example.com');
+assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
+
+await auth.resendEmailChange('owner@example.com');
+assert.equal(resendCount, 1);
+
+protectedUser = true;
+const verified = await auth.getUser();
+assert.equal(userFetchCount, 1);
+assert.equal(verified.is_anonymous, false);
+assert.equal(verified.email, 'owner@example.com');
+assert.equal(auth.getSession().user.email_confirmed_at, '2026-09-19T00:00:00Z');
+assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
+
+rejectRefresh = false;
+const protectedSession = await auth.refreshCurrentSession();
+assert.equal(refreshCount, 3);
+assert.equal(protectedSession.user.id, 'user-2');
+assert.equal(protectedSession.user.is_anonymous, false);
+assert.equal(protectedSession.access_token, 'access-protected');
+assert.equal(auth.getSession().user.is_anonymous, false);
+assert.equal(events.at(-1)?.detail?.event, 'TOKEN_REFRESHED');
+
+const passwordUser = await auth.setRecoveryPassword('StrongPass123!');
+assert.equal(passwordUpdateCount, 1);
+assert.equal(passwordUser.id, 'user-2');
+assert.equal(passwordUser.is_anonymous, false);
+assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
+
 auth.clearLocalSession();
 assert.equal(auth.getSession(), null);
+
+const recovered = await auth.signInWithPassword('OWNER@example.com', 'StrongPass123!');
+assert.equal(passwordLoginCount, 1);
+assert.equal(recovered.user.id, 'user-2');
+assert.equal(recovered.user.is_anonymous, false);
+assert.equal(recovered.access_token, 'access-recovered');
+assert.equal(auth.getSession().user.id, 'user-2');
+assert.equal(events.at(-1)?.detail?.event, 'SIGNED_IN');
 
 console.log('Rinlo Supabase auth bridge tests passed');

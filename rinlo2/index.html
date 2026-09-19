@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7f8" />
+  <title>Rinlo Decisions</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./decision-v2.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <header class="topbar">
+      <button class="brand" data-nav="home" aria-label="Rinlo — на главную">
+        <img src="./logo-v2.svg" alt="" class="brand-mark" />
+        <span class="brand-copy"><b>Rinlo</b><small>DECISIONS</small></span>
+      </button>
+      <button class="icon-button" data-nav="profile" aria-label="Профиль">◎</button>
+    </header>
+
+    <main class="content">
+      <section class="screen active" data-screen="home">
+        <section class="rinlo-home-focus">
+          <p class="eyebrow dark">RINLO · FOOD DECISIONS</p>
+          <h1>Что будем есть?</h1>
+          <p class="home-focus-lead">Не надо придумывать промпт. Скажи, какая ситуация — Rinlo поможет решить, что приготовить или выбрать прямо сейчас.</p>
+
+          <button class="home-mode-card cook-mode-card" type="button" id="cookStart">
+            <span class="home-mode-icon" aria-hidden="true">🍳</span>
+            <span class="home-mode-copy">
+              <small>ДОМА</small>
+              <b>Что приготовить?</b>
+              <span>Из продуктов, которые уже есть</span>
+            </span>
+            <strong aria-hidden="true">→</strong>
+          </button>
+
+          <article class="home-mode-card choose-mode-card">
+            <span class="home-mode-icon" aria-hidden="true">✦</span>
+            <div class="home-mode-copy">
+              <small>ВЫБОР УЖЕ ПЕРЕД ТОБОЙ</small>
+              <b>Что выбрать?</b>
+              <span>Покажи блюдо или спроси словами</span>
+            </div>
+            <div class="choose-mode-actions">
+              <button class="choose-action primary" type="button" data-action="photo">Фото</button>
+              <button class="choose-action" type="button" data-action="text">Текст</button>
+              <button class="choose-action" type="button" data-action="voice">Голос</button>
+            </div>
+          </article>
+
+          <article class="cook-recent-home" id="cookRecentHome" hidden>
+            <div>
+              <small>ПОСЛЕДНИЕ ПРОДУКТЫ</small>
+              <b id="cookRecentHomeList">—</b>
+            </div>
+            <button type="button" id="cookRecentHomeUse">Использовать снова →</button>
+          </article>
+        </section>
+
+        <div class="section-head"><h2>Недавние решения</h2><button data-nav="history">Все →</button></div>
+        <div class="decision-list compact" id="homeRecentList"></div>
+        <p class="home-recent-empty" id="homeRecentEmpty">Сохрани первое решение — оно появится здесь.</p>
+      </section>
+
+      <section class="screen" data-screen="history">
+        <p class="eyebrow dark">ТВОИ ПРЕДЫДУЩИЕ ВЫБОРЫ</p>
+        <h1 class="page-title">История решений</h1>
+        <div class="filters" id="historyFilters">
+          <button class="active" data-history-filter="all">Все</button>
+          <button data-history-filter="cook">Приготовил</button>
+          <button data-history-filter="choose">Выбрал</button>
+        </div>
+        <label class="search"><span>⌕</span><input id="historySearch" placeholder="Найти блюдо или решение" /></label>
+        <div class="section-head"><h2>Недавние</h2><span id="historyCount">0 решений</span></div>
+        <div class="decision-list" id="historyList"></div>
+        <article class="history-empty" id="historyEmpty">
+          <strong>Здесь появятся решения, которые ты принимаешь с Rinlo.</strong>
+          <p>Никакого ручного дневника — достаточно сохранить выбор после ответа.</p>
+        </article>
+      </section>
+
+      <section class="screen" data-screen="progress">
+        <p class="eyebrow dark">НЕ ДНЕВНИК. ПАТТЕРНЫ РЕШЕНИЙ.</p>
+        <h1 class="page-title">Что меняется</h1>
+
+        <article class="progress-decision-card">
+          <div>
+            <small>Последние 7 дней</small>
+            <strong id="progressDecisionCount">Пока нет решений</strong>
+          </div>
+          <span class="progress-signal" aria-hidden="true">↗</span>
+          <p>Rinlo смотрит не на идеальность питания, а на то, какие решения реально повторяются.</p>
+        </article>
+
+        <div class="metric-grid decision-metrics">
+          <article>
+            <span class="metric-icon lime">↗</span>
+            <strong id="progressAdjustedCount">0</strong>
+            <p>решений потребовали небольшой корректировки</p>
+          </article>
+          <article>
+            <span class="metric-icon">✓</span>
+            <strong id="progressChosenAdjustmentCount">0</strong>
+            <p>раз выбран вариант с корректировкой</p>
+          </article>
+        </div>
+
+        <article class="insight-card" id="progressPatternCard">
+          <p class="eyebrow dark">ПОЛЕЗНЫЙ ПАТТЕРН</p>
+          <h2 id="progressPatternTitle">Нужно ещё несколько решений.</h2>
+          <p id="progressPatternText">После нескольких реальных выборов Rinlo покажет, что чаще всего помогает именно тебе.</p>
+        </article>
+
+        <article class="goal-context-card">
+          <div>
+            <small>Цель остаётся контекстом, а не оценкой еды</small>
+            <strong id="progressWeightContext">Вес не задан</strong>
+          </div>
+          <span>Вес помогает персонализировать решения, но не превращает Rinlo в дневник калорий.</span>
+        </article>
+      </section>
+
+      <section class="screen" data-screen="profile">
+        <p class="eyebrow dark">КОНТЕКСТ ДЛЯ РЕШЕНИЙ</p>
+        <h1 class="page-title">Профиль</h1>
+
+        <article class="profile-summary-card">
+          <small>Rinlo использует только то, что реально меняет ответ</small>
+          <strong id="profileSummaryTitle">Контекст пока минимальный</strong>
+          <p id="profileSummaryText">Можно оставить всё как есть или добавить пару ориентиров ниже.</p>
+        </article>
+
+        <article class="profile-editor-card">
+          <small class="profile-label">Цель</small>
+          <div class="profile-goal-options">
+            <button type="button" data-profile-goal="lose">Снизить вес</button>
+            <button type="button" data-profile-goal="maintain">Удерживать</button>
+            <button type="button" data-profile-goal="aware">Осознаннее</button>
+          </div>
+
+          <div class="profile-weight-grid">
+            <label>
+              <span>Сейчас</span>
+              <div><input id="profileCurrentWeight" inputmode="decimal" placeholder="—" /><b>кг</b></div>
+            </label>
+            <label>
+              <span>Цель</span>
+              <div><input id="profileTargetWeight" inputmode="decimal" placeholder="—" /><b>кг</b></div>
+            </label>
+          </div>
+
+          <small class="profile-label priorities-label">Что важнее в спорных случаях</small>
+          <div class="profile-priorities">
+            <button type="button" data-profile-priority="satiety">Сытность</button>
+            <button type="button" data-profile-priority="calories">Калорийность</button>
+            <button type="button" data-profile-priority="familiar">Привычные продукты</button>
+            <button type="button" data-profile-priority="simplicity">Простота</button>
+          </div>
+          <p class="profile-hint">Можно выбрать несколько. Это не жёсткие правила, а подсказка Rinlo, что предпочесть при равных вариантах.</p>
+
+          <div class="profile-staples-head">
+            <div>
+              <small class="profile-label">Обычно есть дома</small>
+              <p>Rinlo сможет использовать эти продукты в рецепте без отдельного вопроса.</p>
+            </div>
+            <span>не склад</span>
+          </div>
+          <div class="profile-staples">
+            <button type="button" data-profile-staple="salt">Соль</button>
+            <button type="button" data-profile-staple="pepper">Перец</button>
+            <button type="button" data-profile-staple="vegetable_oil">Растительное масло</button>
+            <button type="button" data-profile-staple="butter">Сливочное масло</button>
+            <button type="button" data-profile-staple="garlic">Чеснок</button>
+            <button type="button" data-profile-staple="onion">Лук</button>
+            <button type="button" data-profile-staple="eggs">Яйца</button>
+            <button type="button" data-profile-staple="rice">Рис</button>
+            <button type="button" data-profile-staple="buckwheat">Гречка</button>
+            <button type="button" data-profile-staple="pasta">Макароны</button>
+            <button type="button" data-profile-staple="flour">Мука</button>
+            <button type="button" data-profile-staple="milk">Молоко</button>
+            <button type="button" data-profile-staple="cheese">Сыр</button>
+            <button type="button" data-profile-staple="sour_cream">Сметана</button>
+            <button type="button" data-profile-staple="soy_sauce">Соевый соус</button>
+          </div>
+          <p class="profile-hint staples-hint">Это лёгкая память, а не точный учёт холодильника. Список можно менять когда угодно.</p>
+
+          <button class="btn primary wide" id="saveDecisionProfile">Сохранить контекст</button>
+          <span class="profile-save-state" id="profileSaveState" aria-live="polite"></span>
+        </article>
+
+        <article class="profile-trust-card">
+          <b>Без скрытой математики</b>
+          <p>Вес и цель не превращаются в «точную норму калорий». Rinlo использует их только как контекст решения.</p>
+        </article>
+
+        <button class="settings-entry-card" type="button" data-nav="settings">
+          <div>
+            <small>НАСТРОЙКИ И ДАННЫЕ</small>
+            <b>Синхронизация, облако и приватность</b>
+            <span id="profileSyncSummary">Проверяю состояние…</span>
+          </div>
+          <strong aria-hidden="true">›</strong>
+        </button>
+
+        <article class="brand-card"><img src="./logo-v2.svg" alt="" /><div><b>Меньше сомнений.<br>Больше нормальных решений.</b><small>Rinlo Decisions · prototype</small></div></article>
+      </section>
+
+      <section class="screen settings-screen" data-screen="settings">
+        <button class="settings-back" type="button" data-nav="profile">← Профиль</button>
+        <p class="eyebrow dark">RINLO НА ТВОИХ УСТРОЙСТВАХ</p>
+        <h1 class="page-title">Настройки</h1>
+
+        <article class="sync-hero-card" id="syncHeroCard" data-state="checking">
+          <div class="sync-hero-head">
+            <span class="sync-cloud-mark" id="syncCloudMark">↻</span>
+            <div>
+              <small>АККАУНТ И СИНХРОНИЗАЦИЯ</small>
+              <strong id="syncStatusTitle">Проверяю облако…</strong>
+              <p id="syncStatusText">Локальные данные уже доступны, соединение проверяется.</p>
+            </div>
+          </div>
+          <div class="sync-meta">
+            <span><small>Последняя синхронизация</small><b id="syncLastAt">—</b></span>
+            <span><small>Режим</small><b id="syncAccountMode">На этом устройстве</b></span>
+          </div>
+          <button class="btn primary wide" type="button" id="syncNowButton">Синхронизировать сейчас</button>
+          <span class="sync-action-status" id="syncActionStatus" aria-live="polite"></span>
+        </article>
+
+        <article class="settings-section-card">
+          <div class="settings-section-head">
+            <div><small>ЧТО ХРАНИТСЯ</small><b>Данные Rinlo</b></div>
+            <span>local-first</span>
+          </div>
+          <div class="settings-data-list">
+            <div><span>Профиль и цель</span><b id="settingsProfileState">—</b></div>
+            <div><span>История решений</span><b id="settingsDecisionCount">0</b></div>
+            <div><span>Память по поправкам</span><b id="settingsMemoryCount">0</b></div>
+            <div><span>Оценки ответов</span><b id="settingsFeedbackCount">0</b></div>
+          </div>
+          <p>Изменения сначала сохраняются на устройстве. Когда облако доступно, Rinlo синхронизирует более свежую версию.</p>
+        </article>
+
+        <article class="settings-section-card account-protection-card" id="accountProtectionCard">
+          <div class="settings-section-head">
+            <div><small>ВОССТАНОВЛЕНИЕ</small><b id="accountProtectionTitle">Защитить аккаунт</b></div>
+            <span id="settingsAccountBadge">Временный</span>
+          </div>
+          <p id="settingsAccountText">Сейчас Rinlo использует временный аккаунт без регистрации. Привяжи email, чтобы этот же аккаунт перестал быть одноразовым.</p>
+
+          <div class="account-protection-form" id="accountProtectionForm">
+            <label>
+              <span>Email для защиты аккаунта</span>
+              <input id="accountProtectionEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+            </label>
+            <button class="btn primary wide" type="button" id="accountProtectionSend" disabled>Отправить письмо</button>
+            <small>Никакого нового профиля: email привяжется к текущему Rinlo user и не изменит владельца истории.</small>
+          </div>
+
+          <div class="account-protection-pending" id="accountProtectionPending" hidden>
+            <div class="account-protection-mail">
+              <span aria-hidden="true">✉</span>
+              <div><small>ПИСЬМО ОТПРАВЛЕНО</small><b id="accountProtectionPendingEmail">—</b></div>
+            </div>
+            <p>Открой письмо Supabase и подтверди email. После этого вернись в Rinlo и нажми кнопку ниже.</p>
+            <button class="btn primary wide" type="button" id="accountProtectionCheck">Я подтвердил email</button>
+            <button class="settings-link-action" type="button" id="accountProtectionResend">Отправить письмо ещё раз</button>
+          </div>
+
+          <div class="account-protection-done" id="accountProtectionDone" hidden>
+            <div class="account-protection-success" aria-hidden="true">✓</div>
+            <div>
+              <small>АККАУНТ ЗАЩИЩЁН</small>
+              <b id="accountProtectionEmailValue">—</b>
+              <p>Этот Rinlo user теперь привязан к подтверждённому email. Данные и RLS-владелец остались прежними.</p>
+            </div>
+          </div>
+
+          <span class="account-protection-status" id="accountProtectionStatus" aria-live="polite"></span>
+        </article>
+
+        <article class="settings-section-card recovery-card" id="accountRecoveryCard">
+          <div class="settings-section-head">
+            <div><small>ДРУГОЕ УСТРОЙСТВО</small><b id="accountRecoveryTitle">Восстановить Rinlo</b></div>
+            <span id="accountRecoveryBadge">Email + пароль</span>
+          </div>
+          <p id="accountRecoveryText">Защищённый аккаунт можно открыть на другом устройстве без переноса данных вручную.</p>
+
+          <div class="recovery-login-step" id="recoveryLoginStep">
+            <label>
+              <span>Email защищённого аккаунта</span>
+              <input id="recoveryLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+            </label>
+            <label>
+              <span>Пароль восстановления</span>
+              <input id="recoveryLoginPassword" type="password" autocomplete="current-password" placeholder="Минимум 8 символов" />
+            </label>
+            <button class="btn primary wide" type="button" id="recoveryLoginButton" disabled>Войти и восстановить</button>
+            <small>Вход работает только для уже существующего защищённого аккаунта.</small>
+          </div>
+
+          <div class="recovery-setup-step" id="recoverySetupStep" hidden>
+            <div class="recovery-ready">
+              <div class="recovery-ready-mark" aria-hidden="true">↗</div>
+              <div>
+                <small>ДОСТУП С ДРУГОГО УСТРОЙСТВА</small>
+                <b>Создай пароль восстановления</b>
+                <p>Он нужен только для входа на новом устройстве. Rinlo не хранит его локально.</p>
+              </div>
+            </div>
+            <label>
+              <span>Новый пароль</span>
+              <input id="recoverySetPassword" type="password" autocomplete="new-password" placeholder="Минимум 8 символов" />
+            </label>
+            <label>
+              <span>Повтори пароль</span>
+              <input id="recoverySetPasswordConfirm" type="password" autocomplete="new-password" placeholder="Ещё раз" />
+            </label>
+            <button class="btn primary wide" type="button" id="recoverySetPasswordButton" disabled>Сохранить пароль восстановления</button>
+            <small id="recoverySetupHint">Пароль можно изменить здесь в любой момент.</small>
+          </div>
+
+          <div class="recovery-local-warning" id="recoveryLocalWarning" hidden>
+            <b>На этом устройстве уже есть локальные данные</b>
+            <p id="recoveryLocalWarningText">Перед переключением аккаунта Rinlo сохранит их в локальную резервную копию и не смешает с восстановленным аккаунтом.</p>
+          </div>
+
+          <span class="account-protection-status" id="accountRecoveryStatus" aria-live="polite"></span>
+        </article>
+
+        <article class="settings-section-card">
+          <div class="settings-section-head">
+            <div><small>ПРОЗРАЧНОСТЬ</small><b>Память и приватность</b></div>
+          </div>
+          <p>Rinlo хранит только явные поправки, решения и выбранный тобой контекст. Управлять сохранённой памятью можно прямо в Профиле.</p>
+          <button class="settings-link-action" type="button" data-nav="profile">Открыть память в Профиле →</button>
+        </article>
+
+        <article class="settings-section-card about-settings-card">
+          <div class="settings-section-head">
+            <div><small>О ПРИЛОЖЕНИИ</small><b>Rinlo Decisions</b></div>
+            <span>prototype</span>
+          </div>
+          <div class="settings-data-list">
+            <div><span>Decision flow</span><b id="settingsDecisionVersion">—</b></div>
+            <div><span>Sync layer</span><b id="settingsSyncVersion">v1</b></div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button class="active" data-nav="home"><span>⌂</span><small>Главная</small></button>
+      <button data-nav="history"><span>◷</span><small>История</small></button>
+      <button data-nav="progress"><span>▥</span><small>Прогресс</small></button>
+      <button data-nav="profile"><span>◎</span><small>Профиль</small></button>
+    </nav>
+  </div>
+
+  <input type="file" id="photoInput" accept="image/*" hidden />
+
+  <div class="cook-flow" id="cookFlow" hidden>
+    <section class="cook-step active" data-cook-step="ingredients">
+      <header class="flow-header"><button type="button" data-cook-back aria-label="Назад">←</button><b>Что приготовить?</b><span></span></header>
+      <div class="flow-body cook-flow-body">
+        <p class="eyebrow dark">ИЗ ТОГО, ЧТО ЕСТЬ ДОМА</p>
+        <h1>Что есть из продуктов?</h1>
+        <p class="flow-lead">Сфотографируй продукты, напиши их или выбери в пару тапов. Способы можно сочетать.</p>
+
+        <div class="cook-photo-input">
+          <input id="cookPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden />
+          <button class="cook-photo-button" type="button" id="cookPhotoButton">
+            <span aria-hidden="true">◫</span>
+            <div>
+              <b>Сфотографировать продукты</b>
+              <small>Холодильник, полка или продукты на столе</small>
+            </div>
+            <strong aria-hidden="true">→</strong>
+          </button>
+          <span class="cook-photo-status" id="cookPhotoStatus" aria-live="polite"></span>
+        </div>
+
+        <article class="cook-photo-results" id="cookPhotoResults" hidden>
+          <div class="cook-photo-results-head">
+            <div><small>НАШЁЛ НА ФОТО</small><b id="cookPhotoSummary">Проверь перед добавлением</b></div>
+            <span id="cookPhotoCount">0</span>
+          </div>
+          <div class="cook-photo-chips" id="cookPhotoChips"></div>
+          <p id="cookPhotoNote"></p>
+          <button class="cook-photo-apply" type="button" id="cookPhotoApply">Добавить выбранные</button>
+        </article>
+
+        <div class="cook-input-divider"><span>или вручную</span></div>
+
+        <label class="cook-text-input">
+          <span>Добавить текстом</span>
+          <textarea id="cookIngredientText" maxlength="260" placeholder="Например: есть курица, яйца, сыр, немного риса и помидоры"></textarea>
+        </label>
+        <button class="cook-inline-add" type="button" id="cookAddText">Добавить из текста</button>
+
+        <div class="cook-quick-head"><b>Часто используют</b><span><strong id="cookIngredientCount">0</strong> выбрано</span></div>
+        <div class="cook-quick-grid">
+          <button type="button" data-cook-ingredient="Яйца">Яйца</button>
+          <button type="button" data-cook-ingredient="Куриное филе">Курица</button>
+          <button type="button" data-cook-ingredient="Свинина">Свинина</button>
+          <button type="button" data-cook-ingredient="Говядина">Говядина</button>
+          <button type="button" data-cook-ingredient="Фарш">Фарш</button>
+          <button type="button" data-cook-ingredient="Сыр">Сыр</button>
+          <button type="button" data-cook-ingredient="Творог">Творог</button>
+          <button type="button" data-cook-ingredient="Помидоры">Помидоры</button>
+          <button type="button" data-cook-ingredient="Огурцы">Огурцы</button>
+          <button type="button" data-cook-ingredient="Картофель">Картофель</button>
+          <button type="button" data-cook-ingredient="Лук">Лук</button>
+          <button type="button" data-cook-ingredient="Морковь">Морковь</button>
+          <button type="button" data-cook-ingredient="Шампиньоны">Грибы</button>
+          <button type="button" data-cook-ingredient="Рис">Рис</button>
+          <button type="button" data-cook-ingredient="Гречка">Гречка</button>
+          <button type="button" data-cook-ingredient="Макароны">Макароны</button>
+          <button type="button" data-cook-ingredient="Брокколи">Брокколи</button>
+        </div>
+
+        <div class="cook-recent-inline" id="cookRecentIngredients" hidden></div>
+
+        <div class="cook-selected">
+          <small>СЕГОДНЯ ЕСТЬ</small>
+          <div id="cookSelectedIngredients"></div>
+        </div>
+
+        <article class="cook-staples-context" id="cookStaplesContext" hidden>
+          <small>RINLO ТАКЖЕ ПОМНИТ</small>
+          <p id="cookStaplesContextList"></p>
+          <span>Эти продукты отмечены в Профиле как «Обычно есть дома».</span>
+        </article>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" type="button" id="cookIngredientsNext" disabled>Продолжить →</button></div>
+    </section>
+
+    <section class="cook-step" data-cook-step="priority">
+      <header class="flow-header"><button type="button" data-cook-back aria-label="Назад">←</button><b>Контекст</b><span></span></header>
+      <div class="flow-body cook-flow-body">
+        <p class="eyebrow dark">ОДНО УТОЧНЕНИЕ</p>
+        <h1>Что сейчас важнее?</h1>
+        <p class="flow-lead">Выбери один приоритет. Остальное Rinlo возьмёт из продуктов и твоего контекста.</p>
+        <div class="cook-priority-list">
+          <button type="button" data-cook-priority="fast"><span>⚡</span><div><b>Быстро</b><small>Минимум времени на готовку</small></div></button>
+          <button type="button" data-cook-priority="satiety"><span>🍽</span><div><b>Сытно</b><small>Хочется полноценной еды</small></div></button>
+          <button type="button" data-cook-priority="light"><span>🌿</span><div><b>Полегче</b><small>Без слишком тяжёлого варианта</small></div></button>
+          <button type="button" data-cook-priority="use"><span>◎</span><div><b>Использовать продукты</b><small>Главное — приготовить из того, что уже есть</small></div></button>
+          <button type="button" data-cook-priority="none"><span>✦</span><div><b>Неважно</b><small>Пусть Rinlo выберет сам</small></div></button>
+        </div>
+      </div>
+      <div class="flow-footer">
+        <span class="cook-ai-status" id="cookAiStatus" aria-live="polite"></span>
+        <button class="btn primary wide" type="button" id="cookPriorityNext" disabled>Подобрать блюдо →</button>
+      </div>
+    </section>
+
+    <section class="cook-step" data-cook-step="result">
+      <header class="flow-header"><button type="button" data-cook-back aria-label="Назад">←</button><b>Решение</b><span></span></header>
+      <div class="flow-body cook-result-body">
+        <p class="eyebrow dark">Я БЫ ПРИГОТОВИЛ</p>
+        <h1 id="cookResultTitle">Курица с грибами и рисом</h1>
+        <div class="cook-result-time" id="cookResultDuration">20 минут</div>
+        <div class="cook-nutrition" id="cookResultNutrition" hidden>
+          <div><small>ККАЛ</small><b id="cookNutritionCalories">—</b></div>
+          <div><small>БЕЛКИ</small><b id="cookNutritionProtein">—</b></div>
+          <div><small>ЖИРЫ</small><b id="cookNutritionFat">—</b></div>
+          <div><small>УГЛЕВОДЫ</small><b id="cookNutritionCarbs">—</b></div>
+        </div>
+        <p class="cook-nutrition-assumption" id="cookNutritionAssumption" hidden></p>
+        <p class="cook-result-note" id="cookResultNote"></p>
+        <article class="cook-why-card">
+          <small>ПОЧЕМУ ЭТОТ ВАРИАНТ</small>
+          <p id="cookResultContext"></p>
+          <p class="cook-assumptions" id="cookResultAssumptions" hidden></p>
+        </article>
+        <div class="cook-alternatives">
+          <div class="cook-quick-head"><b>Ещё два варианта</b><span>если хочется иначе</span></div>
+          <div id="cookAlternatives"></div>
+        </div>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" type="button" id="cookStartCooking">Готовим →</button></div>
+    </section>
+
+    <section class="cook-step" data-cook-step="cook">
+      <header class="flow-header"><button type="button" data-cook-back aria-label="Назад">←</button><b id="cookActiveRecipe">Готовим</b><span></span></header>
+      <div class="flow-body cook-mode-body">
+        <div class="cook-progress-track"><span id="cookStepBar"></span></div>
+        <p class="eyebrow dark" id="cookStepCounter">1 из 5</p>
+        <h1 id="cookStepTitle">Подготовь продукты</h1>
+        <p class="cook-step-copy" id="cookStepText"></p>
+      </div>
+      <div class="flow-footer cook-mode-footer">
+        <button class="btn secondary" type="button" id="cookStepPrev" disabled>←</button>
+        <button class="btn primary" type="button" id="cookStepNext">Далее →</button>
+      </div>
+    </section>
+
+    <section class="cook-step" data-cook-step="outcome">
+      <header class="flow-header"><span></span><b>Готово</b><button type="button" data-cook-close aria-label="Закрыть">×</button></header>
+      <div class="flow-body cook-outcome-body">
+        <div class="success-mark">✓</div>
+        <p class="eyebrow dark">РЕШЕНИЕ ЗАВЕРШЕНО</p>
+        <h1 id="cookOutcomeRecipe">Блюдо</h1>
+        <div id="cookOutcomeQuestion">
+          <p class="flow-lead">Ты в итоге приготовил этот вариант?</p>
+          <div class="cook-outcome-actions">
+            <button class="btn primary wide" type="button" id="cookOutcomePrepared">Да, приготовил</button>
+            <button class="btn secondary wide" type="button" id="cookOutcomeSkipped">В итоге выбрал другое</button>
+          </div>
+        </div>
+        <div id="cookOutcomeFeedback" hidden>
+          <p class="flow-lead">Как тебе решение Rinlo?</p>
+          <div class="cook-feedback-actions">
+            <button type="button" data-cook-feedback="helpful">👍 Хорошо</button>
+            <button type="button" data-cook-feedback="not_for_me">👎 Не моё</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="decision-flow" id="decisionFlow" hidden>
+    <section class="flow-step" data-flow-step="photo">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Фото блюда</b><span></span></header>
+      <div class="flow-body photo-body">
+        <p class="eyebrow dark">ОДНО УТОЧНЕНИЕ</p>
+        <h1>Что на фото?</h1>
+        <p class="flow-lead">Иногда по одному фото нельзя надёжно понять состав. Назови блюдо одной фразой — Rinlo не будет угадывать лишнего.</p>
+        <button class="photo-preview" id="photoPreview" type="button" aria-label="Выбрать другое фото">
+          <span class="photo-preview-hint">↻ Другое фото</span>
+        </button>
+        <div class="photo-vision-status" id="photoVisionStatus" data-state="idle" aria-live="polite">
+          <span class="photo-vision-dot"></span>
+          <div><b>Фото готово</b><small>Rinlo попробует распознать блюдо автоматически</small></div>
+        </div>
+        <label class="photo-description">
+          <span>Коротко опиши блюдо</span>
+          <input id="photoDescription" maxlength="120" placeholder="Например: бургер, картошка и кола" />
+        </label>
+        <div class="quick-questions photo-quick">
+          <button data-photo-question="Бургер, картошка и кола">Бургер, картошка и кола</button>
+          <button data-photo-question="Роллы">Роллы</button>
+          <button data-photo-question="Овсянка с ягодами">Овсянка с ягодами</button>
+        </div>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" id="analyzePhoto" disabled>Разобрать выбор →</button></div>
+    </section>
+
+    <section class="flow-step" data-flow-step="ask">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Спросить текстом</b><span></span></header>
+      <div class="flow-body ask-body">
+        <p class="eyebrow dark">ОДИН ВОПРОС</p>
+        <h1>Что хочешь съесть?</h1>
+        <p class="flow-lead">Напиши как есть — Rinlo даст короткий ответ с учётом твоей цели.</p>
+        <label class="question-box"><textarea id="decisionQuestion" maxlength="220" placeholder="Например: Можно сегодня бургер и колу?"></textarea><small><span id="questionCount">0</span>/220</small></label>
+        <div class="text-ai-status" id="textAiStatus" data-state="idle" hidden aria-live="polite">
+          <span class="text-ai-dot"></span>
+          <div><b id="textAiTitle">Разбираю вопрос…</b><small id="textAiDetail">Учитываю блюдо, твою цель и контекст.</small></div>
+        </div>
+        <div class="text-clarification" id="textClarification" hidden>
+          <label>
+            <span id="textClarificationQuestion">Нужно одно уточнение</span>
+            <input id="textClarificationAnswer" maxlength="120" placeholder="Ответь коротко" />
+          </label>
+        </div>
+        <div class="quick-questions">
+          <button data-question="Можно сегодня бургер и колу?">Можно сегодня бургер и колу?</button>
+          <button data-question="Можно роллы на ужин?">Можно роллы на ужин?</button>
+          <button data-question="Подойдёт овсянка с ягодами на завтрак?">Подойдёт овсянка с ягодами?</button>
+        </div>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" id="analyzeDecision" disabled>Получить ответ →</button></div>
+    </section>
+
+    <section class="flow-step" data-flow-step="voice">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Спросить голосом</b><span></span></header>
+      <div class="flow-body voice-body">
+        <p class="eyebrow dark">СКАЖИ КАК ЕСТЬ</p>
+        <h1>Что собираешься съесть?</h1>
+        <p class="flow-lead">Нажми на микрофон и скажи вопрос одной фразой. Rinlo разберёт смысл, а не только расшифровку.</p>
+
+        <button class="voice-record-button" id="voiceRecordButton" type="button" aria-label="Начать запись">
+          <span class="voice-record-core">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="9" y="4" width="6" height="10" rx="3"></rect>
+              <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3M9 20h6"></path>
+            </svg>
+          </span>
+        </button>
+
+        <div class="voice-state" id="voiceState" data-state="idle" aria-live="polite">
+          <b id="voiceStateTitle">Готов к записи</b>
+          <span id="voiceStateDetail">Нажми на микрофон</span>
+          <strong id="voiceTimer">0:00</strong>
+        </div>
+
+        <div class="voice-clarification" id="voiceClarification" hidden>
+          <label>
+            <span id="voiceClarificationQuestion">Нужно одно уточнение</span>
+            <input id="voiceClarificationAnswer" maxlength="120" placeholder="Ответь коротко" />
+          </label>
+          <button class="btn primary wide" id="voiceClarificationSubmit" disabled>Продолжить →</button>
+        </div>
+
+        <button class="voice-file-link" id="voiceFileButton" type="button">Выбрать аудиофайл</button>
+        <input type="file" id="voiceFileInput" accept="audio/*" hidden />
+      </div>
+    </section>
+
+    <section class="flow-step" data-flow-step="result">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Результат</b><span></span></header>
+      <div class="flow-body">
+        <article class="question-summary"><small>Твой вопрос</small><b id="resultQuestion">Можно сегодня бургер и колу?</b></article>
+        <article class="result-verdict" id="resultVerdictCard">
+          <span class="result-icon" id="resultIcon">✓</span>
+          <h1 id="resultTitle">Можно, но лучше аккуратнее</h1>
+          <p id="resultExplanation">Бургер и кола — нормальный выбор иногда, но вместе это довольно калорийно.</p>
+        </article>
+        <article class="result-metrics">
+          <div><small>Примерно</small><strong id="resultCalories">~ 820 ккал</strong></div>
+          <div><small>В контексте дня</small><strong id="resultContext">плотный выбор</strong></div>
+        </article>
+        <article class="fit-card" id="fitCard"><b>Как это вписывается в твою цель?</b><p id="resultFit">Если хочется сохранить текущий темп, лучше немного облегчить комбинацию, а не отказываться от идеи целиком.</p></article>
+        <article class="action-now-card" id="actionNowCard" hidden>
+          <b>Можно сделать сейчас</b>
+          <ul id="actionNowList"></ul>
+        </article>
+        <article class="future-tip-card" id="futureTipCard" hidden>
+          <small>НА БУДУЩЕЕ</small>
+          <p id="futureTip"></p>
+        </article>
+      </div>
+      <div class="flow-footer stacked"><button class="btn primary wide" id="showAlternative">Показать вариант лучше</button><button class="btn secondary wide" id="saveOriginal">Оставить как есть</button></div>
+    </section>
+
+    <section class="flow-step" data-flow-step="alternative">
+      <header class="flow-header"><button data-flow-back aria-label="Назад">←</button><b>Вариант лучше</b><span></span></header>
+      <div class="flow-body">
+        <p class="eyebrow dark">ТА ЖЕ ИДЕЯ. МЕНЬШЕ ЛИШНЕГО.</p>
+        <h1 class="alternative-title">Есть вариант лучше</h1>
+        <div class="comparison-grid">
+          <article class="compare-card"><span>Твой вариант</span><div class="compare-photo burger-cola"></div><b id="originalName">Бургер + кола</b><strong id="originalCalories">~ 820 ккал</strong></article>
+          <article class="compare-card better"><span>Лучше так</span><div class="compare-photo burger-zero"></div><b id="alternativeName">Бургер без соуса + Cola Zero</b><strong id="alternativeCalories">~ 540 ккал</strong></article>
+        </div>
+        <article class="difference-card"><b>В чём разница?</b><ul id="differenceList"><li>примерно на 280 ккал меньше</li><li>меньше сахара</li><li>проще вписать в текущий темп</li></ul></article>
+      </div>
+      <div class="flow-footer stacked"><button class="btn primary wide" id="chooseAlternative">Выбрать этот вариант</button><button class="btn secondary wide" id="keepOriginal">Оставить исходный</button></div>
+    </section>
+
+    <section class="flow-step" data-flow-step="detail">
+      <header class="flow-header"><button data-flow-back aria-label="Закрыть">←</button><b>Решение</b><span></span></header>
+      <div class="flow-body detail-body">
+        <div class="detail-meta"><span id="detailSource">Фото</span><span id="detailDate">Сегодня · 19:30</span></div>
+        <h1 id="detailName">Сохранённое решение</h1>
+        <div class="detail-verdict" id="detailVerdict"><span>✓</span><b id="detailTitle">Можно брать</b></div>
+
+        <article class="detail-section">
+          <small>ЧТО БЫЛО В МОМЕНТ РЕШЕНИЯ</small>
+          <p id="detailExplanation"></p>
+          <div class="detail-facts">
+            <span><small>Оценка</small><b id="detailCalories">—</b></span>
+            <span><small>Контекст</small><b id="detailContext">—</b></span>
+          </div>
+        </article>
+
+        <article class="detail-section" id="detailActionsCard" hidden>
+          <small>МОЖНО БЫЛО СДЕЛАТЬ ТОГДА</small>
+          <ul id="detailActions"></ul>
+        </article>
+
+        <article class="detail-section selected-detail">
+          <small>ЧТО ТЫ ВЫБРАЛ</small>
+          <b id="detailSelectedName">—</b>
+          <p id="detailSelectedCalories">—</p>
+        </article>
+
+        <article class="detail-section future-detail" id="detailFutureCard" hidden>
+          <small>НА БУДУЩЕЕ</small>
+          <p id="detailFuture"></p>
+        </article>
+
+        <p class="detail-stage-note" id="detailStageNote"></p>
+      </div>
+      <div class="flow-footer"><button class="btn primary wide" id="detailDone">Готово</button></div>
+    </section>
+
+    <section class="flow-step saved-step" data-flow-step="saved">
+      <header class="flow-header"><span></span><b>Готово</b><span></span></header>
+      <div class="flow-body saved-body">
+        <div class="success-mark">✓</div>
+        <p class="eyebrow dark">РЕШЕНИЕ СОХРАНЕНО</p>
+        <h1>Запомнил.</h1>
+        <p class="flow-lead">Без отчётов и дополнительного учёта — выбор уже появился в истории.</p>
+        <article class="saved-card"><div class="thumb decision-source-thumb" id="savedThumb" data-source="text" aria-hidden="true"></div><div><small>Выбрано</small><b id="savedName">Решение</b><span id="savedCalories">—</span></div></article>
+      </div>
+      <div class="flow-footer stacked"><button class="btn primary wide" id="goHistory">Открыть историю</button><button class="btn secondary wide" id="askAgain">Задать ещё вопрос</button></div>
+    </section>
+  </div>
+
+  <div class="onboarding" id="onboarding" hidden>
+    <section class="welcome-step active" data-onboarding-step="welcome">
+      <div class="welcome-brand"><img src="./logo-v2.svg" alt="" /><span><b>Rinlo</b><small>DECISIONS</small></span></div>
+      <p class="eyebrow dark">НОВЫЙ RINLO</p>
+      <h1>Лучшие решения о еде — без перегруза.</h1>
+      <p class="lead">Спроси до того, как выбор уже сделан. Rinlo даст короткий ответ и предложит более удобный вариант, если он действительно нужен.</p>
+      <div class="steps"><div><b>01</b><span>Сфотографируй или спроси</span></div><div><b>02</b><span>Получи понятный ответ</span></div><div><b>03</b><span>Сделай свой выбор</span></div></div>
+      <button class="btn primary wide" id="startSetup">Начать →</button>
+      <button class="text-button" id="skipOnboarding">Посмотреть демо без настройки</button>
+    </section>
+    <section class="welcome-step" data-onboarding-step="setup">
+      <button class="back-button" id="backWelcome">← Назад</button>
+      <p class="eyebrow dark">ТОЛЬКО ТО, ЧТО МЕНЯЕТ РЕШЕНИЯ</p>
+      <h1>К какой цели идём?</h1>
+      <p class="lead">Никаких анкет про настроение и привычки. Для foundation достаточно базового контекста.</p>
+      <div class="form-grid">
+        <label>Текущий вес<input id="currentWeight" inputmode="decimal" placeholder="Например, 80" /><span>кг</span></label>
+        <label>Цель<input id="targetWeight" inputmode="decimal" placeholder="Например, 72" /><span>кг</span></label>
+      </div>
+      <div class="goal-choice"><button class="active" data-setup-goal="lose">Снизить вес</button><button data-setup-goal="maintain">Удерживать</button><button data-setup-goal="aware">Питаться осознаннее</button></div>
+      <button class="btn primary wide" id="finishOnboarding">Готово →</button>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="../runtime-config.js"></script>
+  <script src="../rinlo-supabase-auth-v1.js"></script>
+  <script src="./app.js"></script>
+  <script src="./supabase-profile-v1.js"></script>
+  <script src="./supabase-corrections-v1.js"></script>
+  <script src="./supabase-feedback-v1.js"></script>
+  <script src="./vision-v1.js"></script>
+  <script src="./cook-v1.js"></script>\n  <script src="./decision-v2.js"></script>
+  <script src="./supabase-decisions-v1.js"></script>
+  <script src="./sync-center-v1.js"></script>
+  <script src="./account-protection-v1.js"></script>
+  <script src="./account-recovery-v1.js"></script>
+</body>
+</html>
