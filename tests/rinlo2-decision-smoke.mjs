@@ -219,7 +219,7 @@ try {
 
   await page.locator('[data-nav="progress"]').last().click();
   await page.getByRole('heading', { name: 'Что меняется', exact: true }).waitFor({ state: 'visible' });
-  assert((await page.locator('#progressDecisionCount').textContent())?.includes('1 решение'), 'progress_decision_count_wrong');
+  assert((await page.locator('#progressDecisionCount').textContent())?.includes('2 решения'), 'progress_decision_count_wrong');
   assert((await page.locator('#progressChosenAdjustmentCount').textContent())?.trim() === '1', 'progress_adjustment_count_wrong');
   assert((await page.locator('#progressFeedbackTitle').textContent())?.includes('0 из 1'), 'progress_feedback_quality_wrong');
   assert((await page.locator('#progressFeedbackText').textContent())?.includes('1 ответ не помог'), 'progress_feedback_negative_signal_missing');
