@@ -1,10 +1,11 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v2-ai';
+  const VERSION = 'v3-photo-ingredients';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
+  const vision = window.RinloVision;
   const base = String(config.supabaseUrl || '').replace(/\/+$/, '');
   const publishableKey = String(config.supabasePublishableKey || '');
   const localOnly = new URLSearchParams(location.search).get('local') === '1';
@@ -142,6 +143,8 @@
   let recommendations = [];
   let activeRecipe = null;
   let stepIndex = 0;
+  let photoItems = [];
+  let photoBusy = false;
 
   function readState() {
     try {
@@ -192,7 +195,7 @@
     const list = [...selected];
     host.innerHTML = list.length
       ? list.map((name) => '<button type="button" data-cook-remove="' + escapeHtml(name) + '"><span>' + escapeHtml(name) + '</span><b>×</b></button>').join('')
-      : '<p>Добавь хотя бы 2 продукта — фото для этого прототипа пока не требуется.</p>';
+      : '<p>Добавь хотя бы 2 продукта — фото, текстом или из списка.</p>';
     const count = $('#cookIngredientCount');
     if (count) count.textContent = list.length ? String(list.length) : '0';
     const next = $('#cookIngredientsNext');
@@ -200,6 +203,96 @@
     $$('[data-cook-ingredient]').forEach((button) => {
       button.classList.toggle('active', selected.has(button.dataset.cookIngredient));
     });
+  }
+
+
+  function renderPhotoResults() {
+    const card = $('#cookPhotoResults');
+    const chips = $('#cookPhotoChips');
+    const count = $('#cookPhotoCount');
+    const summary = $('#cookPhotoSummary');
+    const note = $('#cookPhotoNote');
+    const apply = $('#cookPhotoApply');
+    if (!card || !chips || !count || !summary || !note || !apply) return;
+
+    card.hidden = !photoItems.length;
+    if (!photoItems.length) {
+      chips.innerHTML = '';
+      count.textContent = '0';
+      apply.disabled = true;
+      return;
+    }
+
+    const chosen = photoItems.filter((item) => item.selected);
+    count.textContent = String(chosen.length) + '/' + String(photoItems.length);
+    summary.textContent = chosen.length
+      ? 'Проверь и оставь только то, что действительно есть'
+      : 'Выбери хотя бы один распознанный продукт';
+    note.textContent = photoItems.some((item) => item.confidence === 'low')
+      ? 'Знаком ? отмечены продукты, в которых Rinlo не уверен.'
+      : 'Нажми на продукт, чтобы убрать его перед добавлением.';
+    chips.innerHTML = photoItems.map((item, index) =>
+      '<button type="button" data-cook-photo-index="' + index + '" class="' +
+      (item.selected ? 'active ' : '') + (item.confidence === 'low' ? 'uncertain' : '') + '">' +
+      (item.confidence === 'low' ? '<span>?</span>' : '') +
+      '<b>' + escapeHtml(item.name) + '</b>' +
+      (item.detail ? '<small>' + escapeHtml(item.detail) + '</small>' : '') +
+      '</button>'
+    ).join('');
+    apply.disabled = chosen.length === 0;
+  }
+
+  function setPhotoStatus(message = '') {
+    const status = $('#cookPhotoStatus');
+    if (status) status.textContent = message;
+  }
+
+  async function analyzeCookPhoto(file) {
+    if (!file || photoBusy) return;
+    if (!vision?.enabled || typeof vision.analyzeIngredientsPhoto !== 'function') {
+      setPhotoStatus(localOnly
+        ? 'Фото недоступно в локальном режиме.'
+        : 'Распознавание фото сейчас недоступно.');
+      return;
+    }
+
+    const button = $('#cookPhotoButton');
+    photoBusy = true;
+    if (button) button.disabled = true;
+    setPhotoStatus('Rinlo смотрит, что есть на фото…');
+
+    try {
+      const data = await vision.analyzeIngredientsPhoto(file);
+      const result = data?.ingredientPhoto || {};
+      photoItems = (Array.isArray(result.ingredients) ? result.ingredients : [])
+        .map((item) => ({
+          name: canonical(item?.name),
+          confidence: ['high','medium','low'].includes(item?.confidence) ? item.confidence : 'low',
+          detail: String(item?.detail || '').trim(),
+          selected: item?.confidence !== 'low',
+        }))
+        .filter((item) => item.name)
+        .slice(0, 24);
+
+      if (!photoItems.length) {
+        renderPhotoResults();
+        setPhotoStatus(result.note || 'Не смог уверенно распознать продукты. Попробуй другое фото или добавь их вручную.');
+        return;
+      }
+
+      renderPhotoResults();
+      setPhotoStatus(result.status === 'needs_review'
+        ? 'Есть сомнения — проверь список перед добавлением.'
+        : 'Готово. Проверь список перед добавлением.');
+    } catch (error) {
+      console.error('Cook ingredient photo failed', error);
+      photoItems = [];
+      renderPhotoResults();
+      setPhotoStatus('Не получилось распознать фото. Можно попробовать ещё раз или добавить продукты вручную.');
+    } finally {
+      photoBusy = false;
+      if (button) button.disabled = false;
+    }
   }
 
   function renderRecent() {
@@ -408,13 +501,19 @@
     recommendations = [];
     activeRecipe = null;
     stepIndex = 0;
+    photoItems = [];
+    photoBusy = false;
     const text = $('#cookIngredientText');
     if (text) text.value = '';
     const outcomeQuestion = $('#cookOutcomeQuestion');
     const outcomeFeedback = $('#cookOutcomeFeedback');
     if (outcomeQuestion) outcomeQuestion.hidden = false;
     if (outcomeFeedback) outcomeFeedback.hidden = true;
-    $$('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
+    const photoInput = $('#cookPhotoInput');
+    if (photoInput) photoInput.value = '';
+    setPhotoStatus('');
+    renderPhotoResults();
+    $('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
     renderSelected();
     renderRecent();
     renderStaplesContext();
@@ -566,6 +665,36 @@
       showFlow('ingredients');
     });
 
+    $('#cookPhotoButton')?.addEventListener('click', () => {
+      if (!vision?.enabled) {
+        setPhotoStatus(localOnly
+          ? 'Фото недоступно в локальном режиме.'
+          : 'Распознавание фото сейчас недоступно.');
+        return;
+      }
+      $('#cookPhotoInput')?.click();
+    });
+
+    $('#cookPhotoInput')?.addEventListener('change', async (event) => {
+      const file = event.target?.files?.[0] || null;
+      if (file) await analyzeCookPhoto(file);
+      if (event.target) event.target.value = '';
+    });
+
+    $('#cookPhotoApply')?.addEventListener('click', () => {
+      const chosen = photoItems.filter((item) => item.selected);
+      chosen.forEach((item) => selected.add(item.name));
+      renderSelected();
+      renderStaplesContext();
+      setPhotoStatus(chosen.length
+        ? 'Добавлено с фото: ' + chosen.length + '. Можно добавить ещё или продолжить.'
+        : 'Сначала выбери продукты на фото.');
+      if (chosen.length) {
+        photoItems = [];
+        renderPhotoResults();
+      }
+    });
+
     $('#cookAddText')?.addEventListener('click', () => {
       const input = $('#cookIngredientText');
       parseText(input?.value).forEach((item) => selected.add(item));
@@ -578,6 +707,15 @@
     });
 
     document.addEventListener('click', (event) => {
+      const photo = event.target.closest('[data-cook-photo-index]');
+      if (photo) {
+        const index = Number(photo.dataset.cookPhotoIndex);
+        if (photoItems[index]) {
+          photoItems[index].selected = !photoItems[index].selected;
+          renderPhotoResults();
+        }
+        return;
+      }
       const quick = event.target.closest('[data-cook-ingredient]');
       if (quick) {
         const name = quick.dataset.cookIngredient;
@@ -702,7 +840,8 @@
     version: VERSION,
     getState: readState,
     getSelected: () => [...selected],
-    getAvailableStaples: () => getAvailableStaples()
+    getAvailableStaples: () => getAvailableStaples(),
+    getPhotoItems: () => photoItems.map((item) => ({ ...item }))
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
