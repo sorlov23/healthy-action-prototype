@@ -312,3 +312,99 @@
 .progress-feedback-card strong{display:block;margin-top:6px;font-size:15px;line-height:1.3;letter-spacing:-.02em}
 .progress-feedback-card p{margin:6px 0 0;color:#747d84;font-size:10px;line-height:1.5}
 .progress-feedback-card>span{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--rinlo-lime);font-size:20px;font-weight:950}
+
+
+/* Rinlo 2.1 — Cook Flow v1 */
+.rinlo-home-focus{padding:18px 0 8px}
+.rinlo-home-focus>h1{font-size:clamp(42px,11.4vw,54px);line-height:.94;letter-spacing:-.06em;margin:7px 0 15px;max-width:420px}
+.home-focus-lead{margin:0 0 22px;max-width:470px;font-size:14px;line-height:1.52;color:#6d757d}
+.home-mode-card{width:100%;border:1px solid rgba(17,19,21,.07);border-radius:24px;background:#fff;box-shadow:0 12px 34px rgba(17,19,21,.05)}
+button.home-mode-card{display:grid;grid-template-columns:46px 1fr 28px;gap:13px;align-items:center;text-align:left;padding:20px;margin:0 0 12px}
+button.home-mode-card>strong{font-size:24px;font-weight:500;text-align:right}
+.home-mode-icon{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;background:#eff4e8;font-size:21px}
+.cook-mode-card{background:linear-gradient(145deg,#f8ffe9,#fff 72%);border-color:rgba(139,195,54,.2)!important}
+.cook-mode-card .home-mode-icon{background:var(--rinlo-lime)}
+.home-mode-copy{display:flex;flex-direction:column;min-width:0}
+.home-mode-copy small{font-size:8px;font-weight:850;letter-spacing:.15em;color:#8a9299;margin-bottom:5px}
+.home-mode-copy b{font-size:23px;line-height:1.05;letter-spacing:-.045em;color:#111315}
+.home-mode-copy span{margin-top:6px;font-size:11px;line-height:1.35;color:#717a82}
+.choose-mode-card{display:grid;grid-template-columns:46px 1fr;gap:13px;align-items:start;padding:20px;margin-bottom:13px}
+.choose-mode-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px}
+.choose-action{min-height:44px;border-radius:14px;border:1px solid rgba(17,19,21,.07);background:#f7f8f8;font-size:12px;font-weight:800;color:#111315}
+.choose-action.primary{background:#111315;color:#fff;border-color:#111315}
+.cook-recent-home{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-radius:18px;background:#f1f3f4;margin:2px 0 18px}
+.cook-recent-home>div{display:flex;flex-direction:column;min-width:0;gap:3px}
+.cook-recent-home small{font-size:8px;font-weight:850;letter-spacing:.13em;color:#8b939a}
+.cook-recent-home b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cook-recent-home button{flex:none;font-size:10px;font-weight:850;text-decoration:underline;text-underline-offset:3px}
+
+.cook-flow{position:fixed;inset:0;z-index:145;background:var(--rinlo-soft);overflow:hidden}
+.cook-step{display:none;position:absolute;inset:0;margin:0 auto;max-width:560px;background:var(--rinlo-soft);min-height:100dvh;flex-direction:column;overflow:hidden}
+.cook-step.active{display:flex;animation:flowIn .2s ease}
+.cook-flow-body{padding-top:24px}
+.cook-text-input{display:block;background:#fff;border:1px solid rgba(17,19,21,.08);border-radius:20px;padding:14px 14px 12px}
+.cook-text-input>span{display:block;margin-bottom:8px;font-size:10px;font-weight:850;letter-spacing:.04em;color:#767f87}
+.cook-text-input textarea{display:block;width:100%;min-height:82px;border:0;outline:0;resize:none;background:transparent;font:700 16px/1.35 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;color:#111315}
+.cook-text-input textarea::placeholder{font-weight:550;color:#a1a8ae}
+.cook-inline-add{display:block;margin:8px 0 19px auto;padding:9px 13px;border-radius:12px;background:#edf0f1;font-size:10px;font-weight:850}
+.cook-quick-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 10px}
+.cook-quick-head b{font-size:12px}
+.cook-quick-head span{font-size:9px;color:#899198}
+.cook-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cook-quick-grid button,.cook-recent-inline button{min-height:42px;border-radius:14px;background:#fff;border:1px solid rgba(17,19,21,.07);font-size:10px;font-weight:750;padding:8px 7px}
+.cook-quick-grid button.active{background:#111315;color:#fff;border-color:#111315}
+.cook-recent-inline{display:flex;gap:7px;overflow:auto;margin:14px -2px 0;padding:2px 2px 4px;scrollbar-width:none}
+.cook-recent-inline::-webkit-scrollbar{display:none}
+.cook-recent-inline button{flex:none;min-height:36px;padding:7px 11px;background:#f0f4e8}
+.cook-selected{margin-top:20px;padding:14px;border-radius:19px;background:#eef1f2}
+.cook-selected>small{display:block;font-size:8px;letter-spacing:.14em;font-weight:850;color:#889198;margin-bottom:8px}
+#cookSelectedIngredients{display:flex;flex-wrap:wrap;gap:7px}
+#cookSelectedIngredients>button{display:inline-flex;align-items:center;gap:7px;min-height:34px;border-radius:999px;background:#fff;padding:7px 10px;font-size:10px;font-weight:750}
+#cookSelectedIngredients>button b{font-size:14px;font-weight:500;color:#8d959c}
+#cookSelectedIngredients>p{margin:0;font-size:10px;line-height:1.45;color:#7e878e}
+
+.cook-priority-list{display:grid;gap:9px;margin-top:18px}
+.cook-priority-list>button{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;text-align:left;padding:13px;border-radius:18px;background:#fff;border:1px solid rgba(17,19,21,.07)}
+.cook-priority-list>button>span{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:#f1f3f4;font-size:18px}
+.cook-priority-list>button>div{display:flex;flex-direction:column;gap:3px}
+.cook-priority-list b{font-size:14px}
+.cook-priority-list small{font-size:10px;color:#7c858d}
+.cook-priority-list>button.active{border-color:#111315;box-shadow:0 0 0 2px #111315}
+.cook-priority-list>button.active>span{background:var(--rinlo-lime)}
+
+.cook-result-body{padding-top:32px}
+.cook-result-body>h1{font-size:40px;line-height:.96;max-width:430px}
+.cook-result-time{display:inline-flex;margin:4px 0 14px;padding:8px 11px;border-radius:999px;background:var(--rinlo-lime);font-size:11px;font-weight:900}
+.cook-result-note{margin:0 0 17px;font-size:14px;line-height:1.5;color:#68717a}
+.cook-why-card{padding:15px;border-radius:18px;background:#fff;border:1px solid rgba(17,19,21,.06)}
+.cook-why-card small{display:block;font-size:8px;font-weight:850;letter-spacing:.13em;color:#879098;margin-bottom:7px}
+.cook-why-card p{margin:0;font-size:11px;line-height:1.48}
+.cook-alternatives{margin-top:20px}
+#cookAlternatives{display:grid;gap:8px}
+#cookAlternatives>button{display:grid;text-align:left;gap:2px;padding:13px 14px;border-radius:16px;background:#fff;border:1px solid rgba(17,19,21,.07)}
+#cookAlternatives>button span{font-size:8px;font-weight:850;letter-spacing:.08em;color:#8b9399}
+#cookAlternatives>button b{font-size:12px}
+#cookAlternatives>button small{font-size:9px;color:#7f888f}
+#cookAlternatives>button.active{border-color:#111315;box-shadow:0 0 0 1px #111315}
+
+.cook-progress-track{height:5px;border-radius:99px;background:#e2e6e8;overflow:hidden;margin:4px 0 28px}
+.cook-progress-track span{display:block;height:100%;width:20%;background:#111315;border-radius:99px;transition:width .2s ease}
+.cook-mode-body{display:flex;flex-direction:column;justify-content:center;padding-top:30px;padding-bottom:50px}
+.cook-mode-body h1{font-size:44px;max-width:430px}
+.cook-step-copy{font-size:19px;line-height:1.5;letter-spacing:-.02em;color:#606970;max-width:450px;margin:4px 0 0}
+.cook-mode-footer{display:grid;grid-template-columns:72px 1fr;gap:9px}
+.cook-mode-footer .btn{width:100%}
+
+.cook-outcome-body{text-align:center;padding-top:55px}
+.cook-outcome-body .success-mark{margin:0 auto 18px}
+.cook-outcome-body h1{max-width:430px;margin-left:auto;margin-right:auto}
+.cook-outcome-actions{display:grid;gap:9px;margin-top:22px}
+.cook-feedback-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.cook-feedback-actions button{min-height:58px;border-radius:18px;background:#fff;border:1px solid rgba(17,19,21,.07);font-size:13px;font-weight:850}
+
+@media(max-width:380px){
+  .rinlo-home-focus>h1{font-size:40px}
+  .home-mode-copy b{font-size:21px}
+  .cook-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cook-result-body>h1,.cook-mode-body h1{font-size:36px}
+}
