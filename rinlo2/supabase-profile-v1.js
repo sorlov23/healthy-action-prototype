@@ -42,6 +42,7 @@
       || profile.currentWeight
       || profile.targetWeight
       || (Array.isArray(profile.priorities) && profile.priorities.length)
+      || (Array.isArray(profile.staples) && profile.staples.length)
     );
   }
 
@@ -52,6 +53,7 @@
       current_weight_kg: profile.currentWeight || null,
       target_weight_kg: profile.targetWeight || null,
       priorities: Array.isArray(profile.priorities) ? profile.priorities : [],
+      staples: Array.isArray(profile.staples) ? profile.staples : [],
       updated_at: profile.updatedAt || new Date().toISOString(),
     };
   }
@@ -62,6 +64,7 @@
       currentWeight: row?.current_weight_kg == null ? null : Number(row.current_weight_kg),
       targetWeight: row?.target_weight_kg == null ? null : Number(row.target_weight_kg),
       priorities: Array.isArray(row?.priorities) ? row.priorities : [],
+      staples: Array.isArray(row?.staples) ? row.staples : [],
       updatedAt: row?.updated_at || null,
     };
   }
@@ -166,7 +169,7 @@
   setTimeout(syncNow, 0);
 
   window.Rinlo2ProfileSync = {
-    version: 'v2-conflict-aware',
+    version: 'v3-staples',
     enabled,
     localOnly,
     fetchProfile,
