@@ -1678,7 +1678,15 @@
     };
 
     const sourceLabels = { photo: 'Фото', text: 'Текст', voice: 'Голос', cook: 'Готовка' };
+    const isCook = decision.source === 'cook';
     setText('detailSource', sourceLabels[decision.source] || 'Решение');
+
+    const explanationLabel = document.querySelector('[data-flow-step="detail"] .detail-section > small');
+    const actionsLabel = document.querySelector('#detailActionsCard > small');
+    const selectedLabel = document.querySelector('[data-flow-step="detail"] .selected-detail > small');
+    if (explanationLabel) explanationLabel.textContent = isCook ? 'ПОЧЕМУ ЭТОТ ВАРИАНТ' : 'ЧТО БЫЛО В МОМЕНТ РЕШЕНИЯ';
+    if (actionsLabel) actionsLabel.textContent = isCook ? 'КАК ГОТОВИЛ' : 'МОЖНО БЫЛО СДЕЛАТЬ ТОГДА';
+    if (selectedLabel) selectedLabel.textContent = isCook ? 'ЧТО ПРИГОТОВИЛ' : 'ЧТО ТЫ ВЫБРАЛ';
     setText('detailDate', formatDecisionDate(decision.createdAt));
     setText('detailName', selected.name || decision.original?.name || decision.question || 'Сохранённое решение');
     setText('detailTitle', decision.title || 'Решение сохранено');
