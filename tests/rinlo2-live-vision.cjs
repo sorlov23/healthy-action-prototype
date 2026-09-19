@@ -196,6 +196,53 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
     throw new Error(`audio_noncanonical_verdict:${JSON.stringify(audioPayload?.analysis || {})}`);
   }
 
+
+  const cookDecision = await fetch(`${url}/functions/v1/analyze-food`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      apikey: key,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      mode: 'cook',
+      ingredients: ['Куриное филе', 'Яйца', 'Сыр'],
+      staples: [],
+      priority: 'fast',
+      profile: {
+        goal: 'lose',
+        priorities: ['satiety', 'simplicity'],
+      },
+      recentCookOutcomes: [],
+    }),
+  });
+
+  const cookPayload = await jsonResponse(cookDecision);
+  if (!cookDecision.ok) {
+    throw new Error(`cook_decision_call_failed:${cookDecision.status}:${JSON.stringify(cookPayload)}`);
+  }
+  if (cookPayload?.meta?.mode !== 'cook' || cookPayload?.meta?.provider !== 'google-gemini') {
+    throw new Error(`cook_unexpected_meta:${JSON.stringify(cookPayload?.meta || {})}`);
+  }
+  const cookPrimary = cookPayload?.cook?.primary;
+  if (!cookPrimary?.name || !Array.isArray(cookPrimary?.steps) || cookPrimary.steps.length < 3) {
+    throw new Error(`cook_primary_invalid:${JSON.stringify(cookPayload?.cook || {})}`);
+  }
+  if (!Array.isArray(cookPayload?.cook?.alternatives) || cookPayload.cook.alternatives.length !== 2) {
+    throw new Error(`cook_alternatives_invalid:${JSON.stringify(cookPayload?.cook || {})}`);
+  }
+  if (!cookPrimary.steps.every((step) => step?.title && step?.instruction)) {
+    throw new Error(`cook_steps_not_actionable:${JSON.stringify(cookPrimary.steps)}`);
+  }
+  const allowedCookIngredients = new Set(['куриное филе', 'яйца', 'сыр']);
+  if (!(cookPrimary.ingredients_used || []).every((item) => allowedCookIngredients.has(String(item).toLowerCase()))) {
+    throw new Error(`cook_invented_ingredient:${JSON.stringify(cookPrimary.ingredients_used)}`);
+  }
+  if ((cookPrimary.assumed_staples || []).length !== 0) {
+    throw new Error(`cook_invented_staples:${JSON.stringify(cookPrimary.assumed_staples)}`);
+  }
+
   console.log('RINLO_LIVE_VISION_RESULT=PASS');
   console.log(JSON.stringify({
     provider: payload.meta.provider,
@@ -218,6 +265,12 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
       decisionStage: audioPayload.analysis.decision_stage,
       requestSummary: audioPayload.analysis.request_summary,
       verdict: audioPayload.analysis.verdict_title,
+    },
+    cookProbe: {
+      name: cookPayload.cook.primary.name,
+      duration: cookPayload.cook.primary.duration_minutes,
+      ingredientsUsed: cookPayload.cook.primary.ingredients_used,
+      steps: cookPayload.cook.primary.steps.map((step) => step.title),
     },
   }, null, 2));
 })().catch((error) => {
