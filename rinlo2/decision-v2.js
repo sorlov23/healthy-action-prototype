@@ -193,6 +193,9 @@
     return 'food-salad';
   }
   function sourceIconMarkup(source = 'text') {
+    if (source === 'cook') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v7a3 3 0 0 0 3 3h1V4M8 4v10M18 4v16M15.5 4v6a2.5 2.5 0 0 0 5 0V4"/></svg>';
+    }
     if (source === 'photo') {
       return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 6.5 9.8 4.8h4.4l1.4 1.7H18a2 2 0 0 1 2 2v8.7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h2.4Z"/><circle cx="12" cy="12.8" r="3.2"/></svg>';
     }
@@ -1601,7 +1604,12 @@
     const verdict = document.createElement('span');
     const adjusted = decision.selected?.kind === 'alternative';
     verdict.className = `verdict ${adjusted || decision.tone === 'good' ? 'good' : 'neutral'}`;
-    verdict.textContent = adjusted ? '● Выбран вариант с корректировкой' : `● ${decision.title || 'Решение сохранено'}`;
+    if (decision.source === 'cook') {
+      const duration = Number(decision.cook?.duration || 0);
+      verdict.textContent = duration ? `● Приготовил · ${duration} мин` : '● Приготовил';
+    } else {
+      verdict.textContent = adjusted ? '● Выбран вариант с корректировкой' : `● ${decision.title || 'Решение сохранено'}`;
+    }
 
     const time = document.createElement('small');
     time.textContent = formatDecisionDate(decision.createdAt);
@@ -1623,13 +1631,8 @@
   }
 
   function matchesHistoryFilter(decision) {
-    if (historyFilter === 'fits') {
-      return decision.decisionState === 'fits_well' || decision.title === 'Можно брать';
-    }
-    if (historyFilter === 'adjusted') {
-      return ['fits_with_adjustment', 'better_alternative'].includes(decision.decisionState)
-        || decision.selected?.kind === 'alternative';
-    }
+    if (historyFilter === 'cook') return decision.source === 'cook';
+    if (historyFilter === 'choose') return decision.source !== 'cook';
     return true;
   }
 
@@ -1644,6 +1647,8 @@
       decision.selected?.name,
       decision.futureTip,
       ...(decision.actionsNow || []),
+      ...(decision.cook?.ingredients || []),
+      ...(decision.cook?.steps || []).flatMap((step) => [step?.title, step?.instruction]),
     ].filter(Boolean).join(' ').toLowerCase();
     return haystack.includes(query);
   }
@@ -1672,21 +1677,31 @@
       if (node) node.textContent = value || '—';
     };
 
-    const sourceLabels = { photo: 'Фото', text: 'Текст', voice: 'Голос' };
+    const sourceLabels = { photo: 'Фото', text: 'Текст', voice: 'Голос', cook: 'Готовка' };
     setText('detailSource', sourceLabels[decision.source] || 'Решение');
     setText('detailDate', formatDecisionDate(decision.createdAt));
     setText('detailName', selected.name || decision.original?.name || decision.question || 'Сохранённое решение');
     setText('detailTitle', decision.title || 'Решение сохранено');
     setText('detailExplanation', decision.explanation || 'Описание этого решения не сохранилось.');
     setText('detailCalories', selected.calories || decision.calories || '—');
-    setText('detailContext', decision.context || stageLabel(decision.stage));
+    setText('detailContext', decision.context || (decision.source === 'cook' ? 'приготовлено дома' : stageLabel(decision.stage)));
     setText('detailSelectedName', selected.name || decision.original?.name || 'Исходный вариант');
     setText('detailSelectedCalories', selected.calories || decision.calories || '—');
-    setText('detailStageNote', stageNote(decision.stage));
+    setText('detailStageNote', decision.source === 'cook'
+      ? (decision.cook?.feedback === 'helpful'
+          ? 'Ты отметил этот вариант как удачный. Rinlo сможет использовать это как сигнал для будущих рецептов.'
+          : 'Это блюдо было приготовлено через Cook Flow и сохранено в общей истории решений.')
+      : stageNote(decision.stage));
 
-    const actions = Array.isArray(decision.actionsNow)
-      ? decision.actionsNow.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
-      : [];
+    const actions = decision.source === 'cook' && Array.isArray(decision.cook?.steps)
+      ? decision.cook.steps.map((step) => {
+          const title = String(step?.title || '').trim();
+          const instruction = String(step?.instruction || '').trim();
+          return [title, instruction].filter(Boolean).join(': ');
+        }).filter(Boolean).slice(0, 8)
+      : (Array.isArray(decision.actionsNow)
+          ? decision.actionsNow.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+          : []);
     const actionsList = document.getElementById('detailActions');
     if (actionsList) {
       actionsList.replaceChildren(...actions.map((text) => {
@@ -1713,6 +1728,116 @@
     }
     updateFeedbackSurface(decision, 'detail');
     showStep('detail');
+  }
+
+
+  function cookNutritionText(nutrition = {}) {
+    const range = (min, max, suffix = '') => {
+      const a = Math.max(0, Math.round(Number(min || 0)));
+      const b = Math.max(0, Math.round(Number(max || 0)));
+      if (!a && !b) return '';
+      if (!a || a === b) return String(b || a) + suffix;
+      return a + '–' + b + suffix;
+    };
+    const calories = range(nutrition.calorieMin, nutrition.calorieMax, ' ккал');
+    const protein = range(nutrition.proteinMin, nutrition.proteinMax);
+    const fat = range(nutrition.fatMin, nutrition.fatMax);
+    const carbs = range(nutrition.carbsMin, nutrition.carbsMax);
+    const macros = protein || fat || carbs
+      ? `Б ${protein || '—'} · Ж ${fat || '—'} · У ${carbs || '—'} г`
+      : '';
+    return [calories ? '≈ ' + calories : '', macros].filter(Boolean).join(' · ');
+  }
+
+  function recordCookDecision(payload = {}) {
+    const recipe = payload.recipe && typeof payload.recipe === 'object' ? payload.recipe : {};
+    const name = String(recipe.name || '').trim();
+    if (!name) return null;
+
+    const id = String(payload.id || `cook-${Date.now()}`);
+    const createdAt = String(payload.createdAt || new Date().toISOString());
+    const nutritionText = cookNutritionText(recipe.nutrition || {});
+    const priorityLabels = {
+      fast: 'Быстро',
+      satiety: 'Сытно',
+      light: 'Полегче',
+      use: 'Использовать продукты',
+      none: 'Без приоритета',
+    };
+    const contextParts = [
+      priorityLabels[payload.priority] || '',
+      Number(recipe.duration || 0) > 0 ? `${Math.round(Number(recipe.duration))} минут` : '',
+    ].filter(Boolean);
+
+    const cook = {
+      ingredients: Array.isArray(payload.ingredients) ? payload.ingredients.map(String).slice(0, 24) : [],
+      staples: Array.isArray(recipe.staples) ? recipe.staples.map(String).slice(0, 16) : [],
+      priority: String(payload.priority || 'none'),
+      outcome: String(payload.outcome || 'prepared'),
+      feedback: String(payload.feedback || ''),
+      duration: Math.max(0, Number(recipe.duration || 0)),
+      nutrition: recipe.nutrition && typeof recipe.nutrition === 'object'
+        ? JSON.parse(JSON.stringify(recipe.nutrition))
+        : null,
+      steps: Array.isArray(recipe.steps)
+        ? recipe.steps.map((step) => ({
+            title: String(step?.[0] || step?.title || ''),
+            instruction: String(step?.[1] || step?.instruction || ''),
+            minutes: Math.max(0, Number(step?.[2] || step?.minutes || 0)),
+          })).slice(0, 8)
+        : [],
+    };
+
+    const decision = {
+      id,
+      source: 'cook',
+      stage: 'ready',
+      question: 'Что приготовить?',
+      createdAt,
+      updatedAt: new Date().toISOString(),
+      decisionState: 'fits_well',
+      title: 'Приготовил',
+      icon: '✓',
+      tone: 'good',
+      explanation: String(recipe.note || 'Rinlo помог выбрать и приготовить это блюдо.'),
+      calories: nutritionText,
+      context: contextParts.join(' · ') || 'приготовлено дома',
+      fit: '',
+      actionsNow: [],
+      futureTip: '',
+      original: {
+        name,
+        calories: nutritionText,
+        thumb: 'food-salad',
+      },
+      alternative: null,
+      selected: {
+        name,
+        calories: nutritionText,
+        thumb: 'food-salad',
+        kind: 'original',
+      },
+      memoryAppliedCount: 0,
+      memorySources: [],
+      cook,
+    };
+
+    const index = decisions.findIndex((item) => item?.id === id);
+    if (index >= 0) {
+      decision.createdAt = decisions[index].createdAt || createdAt;
+      decisions[index] = decision;
+    } else {
+      decisions.unshift(decision);
+    }
+    decisions.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    saveDecisions();
+    renderDecisionSurfaces();
+    renderDayContext();
+    renderProgress();
+    window.dispatchEvent(new CustomEvent('rinlo2:decision-saved', {
+      detail: { decision: JSON.parse(JSON.stringify(decision)) }
+    }));
+    return id;
   }
 
   function renderStoredDecisions() {
@@ -1955,11 +2080,12 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.16-sync-safe',
+    version: 'decision-v2.17-cook-history',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
     importDecisions,
+    recordCookDecision,
     getDayContext: () => ({ target: DAY_TARGET, decisions: todayDecisions().length, calories: sumCalories() }),
     showMemoryExplanation,
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
