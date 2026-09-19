@@ -841,7 +841,7 @@
       closeFlow();
     });
 
-    $('[data-cook-feedback]').forEach((button) => {
+    $$('[data-cook-feedback]').forEach((button) => {
       button.addEventListener('click', () => {
         const feedback = button.dataset.cookFeedback || '';
         updateLatestFeedback(feedback);
