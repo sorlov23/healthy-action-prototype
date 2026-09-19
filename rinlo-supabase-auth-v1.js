@@ -186,6 +186,13 @@
     return ensurePromise;
   }
 
+  async function refreshCurrentSession() {
+    if (!enabled) return null;
+    const current = readSession();
+    if (!current?.refresh_token) return ensureSession();
+    return refreshSession(current);
+  }
+
   async function getAccessToken() {
     const session = await ensureSession();
     return session?.access_token || null;
@@ -200,6 +207,7 @@
     enabled,
     projectUrl: base,
     ensureSession,
+    refreshCurrentSession,
     getSession: readSession,
     getAccessToken,
     getUser,
