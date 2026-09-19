@@ -10,12 +10,12 @@
   ];
 
   const ALIASES = [
-    [/^(курица|куриное филе|филе курицы)$/i, 'Куриное филе'],
-    [/^(грибы|шампиньоны|шампиньон)$/i, 'Шампиньоны'],
-    [/^(помидор|помидоры|томаты|томат)$/i, 'Помидоры'],
-    [/^(яйцо|яйца)$/i, 'Яйца'],
-    [/^(рис)$/i, 'Рис'],
-    [/^(сыр)$/i, 'Сыр'],
+    [/^(курица|курицы|куриное филе|филе курицы)$/i, 'Куриное филе'],
+    [/^(грибы|грибов|шампиньоны|шампиньон|шампиньонов)$/i, 'Шампиньоны'],
+    [/^(помидор|помидоры|помидоров|томаты|томат)$/i, 'Помидоры'],
+    [/^(яйцо|яйца|яиц)$/i, 'Яйца'],
+    [/^(рис|риса)$/i, 'Рис'],
+    [/^(сыр|сыра)$/i, 'Сыр'],
     [/^(свинина)$/i, 'Свинина'],
     [/^(говядина)$/i, 'Говядина'],
     [/^(фарш)$/i, 'Фарш'],
@@ -287,7 +287,11 @@
     stepIndex = 0;
     const text = $('#cookIngredientText');
     if (text) text.value = '';
-    $$('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
+    const outcomeQuestion = $('#cookOutcomeQuestion');
+    const outcomeFeedback = $('#cookOutcomeFeedback');
+    if (outcomeQuestion) outcomeQuestion.hidden = false;
+    if (outcomeFeedback) outcomeFeedback.hidden = true;
+    $('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
     renderSelected();
     renderRecent();
   }
@@ -351,6 +355,24 @@
     state.outcomes = state.outcomes.slice(0, 40);
     writeState(state);
     renderRecent();
+  }
+
+  function updateLatestFeedback(feedback) {
+    const state = readState();
+    const recipe = activeRecipe?.name || '';
+    const index = state.outcomes.findIndex((item) => item.type === 'cook' && item.recipe === recipe && item.outcome === 'prepared');
+    if (index >= 0) state.outcomes[index] = { ...state.outcomes[index], feedback };
+    else state.outcomes.unshift({
+      at: new Date().toISOString(),
+      type: 'cook',
+      recipe,
+      ingredients: [...selected],
+      priority,
+      outcome: 'prepared',
+      feedback
+    });
+    state.outcomes = state.outcomes.slice(0, 40);
+    writeState(state);
   }
 
   function bind() {
@@ -457,9 +479,9 @@
       closeFlow();
     });
 
-    $$('[data-cook-feedback]').forEach((button) => {
+    $('[data-cook-feedback]').forEach((button) => {
       button.addEventListener('click', () => {
-        saveOutcome('prepared', button.dataset.cookFeedback);
+        updateLatestFeedback(button.dataset.cookFeedback);
         closeFlow();
       });
     });
