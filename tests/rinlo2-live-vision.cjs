@@ -243,6 +243,16 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
     throw new Error(`cook_invented_staples:${JSON.stringify(cookPrimary.assumed_staples)}`);
   }
 
+  const nutrition = cookPrimary?.nutrition;
+  if (!nutrition
+      || !(nutrition.calorie_max >= nutrition.calorie_min && nutrition.calorie_min > 0)
+      || !(nutrition.protein_max >= nutrition.protein_min)
+      || !(nutrition.fat_max >= nutrition.fat_min)
+      || !(nutrition.carbs_max >= nutrition.carbs_min)
+      || !String(nutrition.assumption || '').trim()) {
+    throw new Error(`cook_nutrition_invalid:${JSON.stringify(nutrition || {})}`);
+  }
+
   console.log('RINLO_LIVE_VISION_RESULT=PASS');
   console.log(JSON.stringify({
     provider: payload.meta.provider,
@@ -271,6 +281,7 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
       duration: cookPayload.cook.primary.duration_minutes,
       ingredientsUsed: cookPayload.cook.primary.ingredients_used,
       steps: cookPayload.cook.primary.steps.map((step) => step.title),
+      nutrition: cookPayload.cook.primary.nutrition,
     },
   }, null, 2));
 })().catch((error) => {
