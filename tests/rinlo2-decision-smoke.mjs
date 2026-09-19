@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert(window.RinloCook?.version === 'v1-prototype', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v1-prototype', 'cook_bridge_missing');
   await page.locator('#cookStart').click();
   await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
 
