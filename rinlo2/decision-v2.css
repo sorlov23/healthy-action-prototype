@@ -139,6 +139,7 @@
 .decision-source-thumb svg{width:26px;height:26px;stroke:#111315;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;fill:none}
 .decision-source-thumb[data-source="text"]{background:linear-gradient(145deg,#f7f8f9,#eceff1)}
 .decision-source-thumb[data-source="voice"]{background:linear-gradient(145deg,#f7f8f9,#eef3e8)}
+.decision-source-thumb[data-source="cook"]{background:linear-gradient(145deg,#f5ffe5,#ecf7d8)}
 .decision-source-thumb.has-photo{background-size:cover;background-position:center;border-color:rgba(17,19,21,.06)}
 .decision-source-thumb.has-photo svg{display:none}
 
