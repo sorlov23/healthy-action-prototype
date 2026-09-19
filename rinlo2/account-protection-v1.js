@@ -284,11 +284,19 @@
 
   render();
 
-  // If an email-change request is pending, do one authentic server check on load.
+  // If an email-change request is pending, verify it on load and refresh
+  // the JWT immediately after confirmation so is_anonymous is fresh too.
   if (cloudEnabled() && pending) {
     setTimeout(() => {
       auth.getUser()
-        .then((user) => render(user))
+        .then(async (user) => {
+          if (isProtectedUser(user)) {
+            const refreshed = await auth.refreshCurrentSession?.().catch(() => null);
+            render(refreshed?.user || user);
+            return;
+          }
+          render(user);
+        })
         .catch(() => render());
     }, 350);
   }
@@ -302,7 +310,11 @@
         renderLocalOnly();
         return null;
       }
-      const user = await auth.getUser();
+      let user = await auth.getUser();
+      if (isProtectedUser(user)) {
+        const refreshed = await auth.refreshCurrentSession?.().catch(() => null);
+        user = refreshed?.user || user;
+      }
       render(user);
       return user;
     },
