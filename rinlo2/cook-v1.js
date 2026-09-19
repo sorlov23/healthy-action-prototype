@@ -513,7 +513,7 @@
     if (photoInput) photoInput.value = '';
     setPhotoStatus('');
     renderPhotoResults();
-    $('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
+    $$('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
     renderSelected();
     renderRecent();
     renderStaplesContext();
@@ -597,7 +597,7 @@
       assumptions.hidden = !staples.length;
       assumptions.textContent = staples.length ? 'Также предполагаю, что дома есть: ' + staples.join(', ') + '.' : '';
     }
-    $('[data-cook-alt-index]').forEach((button) => button.classList.toggle('active', Number(button.dataset.cookAltIndex) === index));
+    $$('[data-cook-alt-index]').forEach((button) => button.classList.toggle('active', Number(button.dataset.cookAltIndex) === index));
   }
 
   function renderCookStep() {
