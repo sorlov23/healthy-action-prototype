@@ -40,6 +40,12 @@ try {
 
   assert((await page.evaluate(() => window.RinloCook?.version)) === 'v1-prototype', 'cook_bridge_missing');
   await page.locator('#cookStart').click();
+  const cookOpenState = await page.evaluate(() => ({
+    flowHidden: document.getElementById('cookFlow')?.hidden,
+    activeSteps: [...document.querySelectorAll('#cookFlow [data-cook-step].active')].map((el) => el.dataset.cookStep),
+    heading: document.querySelector('#cookFlow [data-cook-step="ingredients"] h1')?.textContent || '',
+  }));
+  assert(cookOpenState.flowHidden === false && cookOpenState.activeSteps.includes('ingredients'), `cook_flow_not_open:${JSON.stringify(cookOpenState)}:errors=${JSON.stringify(errors)}`);
   await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
 
   await page.locator('[data-cook-ingredient="Куриное филе"]').click();
