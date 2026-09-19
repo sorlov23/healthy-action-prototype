@@ -231,16 +231,33 @@ try {
   await page.locator('#profileTargetWeight').fill('72');
   await page.locator('[data-profile-priority="satiety"]').click();
   await page.locator('[data-profile-priority="simplicity"]').click();
+  await page.locator('[data-profile-staple="salt"]').click();
+  await page.locator('[data-profile-staple="vegetable_oil"]').click();
+  await page.locator('[data-profile-staple="garlic"]').click();
   await page.getByRole('button', { name: 'Сохранить контекст', exact: true }).click();
 
   const profileApi = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(profileApi?.goal === 'aware', `profile_goal_wrong:${JSON.stringify(profileApi)}`);
   assert(profileApi?.currentWeight === 80 && profileApi?.targetWeight === 72, `profile_weight_wrong:${JSON.stringify(profileApi)}`);
   assert(Array.isArray(profileApi?.priorities) && profileApi.priorities.includes('satiety') && profileApi.priorities.includes('simplicity'), `profile_priorities_wrong:${JSON.stringify(profileApi)}`);
+  assert(Array.isArray(profileApi?.staples)
+    && profileApi.staples.includes('salt')
+    && profileApi.staples.includes('vegetable_oil')
+    && profileApi.staples.includes('garlic'),
+    `profile_staples_wrong:${JSON.stringify(profileApi)}`);
+
+  const cookStaples = await page.evaluate(() => window.RinloCook?.getAvailableStaples?.() || []);
+  assert(cookStaples.includes('Соль') && cookStaples.includes('Растительное масло') && cookStaples.includes('Чеснок'),
+    `cook_profile_staples_missing:${JSON.stringify(cookStaples)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
+  assert(Array.isArray(reloadedProfile?.staples)
+    && reloadedProfile.staples.includes('salt')
+    && reloadedProfile.staples.includes('vegetable_oil')
+    && reloadedProfile.staples.includes('garlic'),
+    `profile_staples_persistence_failed:${JSON.stringify(reloadedProfile)}`);
 
   await page.locator('[data-nav="profile"]').last().click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
