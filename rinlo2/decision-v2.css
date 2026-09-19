@@ -431,3 +431,8 @@ button.home-mode-card>strong{font-size:24px;font-weight:500;text-align:right}
 .profile-staples button{border:1px solid rgba(17,19,21,.08);background:#f6f7f8;color:#596168;border-radius:999px;padding:9px 11px;font-size:10px;font-weight:750}
 .profile-staples button.active{background:var(--rinlo-lime);color:#111315;border-color:rgba(123,182,38,.25);box-shadow:0 0 0 1px rgba(123,182,38,.06)}
 .staples-hint{margin-bottom:15px}
+
+.cook-staples-context{margin-top:10px;padding:13px 14px;border-radius:17px;background:#f5f9ec;border:1px solid rgba(123,182,38,.14)}
+.cook-staples-context small{display:block;font-size:8px;letter-spacing:.12em;font-weight:850;color:#7b8b68;margin-bottom:5px}
+.cook-staples-context p{margin:0;font-size:11px;font-weight:800;line-height:1.4;color:#30372f}
+.cook-staples-context span{display:block;margin-top:5px;font-size:9px;line-height:1.4;color:#7a8472}
