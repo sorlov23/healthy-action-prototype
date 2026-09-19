@@ -84,6 +84,22 @@ try {
   assert((cookState?.outcomes?.length || 0) >= 1, `cook_outcome_not_saved:${JSON.stringify(cookState)}`);
   assert(await page.locator('#cookRecentHome').isVisible(), 'cook_recent_home_missing');
 
+  const cookHistory = await page.evaluate(() =>
+    (window.Rinlo2Decisions?.getDecisions?.() || []).find((item) => item.source === 'cook')
+  );
+  assert(cookHistory?.selected?.name === 'Курица с грибами и рисом', `cook_history_decision_missing:${JSON.stringify(cookHistory)}`);
+  assert(cookHistory?.cook?.outcome === 'prepared' && cookHistory?.cook?.feedback === 'helpful',
+    `cook_history_metadata_wrong:${JSON.stringify(cookHistory)}`);
+
+  await page.locator('[data-nav="history"]').last().click();
+  await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-history-filter="cook"]').click();
+  const cookHistoryRow = page.locator('#historyList .decision-row').filter({ hasText: 'Курица с грибами и рисом' });
+  await cookHistoryRow.waitFor({ state: 'visible' });
+  assert((await cookHistoryRow.textContent())?.includes('Приготовил'), 'cook_history_row_label_missing');
+  await page.locator('[data-nav="home"]').last().click();
+  await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
+
   await page.locator('[data-action="voice"]').click();
   const voiceStep = page.locator('[data-flow-step="voice"]');
   await voiceStep.waitFor({ state: 'visible' });
