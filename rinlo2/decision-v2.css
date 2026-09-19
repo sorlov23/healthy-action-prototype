@@ -408,3 +408,6 @@ button.home-mode-card>strong{font-size:24px;font-weight:500;text-align:right}
   .cook-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .cook-result-body>h1,.cook-mode-body h1{font-size:36px}
 }
+
+.cook-ai-status{display:block;min-height:16px;margin:0 2px 8px;font-size:10px;line-height:1.35;color:#707980}
+.cook-assumptions{margin-top:9px!important;padding-top:9px;border-top:1px solid rgba(17,19,21,.07);font-size:10px!important;color:#7a838a!important}
