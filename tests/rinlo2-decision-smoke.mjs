@@ -38,7 +38,9 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v2-ai', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v3-photo-ingredients', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
+  assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
   const cookOpenState = await page.evaluate(() => ({
     flowHidden: document.getElementById('cookFlow')?.hidden,
@@ -47,6 +49,9 @@ try {
   }));
   assert(cookOpenState.flowHidden === false && cookOpenState.activeSteps.includes('ingredients'), `cook_flow_not_open:${JSON.stringify(cookOpenState)}:errors=${JSON.stringify(errors)}`);
   await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
+  assert(await page.locator('#cookPhotoButton').isVisible(), 'cook_photo_button_missing');
+  await page.locator('#cookPhotoButton').click();
+  assert((await page.locator('#cookPhotoStatus').textContent())?.includes('локальном режиме'), 'cook_photo_local_only_boundary_missing');
 
   await page.locator('[data-cook-ingredient="Куриное филе"]').click();
   await page.locator('[data-cook-ingredient="Шампиньоны"]').click();
