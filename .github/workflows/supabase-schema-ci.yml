@@ -151,8 +151,25 @@ jobs:
           )
           on conflict(user_id, client_decision_id)
           do update set verdict_title=excluded.verdict_title, updated_at=now();
+          insert into public.rinlo_decisions(
+            user_id, client_decision_id, source, question, decision_state,
+            verdict_title, explanation, original_option, selected_option, selected_kind,
+            source_metadata
+          ) values (
+            '55555555-5555-4555-8555-555555555555',
+            'ci-cook-decision',
+            'cook',
+            'Что приготовить?',
+            'fits_well',
+            'Приготовил',
+            'CI cook',
+            '{"name":"Омлет"}'::jsonb,
+            '{"name":"Омлет"}'::jsonb,
+            'original',
+            '{"cook":{"outcome":"prepared"}}'::jsonb
+          );
           select count(*) from public.rinlo_decisions
-            where user_id=auth.uid() and client_decision_id='ci-decision-1';
+            where user_id=auth.uid() and client_decision_id='ci-cook-decision' and source='cook';
           rollback;
           SQL
 
