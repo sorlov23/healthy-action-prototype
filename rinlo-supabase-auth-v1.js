@@ -142,36 +142,27 @@
     return { email: normalized };
   }
 
-  async function requestLoginOtp(email) {
-    const normalized = String(email || '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      throw new Error('invalid_email');
-    }
-    await authFetch('POST', '/otp', {
-      body: {
-        email: normalized,
-        data: {},
-        create_user: false,
-        gotrue_meta_security: { captcha_token: null },
-      },
-    });
-    return { email: normalized };
+  function validatePassword(password) {
+    const value = String(password || '');
+    if (value.length < 8) throw new Error('password_too_short');
+    return value;
   }
 
-  async function verifyLoginOtp(email, token) {
+  async function setRecoveryPassword(password) {
+    const value = validatePassword(password);
+    return updateUser({ password: value });
+  }
+
+  async function signInWithPassword(email, password) {
     const normalized = String(email || '').trim().toLowerCase();
-    const normalizedToken = String(token || '').replace(/\s+/g, '');
+    const value = validatePassword(password);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
       throw new Error('invalid_email');
     }
-    if (!/^\d{6}$/.test(normalizedToken)) {
-      throw new Error('invalid_otp');
-    }
-    const data = await authFetch('POST', '/verify', {
+    const data = await authFetch('POST', '/token?grant_type=password', {
       body: {
         email: normalized,
-        token: normalizedToken,
-        type: 'email',
+        password: value,
         gotrue_meta_security: { captcha_token: null },
       },
     });
@@ -241,7 +232,7 @@
   });
 
   window.RinloSupabaseAuth = {
-    version: 'v3-recovery-otp',
+    version: 'v3-recovery-password',
     enabled,
     projectUrl: base,
     ensureSession,
@@ -252,8 +243,8 @@
     updateUser,
     requestEmailProtection,
     resendEmailChange,
-    requestLoginOtp,
-    verifyLoginOtp,
+    setRecoveryPassword,
+    signInWithPassword,
     getUserId: () => readSession()?.user?.id || null,
     clearLocalSession: clearSession,
   };
