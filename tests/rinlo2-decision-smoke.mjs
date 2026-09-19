@@ -173,7 +173,7 @@ try {
   await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
   const historyRow = page.locator('#historyList').getByRole('button').filter({ hasText: 'Бургер без соуса + Cola Zero' });
   await historyRow.waitFor({ state: 'visible' });
-  assert((await page.locator('#historyCount').textContent())?.includes('1'), 'history_count_wrong');
+  assert((await page.locator('#historyCount').textContent())?.includes('2'), 'history_count_wrong');
   const historyThumb = await historyRow.locator('.decision-source-thumb').evaluate((el) => ({
     source: el.dataset.source,
     backgroundImage: getComputedStyle(el).backgroundImage,
