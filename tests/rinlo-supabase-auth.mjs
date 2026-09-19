@@ -12,6 +12,8 @@ let nextUser = 1;
 let userFetchCount = 0;
 let userUpdateCount = 0;
 let resendCount = 0;
+let otpRequestCount = 0;
+let otpVerifyCount = 0;
 let protectedUser = false;
 
 const localStorage = {
@@ -92,6 +94,32 @@ async function fetchMock(url, options = {}) {
     assert.equal(body.email, 'owner@example.com');
     return response(200, {});
   }
+  if (String(url).endsWith('/auth/v1/otp') && options.method === 'POST') {
+    otpRequestCount += 1;
+    const body = JSON.parse(options.body || '{}');
+    assert.equal(body.email, 'owner@example.com');
+    assert.equal(body.create_user, false, 'recovery must never create a user');
+    return response(200, {});
+  }
+  if (String(url).endsWith('/auth/v1/verify') && options.method === 'POST') {
+    otpVerifyCount += 1;
+    const body = JSON.parse(options.body || '{}');
+    assert.equal(body.email, 'owner@example.com');
+    assert.equal(body.token, '123456');
+    assert.equal(body.type, 'email');
+    return response(200, {
+      access_token: 'access-recovered',
+      refresh_token: 'refresh-recovered',
+      token_type: 'bearer',
+      expires_in: 3600,
+      user: {
+        id: 'user-2',
+        is_anonymous: false,
+        email: 'owner@example.com',
+        email_confirmed_at: '2026-09-19T00:00:00Z',
+      },
+    });
+  }
   throw new Error(`Unexpected fetch ${url}`);
 }
 
@@ -132,7 +160,7 @@ const context = vm.createContext({
 vm.runInContext(source, context, { filename: 'rinlo-supabase-auth-v1.js' });
 
 const auth = window.RinloSupabaseAuth;
-assert.equal(auth.version, 'v2-account-protection');
+assert.equal(auth.version, 'v3-recovery-otp');
 assert.equal(auth.enabled, true);
 assert.equal(signupCount, 0, 'loading the bridge must not create an anonymous user');
 
@@ -201,5 +229,16 @@ assert.equal(events.at(-1)?.detail?.event, 'TOKEN_REFRESHED');
 
 auth.clearLocalSession();
 assert.equal(auth.getSession(), null);
+
+await auth.requestLoginOtp('OWNER@example.com');
+assert.equal(otpRequestCount, 1);
+
+const recovered = await auth.verifyLoginOtp('owner@example.com', '123456');
+assert.equal(otpVerifyCount, 1);
+assert.equal(recovered.user.id, 'user-2');
+assert.equal(recovered.user.is_anonymous, false);
+assert.equal(recovered.access_token, 'access-recovered');
+assert.equal(auth.getSession().user.id, 'user-2');
+assert.equal(events.at(-1)?.detail?.event, 'SIGNED_IN');
 
 console.log('Rinlo Supabase auth bridge tests passed');
