@@ -203,8 +203,7 @@ try {
   assert((await page.locator('#progressFeedbackText').textContent())?.includes('1 ответ не помог'), 'progress_feedback_negative_signal_missing');
 
   await page.locator('[data-nav="home"]').last().click();
-  await page.locator('#dayCalorieContext').waitFor({ state: 'visible' });
-  assert((await page.locator('#dayCalorieValue').textContent())?.includes('540'), 'day_context_not_updated');
+  await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
 
   const api = await page.locator('body').evaluate(() => window.Rinlo2Decisions?.getDayContext?.());
   assert(api?.target === null, `day_target_should_be_unset:${JSON.stringify(api)}`);
@@ -212,8 +211,9 @@ try {
   assert(api?.calories?.min === 540 && api?.calories?.max === 540, `day_calories_wrong:${JSON.stringify(api)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.locator('#dayCalorieContext').waitFor({ state: 'visible' });
-  assert((await page.locator('#dayCalorieValue').textContent())?.includes('540'), 'day_context_not_persisted_after_reload');
+  await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
+  const apiAfterReload = await page.locator('body').evaluate(() => window.Rinlo2Decisions?.getDayContext?.());
+  assert(apiAfterReload?.decisions === 1 && apiAfterReload?.calories?.min === 540, `day_context_not_persisted_after_reload:${JSON.stringify(apiAfterReload)}`);
 
   await page.locator('[data-nav="profile"]').last().click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
