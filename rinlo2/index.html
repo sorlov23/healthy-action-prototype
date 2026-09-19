@@ -393,7 +393,10 @@
           <button type="button" data-cook-priority="none"><span>✦</span><div><b>Неважно</b><small>Пусть Rinlo выберет сам</small></div></button>
         </div>
       </div>
-      <div class="flow-footer"><button class="btn primary wide" type="button" id="cookPriorityNext" disabled>Подобрать блюдо →</button></div>
+      <div class="flow-footer">
+        <span class="cook-ai-status" id="cookAiStatus" aria-live="polite"></span>
+        <button class="btn primary wide" type="button" id="cookPriorityNext" disabled>Подобрать блюдо →</button>
+      </div>
     </section>
 
     <section class="cook-step" data-cook-step="result">
@@ -406,6 +409,7 @@
         <article class="cook-why-card">
           <small>ПОЧЕМУ ЭТОТ ВАРИАНТ</small>
           <p id="cookResultContext"></p>
+          <p class="cook-assumptions" id="cookResultAssumptions" hidden></p>
         </article>
         <div class="cook-alternatives">
           <div class="cook-quick-head"><b>Ещё два варианта</b><span>если хочется иначе</span></div>
