@@ -63,6 +63,47 @@
     }
   }
 
+
+  async function analyzeIngredientsPhoto(file) {
+    if (!enabled) throw error('ingredient_photo_disabled', 'ingredient_photo_disabled');
+    if (providerUnavailable) throw error('vision_not_configured', 'vision_not_configured', 503);
+
+    const [session, imageDataUrl] = await Promise.all([
+      auth.ensureSession(),
+      compressImage(file),
+    ]);
+    if (!session?.access_token) throw error('no_supabase_session', 'no_supabase_session', 401);
+
+    const response = await fetch(`${base}/functions/v1/analyze-food`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        mode: 'cook_ingredients_photo',
+        imageDataUrl,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (data?.error === 'vision_not_configured') providerUnavailable = true;
+      throw error(
+        data?.message || data?.error || `ingredient_photo_${response.status}`,
+        data?.error || data?.code || null,
+        response.status,
+      );
+    }
+    if (!data?.ingredientPhoto || !Array.isArray(data.ingredientPhoto.ingredients)) {
+      throw error('empty_ingredient_photo_analysis', 'empty_ingredient_photo_analysis', 502);
+    }
+    return data;
+  }
+
   async function analyzeFile(file, context = {}) {
     if (!enabled) throw error('vision_disabled', 'vision_disabled');
     if (providerUnavailable) throw error('vision_not_configured', 'vision_not_configured', 503);
@@ -257,10 +298,11 @@
   }
 
   window.RinloVision = {
-    version: 'v1.5-relevant-memory',
+    version: 'v1.6-cook-ingredients',
     enabled,
     localOnly,
     analyzeFile,
+    analyzeIngredientsPhoto,
     analyzeText,
     analyzeAudio,
     refineAnalysis,
