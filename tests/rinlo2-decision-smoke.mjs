@@ -97,6 +97,7 @@ try {
   const cookHistoryRow = page.locator('#historyList .decision-row').filter({ hasText: 'Курица с грибами и рисом' });
   await cookHistoryRow.waitFor({ state: 'visible' });
   assert((await cookHistoryRow.textContent())?.includes('Приготовил'), 'cook_history_row_label_missing');
+  await page.locator('[data-history-filter="all"]').click();
   await page.locator('[data-nav="home"]').last().click();
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
 
