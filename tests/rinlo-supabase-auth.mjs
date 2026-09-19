@@ -11,9 +11,9 @@ let rejectRefresh = false;
 let nextUser = 1;
 let userFetchCount = 0;
 let userUpdateCount = 0;
+let passwordUpdateCount = 0;
 let resendCount = 0;
-let otpRequestCount = 0;
-let otpVerifyCount = 0;
+let passwordLoginCount = 0;
 let protectedUser = false;
 
 const localStorage = {
@@ -65,15 +65,29 @@ async function fetchMock(url, options = {}) {
     });
   }
   if (String(url).includes('/auth/v1/user') && options.method === 'PUT') {
-    userUpdateCount += 1;
     const body = JSON.parse(options.body || '{}');
-    assert.equal(body.email, 'owner@example.com');
-    return response(200, {
-      id: 'user-2',
-      is_anonymous: true,
-      email_change: body.email,
-      identities: [],
-    });
+    if (body.email) {
+      userUpdateCount += 1;
+      assert.equal(body.email, 'owner@example.com');
+      return response(200, {
+        id: 'user-2',
+        is_anonymous: true,
+        email_change: body.email,
+        identities: [],
+      });
+    }
+    if (body.password) {
+      passwordUpdateCount += 1;
+      assert.equal(body.password, 'StrongPass123!');
+      return response(200, {
+        id: 'user-2',
+        is_anonymous: false,
+        email: 'owner@example.com',
+        email_confirmed_at: '2026-09-19T00:00:00Z',
+        identities: [{ provider: 'email', identity_data: { email_verified: true } }],
+      });
+    }
+    throw new Error('Unexpected user update payload');
   }
   if (String(url).endsWith('/auth/v1/user') && options.method === 'GET') {
     userFetchCount += 1;
@@ -94,19 +108,11 @@ async function fetchMock(url, options = {}) {
     assert.equal(body.email, 'owner@example.com');
     return response(200, {});
   }
-  if (String(url).endsWith('/auth/v1/otp') && options.method === 'POST') {
-    otpRequestCount += 1;
+  if (String(url).includes('/auth/v1/token?grant_type=password') && options.method === 'POST') {
+    passwordLoginCount += 1;
     const body = JSON.parse(options.body || '{}');
     assert.equal(body.email, 'owner@example.com');
-    assert.equal(body.create_user, false, 'recovery must never create a user');
-    return response(200, {});
-  }
-  if (String(url).endsWith('/auth/v1/verify') && options.method === 'POST') {
-    otpVerifyCount += 1;
-    const body = JSON.parse(options.body || '{}');
-    assert.equal(body.email, 'owner@example.com');
-    assert.equal(body.token, '123456');
-    assert.equal(body.type, 'email');
+    assert.equal(body.password, 'StrongPass123!');
     return response(200, {
       access_token: 'access-recovered',
       refresh_token: 'refresh-recovered',
@@ -160,7 +166,7 @@ const context = vm.createContext({
 vm.runInContext(source, context, { filename: 'rinlo-supabase-auth-v1.js' });
 
 const auth = window.RinloSupabaseAuth;
-assert.equal(auth.version, 'v3-recovery-otp');
+assert.equal(auth.version, 'v3-recovery-password');
 assert.equal(auth.enabled, true);
 assert.equal(signupCount, 0, 'loading the bridge must not create an anonymous user');
 
@@ -227,14 +233,17 @@ assert.equal(protectedSession.access_token, 'access-protected');
 assert.equal(auth.getSession().user.is_anonymous, false);
 assert.equal(events.at(-1)?.detail?.event, 'TOKEN_REFRESHED');
 
+const passwordUser = await auth.setRecoveryPassword('StrongPass123!');
+assert.equal(passwordUpdateCount, 1);
+assert.equal(passwordUser.id, 'user-2');
+assert.equal(passwordUser.is_anonymous, false);
+assert.equal(events.at(-1)?.detail?.event, 'USER_UPDATED');
+
 auth.clearLocalSession();
 assert.equal(auth.getSession(), null);
 
-await auth.requestLoginOtp('OWNER@example.com');
-assert.equal(otpRequestCount, 1);
-
-const recovered = await auth.verifyLoginOtp('owner@example.com', '123456');
-assert.equal(otpVerifyCount, 1);
+const recovered = await auth.signInWithPassword('OWNER@example.com', 'StrongPass123!');
+assert.equal(passwordLoginCount, 1);
 assert.equal(recovered.user.id, 'user-2');
 assert.equal(recovered.user.is_anonymous, false);
 assert.equal(recovered.access_token, 'access-recovered');
