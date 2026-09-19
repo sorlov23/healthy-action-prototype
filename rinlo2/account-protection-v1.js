@@ -227,8 +227,10 @@
     setStatus('Проверяю подтверждение…');
 
     try {
-      const user = await auth.getUser();
+      let user = await auth.getUser();
       if (isProtectedUser(user)) {
+        const refreshed = await auth.refreshCurrentSession?.().catch(() => null);
+        user = refreshed?.user || user;
         renderProtected(user);
         window.dispatchEvent(new CustomEvent('rinlo2:account-protected', {
           detail: { userId: user.id, email: userEmail(user) },
