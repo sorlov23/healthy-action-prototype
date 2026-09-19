@@ -84,6 +84,9 @@
         memory_sources: Array.isArray(decision.memorySources)
           ? decision.memorySources.slice(0, 4)
           : [],
+        cook: decision.cook && typeof decision.cook === 'object'
+          ? decision.cook
+          : null,
       },
       created_at: decision.createdAt || new Date().toISOString(),
       updated_at: decision.updatedAt || decision.createdAt || new Date().toISOString(),
@@ -127,6 +130,9 @@
         ? row.source_metadata.memory_sources.slice(0, 4)
         : [],
       decisionState: row.decision_state || null,
+      cook: row.source_metadata?.cook && typeof row.source_metadata.cook === 'object'
+        ? row.source_metadata.cook
+        : null,
     };
   }
 
@@ -214,7 +220,7 @@
   setTimeout(scheduleSync, 0);
 
   window.Rinlo2Supabase = {
-    version: 'v1.4-full-state-sync',
+    version: 'v1.5-cook-decisions',
     enabled,
     localOnly,
     upsertDecision,
