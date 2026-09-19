@@ -257,40 +257,42 @@
         <article class="settings-section-card recovery-card" id="accountRecoveryCard">
           <div class="settings-section-head">
             <div><small>ДРУГОЕ УСТРОЙСТВО</small><b id="accountRecoveryTitle">Восстановить Rinlo</b></div>
-            <span id="accountRecoveryBadge">Email OTP</span>
+            <span id="accountRecoveryBadge">Email + пароль</span>
           </div>
-          <p id="accountRecoveryText">Если ты уже защищал Rinlo email’ом, можно войти в тот же аккаунт и вернуть историю, профиль и память.</p>
+          <p id="accountRecoveryText">Защищённый аккаунт можно открыть на другом устройстве без переноса данных вручную.</p>
 
-          <div class="recovery-email-step" id="recoveryEmailStep">
+          <div class="recovery-login-step" id="recoveryLoginStep">
             <label>
               <span>Email защищённого аккаунта</span>
-              <input id="recoveryEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+              <input id="recoveryLoginEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
             </label>
-            <button class="btn primary wide" type="button" id="recoverySendCode" disabled>Получить код</button>
-            <small>Rinlo не создаст новый аккаунт, если такого email нет.</small>
+            <label>
+              <span>Пароль восстановления</span>
+              <input id="recoveryLoginPassword" type="password" autocomplete="current-password" placeholder="Минимум 8 символов" />
+            </label>
+            <button class="btn primary wide" type="button" id="recoveryLoginButton" disabled>Войти и восстановить</button>
+            <small>Вход работает только для уже существующего защищённого аккаунта.</small>
           </div>
 
-          <div class="recovery-code-step" id="recoveryCodeStep" hidden>
-            <div class="recovery-code-head">
-              <small>КОД ОТПРАВЛЕН</small>
-              <b id="recoveryCodeEmail">—</b>
+          <div class="recovery-setup-step" id="recoverySetupStep" hidden>
+            <div class="recovery-ready">
+              <div class="recovery-ready-mark" aria-hidden="true">↗</div>
+              <div>
+                <small>ДОСТУП С ДРУГОГО УСТРОЙСТВА</small>
+                <b>Создай пароль восстановления</b>
+                <p>Он нужен только для входа на новом устройстве. Rinlo не хранит его локально.</p>
+              </div>
             </div>
             <label>
-              <span>6-значный код из письма</span>
-              <input id="recoveryOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+              <span>Новый пароль</span>
+              <input id="recoverySetPassword" type="password" autocomplete="new-password" placeholder="Минимум 8 символов" />
             </label>
-            <button class="btn primary wide" type="button" id="recoveryVerifyCode" disabled>Войти и восстановить</button>
-            <button class="settings-link-action" type="button" id="recoveryResendCode">Отправить новый код</button>
-            <button class="settings-link-action recovery-change-email" type="button" id="recoveryChangeEmail">Изменить email</button>
-          </div>
-
-          <div class="recovery-ready" id="recoveryReady" hidden>
-            <div class="recovery-ready-mark" aria-hidden="true">↗</div>
-            <div>
-              <small>ВОССТАНОВЛЕНИЕ ГОТОВО</small>
-              <b>На новом устройстве войди по email-коду</b>
-              <p>После входа Rinlo подтянет облачную историю, профиль, память и оценки ответов.</p>
-            </div>
+            <label>
+              <span>Повтори пароль</span>
+              <input id="recoverySetPasswordConfirm" type="password" autocomplete="new-password" placeholder="Ещё раз" />
+            </label>
+            <button class="btn primary wide" type="button" id="recoverySetPasswordButton" disabled>Сохранить пароль восстановления</button>
+            <small id="recoverySetupHint">Пароль можно изменить здесь в любой момент.</small>
           </div>
 
           <div class="recovery-local-warning" id="recoveryLocalWarning" hidden>
