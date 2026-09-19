@@ -9,6 +9,24 @@
   const publishableKey = String(config.supabasePublishableKey || '');
   const localOnly = new URLSearchParams(location.search).get('local') === '1';
   const aiEnabled = !localOnly && Boolean(auth?.enabled && base && publishableKey);
+  const STAPLE_LABELS = {
+    salt: 'Соль',
+    pepper: 'Чёрный перец',
+    vegetable_oil: 'Растительное масло',
+    butter: 'Сливочное масло',
+    garlic: 'Чеснок',
+    onion: 'Лук',
+    eggs: 'Яйца',
+    rice: 'Рис',
+    buckwheat: 'Гречка',
+    pasta: 'Макароны',
+    flour: 'Мука',
+    milk: 'Молоко',
+    cheese: 'Сыр',
+    sour_cream: 'Сметана',
+    soy_sauce: 'Соевый соус',
+  };
+
   const COMMON = [
     'Яйца','Куриное филе','Свинина','Говядина','Фарш','Сыр','Творог',
     'Помидоры','Огурцы','Картофель','Лук','Морковь','Шампиньоны',
@@ -208,6 +226,24 @@
     }[char]));
   }
 
+  function getAvailableStaples() {
+    const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
+    const chosenToday = new Set([...selected].map((item) => item.toLowerCase()));
+    return (Array.isArray(profile.staples) ? profile.staples : [])
+      .map((id) => STAPLE_LABELS[id])
+      .filter(Boolean)
+      .filter((label) => !chosenToday.has(label.toLowerCase()));
+  }
+
+  function renderStaplesContext() {
+    const host = $('#cookStaplesContext');
+    const list = $('#cookStaplesContextList');
+    if (!host || !list) return;
+    const staples = getAvailableStaples();
+    host.hidden = !staples.length;
+    list.textContent = staples.join(' · ');
+  }
+
   function profileHint() {
     try {
       const data = JSON.parse(localStorage.getItem('rinlo2-foundation-state-v1') || '{}');
@@ -280,6 +316,7 @@
     if (!session?.access_token) throw new Error('no_supabase_session');
 
     const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
+    const staples = getAvailableStaples();
     const state = readState();
     const recentCookOutcomes = (state.outcomes || []).slice(0, 6);
 
@@ -295,7 +332,7 @@
       body: JSON.stringify({
         mode: 'cook',
         ingredients: [...selected],
-        staples: [],
+        staples,
         priority,
         profile,
         recentCookOutcomes,
@@ -380,6 +417,7 @@
     $$('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
     renderSelected();
     renderRecent();
+    renderStaplesContext();
   }
 
   function nutritionRange(min, max, suffix = '') {
@@ -524,6 +562,7 @@
       resetFlow();
       readState().recent.forEach((item) => selected.add(item));
       renderSelected();
+      renderStaplesContext();
       showFlow('ingredients');
     });
 
@@ -544,18 +583,21 @@
         const name = quick.dataset.cookIngredient;
         if (selected.has(name)) selected.delete(name); else selected.add(name);
         renderSelected();
+        renderStaplesContext();
         return;
       }
       const recent = event.target.closest('[data-cook-recent]');
       if (recent) {
         selected.add(recent.dataset.cookRecent);
         renderSelected();
+        renderStaplesContext();
         return;
       }
       const remove = event.target.closest('[data-cook-remove]');
       if (remove) {
         selected.delete(remove.dataset.cookRemove);
         renderSelected();
+        renderStaplesContext();
         return;
       }
       const alt = event.target.closest('[data-cook-alt-index]');
@@ -653,12 +695,14 @@
 
     renderRecent();
     renderSelected();
+    renderStaplesContext();
   }
 
   window.RinloCook = {
     version: VERSION,
     getState: readState,
-    getSelected: () => [...selected]
+    getSelected: () => [...selected],
+    getAvailableStaples: () => getAvailableStaples()
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
