@@ -254,6 +254,53 @@
           <span class="account-protection-status" id="accountProtectionStatus" aria-live="polite"></span>
         </article>
 
+        <article class="settings-section-card recovery-card" id="accountRecoveryCard">
+          <div class="settings-section-head">
+            <div><small>ДРУГОЕ УСТРОЙСТВО</small><b id="accountRecoveryTitle">Восстановить Rinlo</b></div>
+            <span id="accountRecoveryBadge">Email OTP</span>
+          </div>
+          <p id="accountRecoveryText">Если ты уже защищал Rinlo email’ом, можно войти в тот же аккаунт и вернуть историю, профиль и память.</p>
+
+          <div class="recovery-email-step" id="recoveryEmailStep">
+            <label>
+              <span>Email защищённого аккаунта</span>
+              <input id="recoveryEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" />
+            </label>
+            <button class="btn primary wide" type="button" id="recoverySendCode" disabled>Получить код</button>
+            <small>Rinlo не создаст новый аккаунт, если такого email нет.</small>
+          </div>
+
+          <div class="recovery-code-step" id="recoveryCodeStep" hidden>
+            <div class="recovery-code-head">
+              <small>КОД ОТПРАВЛЕН</small>
+              <b id="recoveryCodeEmail">—</b>
+            </div>
+            <label>
+              <span>6-значный код из письма</span>
+              <input id="recoveryOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+            </label>
+            <button class="btn primary wide" type="button" id="recoveryVerifyCode" disabled>Войти и восстановить</button>
+            <button class="settings-link-action" type="button" id="recoveryResendCode">Отправить новый код</button>
+            <button class="settings-link-action recovery-change-email" type="button" id="recoveryChangeEmail">Изменить email</button>
+          </div>
+
+          <div class="recovery-ready" id="recoveryReady" hidden>
+            <div class="recovery-ready-mark" aria-hidden="true">↗</div>
+            <div>
+              <small>ВОССТАНОВЛЕНИЕ ГОТОВО</small>
+              <b>На новом устройстве войди по email-коду</b>
+              <p>После входа Rinlo подтянет облачную историю, профиль, память и оценки ответов.</p>
+            </div>
+          </div>
+
+          <div class="recovery-local-warning" id="recoveryLocalWarning" hidden>
+            <b>На этом устройстве уже есть локальные данные</b>
+            <p id="recoveryLocalWarningText">Перед переключением аккаунта Rinlo сохранит их в локальную резервную копию и не смешает с восстановленным аккаунтом.</p>
+          </div>
+
+          <span class="account-protection-status" id="accountRecoveryStatus" aria-live="polite"></span>
+        </article>
+
         <article class="settings-section-card">
           <div class="settings-section-head">
             <div><small>ПРОЗРАЧНОСТЬ</small><b>Память и приватность</b></div>
@@ -499,5 +546,6 @@
   <script src="./supabase-decisions-v1.js"></script>
   <script src="./sync-center-v1.js"></script>
   <script src="./account-protection-v1.js"></script>
+  <script src="./account-recovery-v1.js"></script>
 </body>
 </html>
