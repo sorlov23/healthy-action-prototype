@@ -1,6 +1,6 @@
 (() => {
-  const STORAGE_KEY = 'rinlo2-account-recovery-v1';
   const QUARANTINE_KEY = 'rinlo2-recovery-quarantine-v1';
+  const PASSWORD_READY_KEY = 'rinlo2-recovery-password-ready-v1';
   const USER_KEYS = [
     'rinlo2-foundation-state-v1',
     'rinlo2-decisions-v2',
@@ -11,16 +11,15 @@
   ];
 
   const auth = window.RinloSupabaseAuth;
-  const emailStep = document.getElementById('recoveryEmailStep');
-  const codeStep = document.getElementById('recoveryCodeStep');
-  const readyBox = document.getElementById('recoveryReady');
-  const emailInput = document.getElementById('recoveryEmail');
-  const otpInput = document.getElementById('recoveryOtp');
-  const sendButton = document.getElementById('recoverySendCode');
-  const verifyButton = document.getElementById('recoveryVerifyCode');
-  const resendButton = document.getElementById('recoveryResendCode');
-  const changeEmailButton = document.getElementById('recoveryChangeEmail');
-  const codeEmail = document.getElementById('recoveryCodeEmail');
+  const loginStep = document.getElementById('recoveryLoginStep');
+  const setupStep = document.getElementById('recoverySetupStep');
+  const loginEmail = document.getElementById('recoveryLoginEmail');
+  const loginPassword = document.getElementById('recoveryLoginPassword');
+  const loginButton = document.getElementById('recoveryLoginButton');
+  const setPassword = document.getElementById('recoverySetPassword');
+  const setPasswordConfirm = document.getElementById('recoverySetPasswordConfirm');
+  const setPasswordButton = document.getElementById('recoverySetPasswordButton');
+  const setupHint = document.getElementById('recoverySetupHint');
   const statusNode = document.getElementById('accountRecoveryStatus');
   const titleNode = document.getElementById('accountRecoveryTitle');
   const textNode = document.getElementById('accountRecoveryText');
@@ -29,7 +28,6 @@
   const warningText = document.getElementById('recoveryLocalWarningText');
 
   let busy = false;
-  let pending = loadPending();
 
   function cloudEnabled() {
     return Boolean(
@@ -43,31 +41,12 @@
     );
   }
 
-  function loadPending() {
-    try {
-      const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (!value?.email) return null;
-      return {
-        email: String(value.email).trim().toLowerCase(),
-        requestedAt: value.requestedAt || null,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  function savePending(value) {
-    pending = value;
-    if (!value) localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-  }
-
   function validEmail(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
   }
 
-  function validOtp(value) {
-    return /^\d{6}$/.test(String(value || '').replace(/\s+/g, ''));
+  function validPassword(value) {
+    return String(value || '').length >= 8;
   }
 
   function isProtected(user) {
@@ -121,23 +100,29 @@
     const meaningful = hasMeaningfulLocalData(summary);
     warningBox.hidden = !meaningful;
     if (meaningful && warningText) {
-      const details = localSummaryText(summary);
-      warningText.textContent = `Перед входом Rinlo сохранит локальную копию (${details}) отдельно и не смешает её с восстановленным аккаунтом.`;
+      warningText.textContent = `Перед входом Rinlo сохранит локальную копию (${localSummaryText(summary)}) отдельно и не смешает её с восстановленным аккаунтом.`;
     }
   }
 
   function setBusy(value) {
     busy = Boolean(value);
-    if (sendButton) sendButton.disabled = busy || !validEmail(emailInput?.value);
-    if (verifyButton) verifyButton.disabled = busy || !validOtp(otpInput?.value);
-    if (resendButton) resendButton.disabled = busy;
-    if (changeEmailButton) changeEmailButton.disabled = busy;
+    if (loginButton) {
+      loginButton.disabled = busy
+        || !validEmail(loginEmail?.value)
+        || !validPassword(loginPassword?.value);
+    }
+    if (setPasswordButton) {
+      const password = String(setPassword?.value || '');
+      const confirm = String(setPasswordConfirm?.value || '');
+      setPasswordButton.disabled = busy
+        || !validPassword(password)
+        || password !== confirm;
+    }
   }
 
   function renderLocalOnly() {
-    if (emailStep) emailStep.hidden = true;
-    if (codeStep) codeStep.hidden = true;
-    if (readyBox) readyBox.hidden = true;
+    if (loginStep) loginStep.hidden = true;
+    if (setupStep) setupStep.hidden = true;
     if (warningBox) warningBox.hidden = true;
     if (titleNode) titleNode.textContent = 'Восстановление аккаунта';
     if (badgeNode) badgeNode.textContent = 'Недоступно';
@@ -146,36 +131,31 @@
   }
 
   function renderProtected() {
-    savePending(null);
-    if (emailStep) emailStep.hidden = true;
-    if (codeStep) codeStep.hidden = true;
-    if (readyBox) readyBox.hidden = false;
+    if (loginStep) loginStep.hidden = true;
+    if (setupStep) setupStep.hidden = false;
     if (warningBox) warningBox.hidden = true;
-    if (titleNode) titleNode.textContent = 'Восстановление настроено';
-    if (badgeNode) badgeNode.textContent = 'Email OTP';
+    if (titleNode) titleNode.textContent = 'Доступ с другого устройства';
+    if (badgeNode) badgeNode.textContent = 'Email + пароль';
     if (textNode) {
-      textNode.textContent = 'Аккаунт защищён. На другом устройстве можно войти по email и одноразовому коду.';
+      textNode.textContent = 'Аккаунт защищён. Добавь пароль восстановления, чтобы войти в этот же Rinlo на другом устройстве.';
     }
-    setStatus('');
+    const ready = localStorage.getItem(PASSWORD_READY_KEY);
+    if (setupHint) {
+      setupHint.textContent = ready
+        ? 'Пароль восстановления уже задавался. Здесь его можно заменить.'
+        : 'Пароль сохраняется только в Supabase Auth и не хранится в Rinlo.';
+    }
+    setBusy(false);
   }
 
   function renderTemporary() {
-    if (readyBox) readyBox.hidden = true;
+    if (loginStep) loginStep.hidden = false;
+    if (setupStep) setupStep.hidden = true;
     if (titleNode) titleNode.textContent = 'Уже есть Rinlo?';
-    if (badgeNode) badgeNode.textContent = 'Email OTP';
+    if (badgeNode) badgeNode.textContent = 'Email + пароль';
     if (textNode) {
       textNode.textContent = 'Войди в защищённый аккаунт и верни облачную историю, профиль, память и оценки.';
     }
-
-    if (pending) {
-      if (emailStep) emailStep.hidden = true;
-      if (codeStep) codeStep.hidden = false;
-      if (codeEmail) codeEmail.textContent = pending.email;
-    } else {
-      if (emailStep) emailStep.hidden = false;
-      if (codeStep) codeStep.hidden = true;
-    }
-
     updateLocalWarning();
     setBusy(false);
   }
@@ -194,62 +174,29 @@
     const code = String(error?.code || '').toLowerCase();
 
     if (message === 'invalid_email') return 'Проверь адрес email.';
-    if (message === 'invalid_otp') return 'Введи 6 цифр из письма.';
-    if (message.includes('rate limit') || code.includes('rate')) {
-      return 'Слишком много запросов подряд. Попробуй использовать последнее письмо.';
+    if (message === 'password_too_short') return 'Пароль должен быть не короче 8 символов.';
+    if (message.includes('weak password') || code.includes('weak_password')) {
+      return 'Supabase считает этот пароль слишком слабым. Выбери более сложный.';
     }
-    if (phase === 'verify' && (
-      message.includes('expired')
-      || message.includes('invalid')
-      || message.includes('token')
-      || code.includes('otp')
+    if (phase === 'login' && (
+      message.includes('invalid login credentials')
+      || message.includes('invalid credentials')
+      || code.includes('invalid_credentials')
     )) {
-      return 'Код неверный или уже истёк. Можно запросить новый.';
+      return 'Email или пароль не подошли. Проверь данные и попробуй ещё раз.';
     }
-    if (phase === 'send') {
-      return 'Не получилось отправить код. Проверь email и попробуй ещё раз.';
+    if (message.includes('reauth') || message.includes('nonce')) {
+      return 'Для смены пароля нужно заново подтвердить вход. Текущие данные не изменены.';
     }
-    return 'Не получилось восстановить аккаунт. Текущие данные на устройстве не изменены.';
-  }
-
-  async function requestCode(email = emailInput?.value) {
-    if (busy || !cloudEnabled()) return;
-    const normalized = String(email || '').trim().toLowerCase();
-    if (!validEmail(normalized)) {
-      setStatus('Проверь адрес email.', 'error');
-      return;
-    }
-
-    setBusy(true);
-    setStatus('Отправляю одноразовый код…');
-    if (sendButton) sendButton.textContent = 'Отправляю…';
-    if (resendButton) resendButton.textContent = 'Отправляю…';
-
-    try {
-      await auth.requestLoginOtp(normalized);
-      savePending({ email: normalized, requestedAt: new Date().toISOString() });
-      if (codeEmail) codeEmail.textContent = normalized;
-      if (emailStep) emailStep.hidden = true;
-      if (codeStep) codeStep.hidden = false;
-      if (otpInput) {
-        otpInput.value = '';
-        otpInput.focus();
-      }
-      updateLocalWarning();
-      setStatus('Код отправлен. Он действует ограниченное время.', 'success');
-    } catch (error) {
-      console.warn('Rinlo recovery OTP request failed', error);
-      setStatus(errorCopy(error, 'send'), 'error');
-    } finally {
-      if (sendButton) sendButton.textContent = 'Получить код';
-      if (resendButton) resendButton.textContent = 'Отправить новый код';
-      setBusy(false);
-    }
+    return phase === 'setup'
+      ? 'Не получилось сохранить пароль восстановления. Данные Rinlo не изменены.'
+      : 'Не получилось войти. Текущие данные на устройстве не изменены.';
   }
 
   function quarantineCurrentUser(previousUserId, nextUserId) {
     const summary = localSummary();
     const backup = {};
+
     for (const key of USER_KEYS) {
       const value = localStorage.getItem(key);
       if (value != null) backup[key] = value;
@@ -266,31 +213,74 @@
     }
 
     USER_KEYS.forEach((key) => localStorage.removeItem(key));
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PASSWORD_READY_KEY);
   }
 
-  async function verifyCode() {
-    if (busy || !pending?.email || !cloudEnabled()) return;
-    const token = String(otpInput?.value || '').replace(/\s+/g, '');
-    if (!validOtp(token)) {
-      setStatus('Введи 6 цифр из письма.', 'error');
+  async function saveRecoveryPassword() {
+    if (busy || !cloudEnabled()) return;
+
+    const password = String(setPassword?.value || '');
+    const confirm = String(setPasswordConfirm?.value || '');
+
+    if (!validPassword(password)) {
+      setStatus('Пароль должен быть не короче 8 символов.', 'error');
+      return;
+    }
+    if (password !== confirm) {
+      setStatus('Пароли не совпадают.', 'error');
+      return;
+    }
+
+    setBusy(true);
+    setStatus('Сохраняю пароль восстановления…');
+    if (setPasswordButton) setPasswordButton.textContent = 'Сохраняю…';
+
+    try {
+      const user = await auth.setRecoveryPassword(password);
+      if (!isProtected(user)) throw new Error('recovery_user_not_protected');
+      localStorage.setItem(PASSWORD_READY_KEY, new Date().toISOString());
+      if (setPassword) setPassword.value = '';
+      if (setPasswordConfirm) setPasswordConfirm.value = '';
+      setStatus('Готово — теперь этот аккаунт можно открыть на другом устройстве.', 'success');
+      if (setupHint) setupHint.textContent = 'Пароль восстановления настроен. Здесь его можно изменить.';
+    } catch (error) {
+      console.warn('Rinlo recovery password setup failed', error);
+      setStatus(errorCopy(error, 'setup'), 'error');
+    } finally {
+      if (setPasswordButton) setPasswordButton.textContent = 'Сохранить пароль восстановления';
+      setBusy(false);
+    }
+  }
+
+  async function loginAndRestore() {
+    if (busy || !cloudEnabled()) return;
+
+    const email = String(loginEmail?.value || '').trim().toLowerCase();
+    const password = String(loginPassword?.value || '');
+
+    if (!validEmail(email)) {
+      setStatus('Проверь адрес email.', 'error');
+      return;
+    }
+    if (!validPassword(password)) {
+      setStatus('Пароль должен быть не короче 8 символов.', 'error');
       return;
     }
 
     const previousUserId = auth?.getUserId?.() || null;
     setBusy(true);
-    setStatus('Проверяю код…');
-    if (verifyButton) verifyButton.textContent = 'Вхожу…';
+    setStatus('Вхожу в защищённый аккаунт…');
+    if (loginButton) loginButton.textContent = 'Вхожу…';
 
     try {
-      const session = await auth.verifyLoginOtp(pending.email, token);
+      const session = await auth.signInWithPassword(email, password);
       const nextUserId = session?.user?.id || null;
-      if (!nextUserId) throw new Error('recovery_missing_user');
+      if (!nextUserId || session?.user?.is_anonymous !== false) {
+        throw new Error('recovery_invalid_session');
+      }
 
       if (previousUserId && previousUserId !== nextUserId) {
         quarantineCurrentUser(previousUserId, nextUserId);
-      } else {
-        savePending(null);
       }
 
       setStatus('Аккаунт найден. Восстанавливаю данные…', 'success');
@@ -298,48 +288,30 @@
         detail: { userId: nextUserId },
       }));
 
-      // Reload from an empty user-scoped cache so cloud data becomes the source
-      // of truth for the restored account and never mixes with the temp user.
+      // Reload with a clean user-scoped cache. The existing Supabase session
+      // stays in localStorage, so all Rinlo modules now hydrate from cloud data
+      // owned by the recovered user.
       setTimeout(() => window.location.reload(), 120);
     } catch (error) {
-      console.warn('Rinlo recovery OTP verification failed', error);
-      setStatus(errorCopy(error, 'verify'), 'error');
+      console.warn('Rinlo password recovery failed', error);
+      setStatus(errorCopy(error, 'login'), 'error');
       setBusy(false);
-      if (verifyButton) verifyButton.textContent = 'Войти и восстановить';
+      if (loginButton) loginButton.textContent = 'Войти и восстановить';
     }
   }
 
-  function changeEmail() {
-    if (busy) return;
-    savePending(null);
-    if (otpInput) otpInput.value = '';
-    if (emailStep) emailStep.hidden = false;
-    if (codeStep) codeStep.hidden = true;
-    if (emailInput) {
-      emailInput.value = '';
-      emailInput.focus();
-    }
-    setStatus('');
-    updateLocalWarning();
-    setBusy(false);
-  }
-
-  emailInput?.addEventListener('input', () => {
-    if (sendButton) sendButton.disabled = busy || !validEmail(emailInput.value);
+  [loginEmail, loginPassword].forEach((node) => node?.addEventListener('input', () => {
+    setBusy(busy);
     if (statusNode?.dataset.state === 'error') setStatus('');
-  });
+  }));
 
-  otpInput?.addEventListener('input', () => {
-    const cleaned = String(otpInput.value || '').replace(/\D+/g, '').slice(0, 6);
-    if (otpInput.value !== cleaned) otpInput.value = cleaned;
-    if (verifyButton) verifyButton.disabled = busy || !validOtp(cleaned);
+  [setPassword, setPasswordConfirm].forEach((node) => node?.addEventListener('input', () => {
+    setBusy(busy);
     if (statusNode?.dataset.state === 'error') setStatus('');
-  });
+  }));
 
-  sendButton?.addEventListener('click', () => requestCode());
-  resendButton?.addEventListener('click', () => requestCode(pending?.email));
-  verifyButton?.addEventListener('click', verifyCode);
-  changeEmailButton?.addEventListener('click', changeEmail);
+  loginButton?.addEventListener('click', loginAndRestore);
+  setPasswordButton?.addEventListener('click', saveRecoveryPassword);
 
   window.addEventListener('rinlo:supabase-auth', (event) => {
     render(event.detail?.user || auth?.getSession?.()?.user || null);
@@ -348,10 +320,9 @@
   render();
 
   window.Rinlo2AccountRecovery = {
-    version: 'v1-email-otp',
-    requestCode,
-    verifyCode,
-    getPending: () => pending ? { ...pending } : null,
+    version: 'v1-password',
+    loginAndRestore,
+    saveRecoveryPassword,
     getQuarantine: () => {
       try { return JSON.parse(localStorage.getItem(QUARANTINE_KEY) || 'null'); }
       catch { return null; }
