@@ -91,6 +91,63 @@ const schema = {
 };
 
 
+
+const cookIngredientPhotoItemSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    name: { type: "string" },
+    confidence: { type: "string", enum: ["high", "medium", "low"] },
+    detail: { type: "string" },
+  },
+  required: ["name", "confidence", "detail"],
+};
+
+const cookIngredientPhotoSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    status: { type: "string", enum: ["recognized", "needs_review"] },
+    summary: { type: "string" },
+    ingredients: { type: "array", items: cookIngredientPhotoItemSchema, maxItems: 24 },
+    note: { type: "string" },
+  },
+  required: ["status", "summary", "ingredients", "note"],
+};
+
+function normalizeCookIngredientPhoto(raw: any) {
+  const value = raw && typeof raw === "object" ? raw : {};
+  const allowedConfidence = new Set(["high", "medium", "low"]);
+  const seen = new Set<string>();
+  const ingredients = (Array.isArray(value.ingredients) ? value.ingredients : [])
+    .map((item: any) => ({
+      name: String(item?.name || "").trim().slice(0, 80),
+      confidence: allowedConfidence.has(String(item?.confidence || ""))
+        ? String(item.confidence)
+        : "low",
+      detail: String(item?.detail || "").trim().slice(0, 180),
+    }))
+    .filter((item: any) => {
+      if (!item.name) return false;
+      const key = item.name.toLowerCase().replace(/ё/g, "е");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 24);
+
+  const status = value.status === "recognized" && ingredients.length
+    ? "recognized"
+    : "needs_review";
+
+  return {
+    status,
+    summary: String(value.summary || "").trim().slice(0, 300),
+    ingredients,
+    note: String(value.note || "").trim().slice(0, 300),
+  };
+}
+
 const cookStepSchema = {
   type: "object",
   additionalProperties: false,
@@ -381,6 +438,88 @@ Deno.serve(async (req: Request) => {
   }
 
   const body = await req.json().catch(() => null);
+
+  if (body?.mode === "cook_ingredients_photo") {
+    const imageDataUrl = String(body?.imageDataUrl || "");
+    const imageMatch = imageDataUrl
+      ? /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=]+)$/i.exec(imageDataUrl)
+      : null;
+
+    if (!imageDataUrl) return json({ error: "image_required" }, 400);
+    if (!imageMatch) return json({ error: "invalid_image" }, 400);
+    if (imageDataUrl.length > 9_000_000) return json({ error: "image_too_large" }, 413);
+
+    const imageMimeType = imageMatch[1].toLowerCase() === "image/jpg"
+      ? "image/jpeg"
+      : imageMatch[1].toLowerCase();
+    const imageBase64 = imageMatch[2];
+
+    const model = Deno.env.get("RINLO_VISION_MODEL")
+      || Deno.env.get("RINLO_DECISION_MODEL")
+      || "gemini-3.1-flash-lite";
+
+    const systemPrompt = [
+      "Ты — Ingredient Vision приложения Rinlo.",
+      "Твоя задача — определить продукты и ингредиенты, которые реально видны на фото и доступны для приготовления.",
+      "Пиши названия по-русски обычными бытовыми словами: «Куриное филе», «Яйца», «Сыр», «Помидоры», «Шампиньоны».",
+      "Не придумывай продукты, которых не видно. Не достраивай содержимое холодильника по типичным привычкам.",
+      "Закрытую упаковку можно распознать по понятной этикетке или очевидному виду упаковки, но при сомнении ставь confidence=low.",
+      "Не перечисляй тарелки, упаковку, напитки без пищевой ценности, кухонные предметы или технику.",
+      "Если на фото уже готовое блюдо, распознавай только уверенно видимые ингредиенты, а не полный предполагаемый рецепт.",
+      "confidence=high — продукт очевиден; medium — вероятен; low — есть заметная неоднозначность.",
+      "Если полезных продуктов не видно или фото слишком неоднозначное, status=needs_review и не выдумывай список.",
+      "detail — очень короткое уточнение только если оно помогает понять сомнение; иначе пустая строка.",
+      "Верни строго JSON по схеме.",
+    ].join(" ");
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{
+          role: "user",
+          parts: [
+            { text: "Найди продукты на фото, которые можно использовать для приготовления еды прямо сейчас." },
+            { inlineData: { mimeType: imageMimeType, data: imageBase64 } },
+          ],
+        }],
+        generationConfig: {
+          temperature: 0.05,
+          maxOutputTokens: 1200,
+          responseMimeType: "application/json",
+          responseJsonSchema: cookIngredientPhotoSchema,
+        },
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error("Gemini ingredient photo request failed", response.status, payload?.error?.status || payload?.error?.code || "");
+      return json({
+        error: "ingredient_photo_provider_error",
+        status: response.status,
+        code: payload?.error?.status || payload?.error?.code || null,
+      }, 502);
+    }
+
+    const outputText = extractGeminiText(payload);
+    if (!outputText) return json({ error: "empty_ingredient_photo_response" }, 502);
+
+    try {
+      const ingredientPhoto = normalizeCookIngredientPhoto(JSON.parse(outputText));
+      return json({
+        ingredientPhoto,
+        meta: { model, provider: "google-gemini", userId, mode: "cook_ingredients_photo" },
+      });
+    } catch {
+      return json({ error: "invalid_ingredient_photo_response" }, 502);
+    }
+  }
 
   if (body?.mode === "cook") {
     const ingredients = cleanStringList(body?.ingredients, 24);
