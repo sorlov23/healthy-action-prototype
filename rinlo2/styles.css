@@ -248,3 +248,13 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(199,255,91,.58);
 .recovery-local-warning{margin-top:11px;padding:11px 12px;border-radius:14px;background:#fff8df;border:1px solid rgba(174,139,30,.13)}
 .recovery-local-warning b{display:block;font-size:10px}
 .recovery-local-warning p{margin:5px 0 0;color:#81713d;font-size:9px;line-height:1.45}
+
+
+/* Password Recovery v1 */
+.recovery-login-step,.recovery-setup-step{display:grid;gap:10px;margin-top:14px}
+.recovery-login-step label,.recovery-setup-step label{display:grid;gap:6px}
+.recovery-login-step label>span,.recovery-setup-step label>span{font-size:9px;font-weight:800;color:#707980}
+.recovery-login-step input,.recovery-setup-step input{width:100%;min-height:48px;border:1px solid rgba(17,19,21,.09);border-radius:14px;background:#f7f8f8;padding:0 13px;color:#111315;font:inherit;font-size:12px;outline:none}
+.recovery-login-step input:focus,.recovery-setup-step input:focus{border-color:rgba(132,197,44,.55);box-shadow:0 0 0 3px rgba(199,255,91,.16)}
+.recovery-login-step>small,.recovery-setup-step>small{color:#858d92;font-size:9px;line-height:1.5}
+.recovery-setup-step>.recovery-ready{margin-top:0}
