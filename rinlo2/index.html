@@ -366,7 +366,32 @@
       <div class="flow-body cook-flow-body">
         <p class="eyebrow dark">ИЗ ТОГО, ЧТО ЕСТЬ ДОМА</p>
         <h1>Что есть из продуктов?</h1>
-        <p class="flow-lead">Напиши как есть или выбери продукты в пару тапов. Способы можно сочетать.</p>
+        <p class="flow-lead">Сфотографируй продукты, напиши их или выбери в пару тапов. Способы можно сочетать.</p>
+
+        <div class="cook-photo-input">
+          <input id="cookPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden />
+          <button class="cook-photo-button" type="button" id="cookPhotoButton">
+            <span aria-hidden="true">◫</span>
+            <div>
+              <b>Сфотографировать продукты</b>
+              <small>Холодильник, полка или продукты на столе</small>
+            </div>
+            <strong aria-hidden="true">→</strong>
+          </button>
+          <span class="cook-photo-status" id="cookPhotoStatus" aria-live="polite"></span>
+        </div>
+
+        <article class="cook-photo-results" id="cookPhotoResults" hidden>
+          <div class="cook-photo-results-head">
+            <div><small>НАШЁЛ НА ФОТО</small><b id="cookPhotoSummary">Проверь перед добавлением</b></div>
+            <span id="cookPhotoCount">0</span>
+          </div>
+          <div class="cook-photo-chips" id="cookPhotoChips"></div>
+          <p id="cookPhotoNote"></p>
+          <button class="cook-photo-apply" type="button" id="cookPhotoApply">Добавить выбранные</button>
+        </article>
+
+        <div class="cook-input-divider"><span>или вручную</span></div>
 
         <label class="cook-text-input">
           <span>Добавить текстом</span>
