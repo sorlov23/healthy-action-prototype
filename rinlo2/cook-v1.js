@@ -145,6 +145,8 @@
   let stepIndex = 0;
   let photoItems = [];
   let photoBusy = false;
+  let activeCookDecisionId = null;
+  let activeCookDecisionCreatedAt = null;
 
   function readState() {
     try {
@@ -503,6 +505,8 @@
     stepIndex = 0;
     photoItems = [];
     photoBusy = false;
+    activeCookDecisionId = null;
+    activeCookDecisionCreatedAt = null;
     const text = $('#cookIngredientText');
     if (text) text.value = '';
     const outcomeQuestion = $('#cookOutcomeQuestion');
@@ -611,6 +615,26 @@
     $('#cookStepNext').textContent = stepIndex >= steps.length - 1 ? 'Готово →' : 'Далее →';
     const bar = $('#cookStepBar');
     if (bar) bar.style.width = (((stepIndex + 1) / steps.length) * 100) + '%';
+  }
+
+
+  function persistCookDecision(feedback = '') {
+    if (!activeRecipe || typeof window.Rinlo2Decisions?.recordCookDecision !== 'function') return null;
+    if (!activeCookDecisionId) {
+      activeCookDecisionId = `cook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      activeCookDecisionCreatedAt = new Date().toISOString();
+    }
+    const savedId = window.Rinlo2Decisions.recordCookDecision({
+      id: activeCookDecisionId,
+      createdAt: activeCookDecisionCreatedAt,
+      recipe: activeRecipe,
+      ingredients: [...selected],
+      priority,
+      outcome: 'prepared',
+      feedback,
+    });
+    if (savedId) activeCookDecisionId = savedId;
+    return savedId;
   }
 
   function saveOutcome(kind, feedback = '') {
@@ -803,6 +827,7 @@
 
     $('#cookOutcomePrepared')?.addEventListener('click', () => {
       saveOutcome('prepared');
+      persistCookDecision('');
       $('#cookOutcomeQuestion').hidden = true;
       $('#cookOutcomeFeedback').hidden = false;
     });
@@ -812,9 +837,11 @@
       closeFlow();
     });
 
-    $$('[data-cook-feedback]').forEach((button) => {
+    $('[data-cook-feedback]').forEach((button) => {
       button.addEventListener('click', () => {
-        updateLatestFeedback(button.dataset.cookFeedback);
+        const feedback = button.dataset.cookFeedback || '';
+        updateLatestFeedback(feedback);
+        persistCookDecision(feedback);
         closeFlow();
       });
     });
@@ -841,7 +868,8 @@
     getState: readState,
     getSelected: () => [...selected],
     getAvailableStaples: () => getAvailableStaples(),
-    getPhotoItems: () => photoItems.map((item) => ({ ...item }))
+    getPhotoItems: () => photoItems.map((item) => ({ ...item })),
+    getActiveDecisionId: () => activeCookDecisionId
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
