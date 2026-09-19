@@ -224,3 +224,27 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(199,255,91,.58);
 .account-protection-status[data-state="success"]{color:#69813d}
 .account-protection-status[data-state="error"]{color:#a74a4a}
 .account-protection-status[data-state="pending"]{color:#8c7436}
+
+
+/* Account Recovery v1 */
+.recovery-card{background:linear-gradient(150deg,#fff,#fbfcf8)}
+.recovery-email-step,.recovery-code-step{display:grid;gap:10px;margin-top:14px}
+.recovery-email-step label,.recovery-code-step label{display:grid;gap:6px}
+.recovery-email-step label>span,.recovery-code-step label>span{font-size:9px;font-weight:800;color:#707980}
+.recovery-email-step input,.recovery-code-step input{width:100%;min-height:48px;border:1px solid rgba(17,19,21,.09);border-radius:14px;background:#f7f8f8;padding:0 13px;color:#111315;font:inherit;font-size:12px;outline:none}
+.recovery-code-step input{font-size:20px;font-weight:900;letter-spacing:.22em;text-align:center}
+.recovery-email-step input:focus,.recovery-code-step input:focus{border-color:rgba(132,197,44,.55);box-shadow:0 0 0 3px rgba(199,255,91,.16)}
+.recovery-email-step>small{color:#858d92;font-size:9px;line-height:1.5}
+.recovery-code-head{padding:11px 12px;border-radius:14px;background:#f2f5ef}
+.recovery-code-head small{display:block;color:#858d92;font-size:8px;letter-spacing:.1em;font-weight:850}
+.recovery-code-head b{display:block;margin-top:4px;font-size:11px;overflow-wrap:anywhere}
+.recovery-code-step .settings-link-action{margin-top:0}
+.recovery-change-email{background:transparent;border-color:transparent;color:#788188}
+.recovery-ready{display:grid;grid-template-columns:44px minmax(0,1fr);gap:11px;align-items:start;margin-top:14px;padding:13px;border-radius:16px;background:#f5f8ef}
+.recovery-ready-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--rinlo-lime);color:#111315;font-size:18px;font-weight:950}
+.recovery-ready small{display:block;color:#858d92;font-size:8px;letter-spacing:.1em;font-weight:850}
+.recovery-ready b{display:block;margin-top:4px;font-size:11px;line-height:1.35}
+.recovery-ready p{margin:6px 0 0;color:#737c82;font-size:9px;line-height:1.5}
+.recovery-local-warning{margin-top:11px;padding:11px 12px;border-radius:14px;background:#fff8df;border:1px solid rgba(174,139,30,.13)}
+.recovery-local-warning b{display:block;font-size:10px}
+.recovery-local-warning p{margin:5px 0 0;color:#81713d;font-size:9px;line-height:1.45}
