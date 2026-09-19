@@ -102,6 +102,29 @@ const cookStepSchema = {
   required: ["title", "instruction", "minutes"],
 };
 
+const cookNutritionSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    calorie_min: { type: "integer", minimum: 0, maximum: 3000 },
+    calorie_max: { type: "integer", minimum: 0, maximum: 3000 },
+    protein_min: { type: "integer", minimum: 0, maximum: 300 },
+    protein_max: { type: "integer", minimum: 0, maximum: 300 },
+    fat_min: { type: "integer", minimum: 0, maximum: 300 },
+    fat_max: { type: "integer", minimum: 0, maximum: 300 },
+    carbs_min: { type: "integer", minimum: 0, maximum: 500 },
+    carbs_max: { type: "integer", minimum: 0, maximum: 500 },
+    assumption: { type: "string" },
+  },
+  required: [
+    "calorie_min", "calorie_max",
+    "protein_min", "protein_max",
+    "fat_min", "fat_max",
+    "carbs_min", "carbs_max",
+    "assumption"
+  ],
+};
+
 const cookRecipeSchema = {
   type: "object",
   additionalProperties: false,
@@ -111,9 +134,10 @@ const cookRecipeSchema = {
     reason: { type: "string" },
     ingredients_used: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 20 },
     assumed_staples: { type: "array", items: { type: "string" }, maxItems: 10 },
+    nutrition: cookNutritionSchema,
     steps: { type: "array", items: cookStepSchema, minItems: 3, maxItems: 8 },
   },
-  required: ["name", "duration_minutes", "reason", "ingredients_used", "assumed_staples", "steps"],
+  required: ["name", "duration_minutes", "reason", "ingredients_used", "assumed_staples", "nutrition", "steps"],
 };
 
 const cookSchema = {
@@ -130,6 +154,27 @@ const cookSchema = {
 function cleanStringList(value: unknown, max = 20): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))].slice(0, max);
+}
+
+function normalizeNutritionRange(raw: any) {
+  const value = raw && typeof raw === "object" ? raw : {};
+  const pair = (a: unknown, b: unknown, max: number) => {
+    let min = Math.max(0, Math.min(max, Math.round(Number(a || 0))));
+    let maxValue = Math.max(0, Math.min(max, Math.round(Number(b || 0))));
+    if (maxValue < min) [min, maxValue] = [maxValue, min];
+    return [min, maxValue];
+  };
+  const [calorie_min, calorie_max] = pair(value.calorie_min, value.calorie_max, 3000);
+  const [protein_min, protein_max] = pair(value.protein_min, value.protein_max, 300);
+  const [fat_min, fat_max] = pair(value.fat_min, value.fat_max, 300);
+  const [carbs_min, carbs_max] = pair(value.carbs_min, value.carbs_max, 500);
+  return {
+    calorie_min, calorie_max,
+    protein_min, protein_max,
+    fat_min, fat_max,
+    carbs_min, carbs_max,
+    assumption: String(value.assumption || "").trim().slice(0, 320),
+  };
 }
 
 function normalizeCookRecipe(raw: any, allowedIngredients: string[], allowedStaples: string[]) {
@@ -154,6 +199,7 @@ function normalizeCookRecipe(raw: any, allowedIngredients: string[], allowedStap
     reason: String(recipe.reason || "").trim().slice(0, 500),
     ingredients_used: ingredientsUsed,
     assumed_staples: assumedStaples,
+    nutrition: normalizeNutritionRange(recipe.nutrition),
     steps,
   };
 }
@@ -382,6 +428,9 @@ Deno.serve(async (req: Request) => {
       "Шаги должны быть конкретными: что нарезать, что нагреть, что добавить, сколько примерно готовить и на каком огне, если это важно.",
       "Запрещены пустые инструкции вроде 'подготовь продукты', 'начни с основы', 'добавь остальное', 'доведи до готовности' без конкретного действия.",
       "Не требуй точных граммов, если пользователь их не сообщил. Используй бытовые ориентиры и диапазоны.",
+      "Для каждого рецепта оцени калорийность и БЖУ на одну предполагаемую порцию диапазоном, а не одной точной цифрой.",
+      "Если точные количества не заданы, сделай реалистичное бытовое предположение о порции и кратко опиши его в nutrition.assumption.",
+      "Не изображай ложную точность: диапазон калорий и БЖУ должен отражать неопределённость количества и способа приготовления.",
       "Если нужно масло, соль, перец или другая базовая вещь, она допустима только если есть в списке staples; перечисли её в assumed_staples.",
       "Основной рецепт должен быть самым подходящим под приоритет пользователя. Две альтернативы должны заметно отличаться по способу или характеру блюда.",
       "Не морализируй, не называй еду хорошей/плохой, не ставь диагнозы и не обещай снижение веса.",
