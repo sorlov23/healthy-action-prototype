@@ -14,6 +14,7 @@
     targetWeight: null,
     goal: null,
     priorities: [],
+    staples: [],
     profileUpdatedAt: null,
     activeScreen: 'home'
   };
@@ -50,6 +51,10 @@
 
   const allowedGoals = new Set(['lose','maintain','aware']);
   const allowedPriorities = new Set(['satiety','calories','familiar','simplicity']);
+  const allowedStaples = new Set([
+    'salt','pepper','vegetable_oil','butter','garlic','onion',
+    'eggs','rice','buckwheat','pasta','flour','milk','cheese','sour_cream','soy_sauce'
+  ]);
 
   function optionalNumber(value) {
     if (value === null || value === undefined || value === '') return null;
@@ -64,7 +69,10 @@
     const priorities = Array.isArray(input.priorities)
       ? [...new Set(input.priorities.filter((item) => allowedPriorities.has(item)))].slice(0, 4)
       : [];
-    return { goal, currentWeight, targetWeight, priorities };
+    const staples = Array.isArray(input.staples)
+      ? [...new Set(input.staples.filter((item) => allowedStaples.has(item)))].slice(0, 15)
+      : [];
+    return { goal, currentWeight, targetWeight, priorities, staples };
   }
 
   function goalLabel(goal) {
@@ -81,6 +89,9 @@
     });
     document.querySelectorAll('[data-profile-priority]').forEach((button) => {
       button.classList.toggle('active', profile.priorities.includes(button.dataset.profilePriority));
+    });
+    document.querySelectorAll('[data-profile-staple]').forEach((button) => {
+      button.classList.toggle('active', profile.staples.includes(button.dataset.profileStaple));
     });
 
     const current = document.getElementById('profileCurrentWeight');
@@ -105,8 +116,11 @@
     };
     const chosen = profile.priorities.map((item) => priorityLabels[item]).filter(Boolean);
     if (text) {
-      text.textContent = chosen.length
-        ? `В спорных случаях учитывать: ${chosen.join(', ')}.`
+      const summary = [];
+      if (chosen.length) summary.push(`В спорных случаях учитывать: ${chosen.join(', ')}.`);
+      if (profile.staples.length) summary.push(`Обычно дома отмечено продуктов: ${profile.staples.length}.`);
+      text.textContent = summary.length
+        ? summary.join(' ')
         : 'Можно оставить всё как есть или добавить пару ориентиров ниже.';
     }
   }
@@ -114,7 +128,7 @@
   function applyDecisionProfile(profile, { silent = false, updatedAt = null } = {}) {
     const normalized = normalizeProfile(profile);
     const nextUpdatedAt = updatedAt || (!silent ? new Date().toISOString() : state.profileUpdatedAt || null);
-    state = { ...state, ...normalized, profileVersion: 2, profileUpdatedAt: nextUpdatedAt };
+    state = { ...state, ...normalized, profileVersion: 3, profileUpdatedAt: nextUpdatedAt };
     saveState();
     renderProfile();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-applied', {
@@ -192,7 +206,8 @@
     state.targetWeight = target;
     state.goal = allowedGoals.has(activeGoal) ? activeGoal : 'lose';
     state.priorities = Array.isArray(state.priorities) ? state.priorities : [];
-    state.profileVersion = 2;
+    state.staples = Array.isArray(state.staples) ? state.staples : [];
+    state.profileVersion = 3;
     state.profileUpdatedAt = new Date().toISOString();
     saveState();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
@@ -228,6 +243,10 @@
     button.addEventListener('click', () => button.classList.toggle('active'));
   });
 
+  document.querySelectorAll('[data-profile-staple]').forEach((button) => {
+    button.addEventListener('click', () => button.classList.toggle('active'));
+  });
+
   document.getElementById('saveDecisionProfile')?.addEventListener('click', () => {
     const goal = document.querySelector('[data-profile-goal].active')?.dataset.profileGoal || null;
     const currentWeight = optionalNumber(document.getElementById('profileCurrentWeight')?.value || '');
@@ -235,8 +254,11 @@
     const priorities = [...document.querySelectorAll('[data-profile-priority].active')]
       .map((button) => button.dataset.profilePriority)
       .filter(Boolean);
+    const staples = [...document.querySelectorAll('[data-profile-staple].active')]
+      .map((button) => button.dataset.profileStaple)
+      .filter(Boolean);
 
-    const profile = applyDecisionProfile({ goal, currentWeight, targetWeight, priorities });
+    const profile = applyDecisionProfile({ goal, currentWeight, targetWeight, priorities, staples });
     const status = document.getElementById('profileSaveState');
     if (status) status.textContent = 'Сохранено';
     showToast('Контекст для решений обновлён');
@@ -271,7 +293,7 @@
   renderProfile();
 
   window.Rinlo2Foundation = {
-    version: 'foundation-v3-profile-sync',
+    version: 'foundation-v4-staples',
     getState: () => ({ ...state }),
     getDecisionProfile: () => ({ ...normalizeProfile(state), updatedAt: state.profileUpdatedAt || null }),
     applyDecisionProfile: (profile, options = {}) => applyDecisionProfile(profile, options),
