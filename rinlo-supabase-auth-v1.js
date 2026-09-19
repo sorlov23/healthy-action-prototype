@@ -142,6 +142,44 @@
     return { email: normalized };
   }
 
+  async function requestLoginOtp(email) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error('invalid_email');
+    }
+    await authFetch('POST', '/otp', {
+      body: {
+        email: normalized,
+        data: {},
+        create_user: false,
+        gotrue_meta_security: { captcha_token: null },
+      },
+    });
+    return { email: normalized };
+  }
+
+  async function verifyLoginOtp(email, token) {
+    const normalized = String(email || '').trim().toLowerCase();
+    const normalizedToken = String(token || '').replace(/\s+/g, '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error('invalid_email');
+    }
+    if (!/^\d{6}$/.test(normalizedToken)) {
+      throw new Error('invalid_otp');
+    }
+    const data = await authFetch('POST', '/verify', {
+      body: {
+        email: normalized,
+        token: normalizedToken,
+        type: 'email',
+        gotrue_meta_security: { captcha_token: null },
+      },
+    });
+    const session = saveSession(data);
+    dispatchAuth('SIGNED_IN', session);
+    return session;
+  }
+
   async function createAnonymousSession() {
     const data = await authRequest('/signup', {
       data: { client: 'rinlo-pwa', schema_version: 1 },
@@ -203,7 +241,7 @@
   });
 
   window.RinloSupabaseAuth = {
-    version: 'v2-account-protection',
+    version: 'v3-recovery-otp',
     enabled,
     projectUrl: base,
     ensureSession,
@@ -214,6 +252,8 @@
     updateUser,
     requestEmailProtection,
     resendEmailChange,
+    requestLoginOtp,
+    verifyLoginOtp,
     getUserId: () => readSession()?.user?.id || null,
     clearLocalSession: clearSession,
   };
