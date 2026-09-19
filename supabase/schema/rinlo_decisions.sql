@@ -6,7 +6,7 @@ create table public.rinlo_decisions (
   user_id uuid not null references auth.users(id) on delete cascade,
   client_decision_id text not null,
   source text not null default 'text'
-    check (source in ('text','photo','voice')),
+    check (source in ('text','photo','voice','cook')),
   question text not null,
   decision_state text not null
     check (decision_state in ('fits_well','fits_with_adjustment','better_alternative','needs_clarification')),
