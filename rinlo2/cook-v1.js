@@ -291,7 +291,7 @@
     const outcomeFeedback = $('#cookOutcomeFeedback');
     if (outcomeQuestion) outcomeQuestion.hidden = false;
     if (outcomeFeedback) outcomeFeedback.hidden = true;
-    $('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
+    $$('[data-cook-priority]').forEach((b) => b.classList.remove('active'));
     renderSelected();
     renderRecent();
   }
@@ -479,7 +479,7 @@
       closeFlow();
     });
 
-    $('[data-cook-feedback]').forEach((button) => {
+    $$('[data-cook-feedback]').forEach((button) => {
       button.addEventListener('click', () => {
         updateLatestFeedback(button.dataset.cookFeedback);
         closeFlow();
