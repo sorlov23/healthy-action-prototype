@@ -142,6 +142,23 @@
           <p id="profileSummaryText">Можно оставить всё как есть или добавить пару ориентиров ниже.</p>
         </article>
 
+        <article class="personal-model-card" id="personalModelCard">
+          <div class="personal-model-head">
+            <div>
+              <small>RINLO ЗАМЕТИЛ ПО ДЕЙСТВИЯМ</small>
+              <strong>Что влияет на будущие решения</strong>
+            </div>
+            <button class="memory-toggle" type="button" id="profileBehaviorMemoryToggle" aria-pressed="true" data-enabled="true">
+              <span aria-hidden="true"></span>
+              <b id="profileBehaviorMemoryStatus">Включено</b>
+            </button>
+          </div>
+          <p class="personal-model-explain">Это только повторяющиеся сигналы из сохранённых решений и твоих 👍/👎. Они не становятся жёсткими правилами.</p>
+          <div class="personal-model-signals" id="personalModelSignals"></div>
+          <p class="personal-model-empty" id="personalModelEmpty">Пока данных мало. После нескольких реальных решений здесь появятся наблюдаемые паттерны.</p>
+          <small class="personal-model-note" id="personalModelNote">Выключатель отключает только поведенческие выводы. Явные поправки вроде «без соуса» продолжают учитываться.</small>
+        </article>
+
         <article class="profile-editor-card">
           <small class="profile-label">Цель</small>
           <div class="profile-goal-options">
