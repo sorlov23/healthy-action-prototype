@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v6-memory-control';
+  const VERSION = 'v7-instant-cook';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -682,6 +682,56 @@
     }
   }
 
+  function renderRefineState() {
+    $('[data-cook-refine]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.cookRefine === priority);
+    });
+  }
+
+  async function generateInstantCook(nextPriority = 'none', { button = null, status = null, source = 'ingredients' } = {}) {
+    if (selected.size < 2) return false;
+    const allowed = new Set(['fast','satiety','light','use','none']);
+    priority = allowed.has(nextPriority) ? nextPriority : 'none';
+    saveRecent();
+
+    const targets = button ? [button] : [];
+    const previousLabels = new Map(targets.map((item) => [item, item.textContent]));
+    targets.forEach((item) => { item.disabled = true; });
+    $('[data-cook-refine]').forEach((item) => { item.disabled = true; });
+
+    if (button) {
+      button.textContent = aiEnabled
+        ? (source === 'refine' ? 'Перестраиваю…' : 'Rinlo подбирает…')
+        : 'Подбираю…';
+    }
+    if (status) {
+      status.textContent = aiEnabled
+        ? (source === 'refine'
+            ? 'Перестраиваю рекомендацию под новый приоритет.'
+            : 'Учитываю продукты, профиль и прошлые решения.')
+        : '';
+    }
+
+    try {
+      const plan = await requestCookPlan();
+      renderResult(plan);
+      showFlow('result');
+      if (status) status.textContent = '';
+      return true;
+    } catch (error) {
+      console.error('Cook AI failed', error);
+      if (status) status.textContent = 'Не получилось получить рецепт. Попробуй ещё раз.';
+      return false;
+    } finally {
+      previousLabels.forEach((label, item) => {
+        item.textContent = label;
+        item.disabled = false;
+      });
+      $('[data-cook-refine]').forEach((item) => { item.disabled = false; });
+      renderRefineState();
+    }
+  }
+
   function renderResult(plan = null) {
     recommendations = plan?.recipes?.length === 3 ? plan.recipes : buildRecommendations();
     activeRecipe = recommendations[0];
@@ -695,6 +745,7 @@
     if (note) note.textContent = activeRecipe.note;
     renderNutrition(activeRecipe);
     renderCookMemory(activeRecipe);
+    renderRefineState();
     if (context) context.textContent = activeRecipe.note || (priorityLabel(priority) + ' · ' + profileHint());
 
     const assumptions = $('#cookResultAssumptions');
@@ -729,6 +780,7 @@
     $('#cookResultNote').textContent = activeRecipe.note;
     renderNutrition(activeRecipe);
     renderCookMemory(activeRecipe);
+    renderRefineState();
     const assumptions = $('#cookResultAssumptions');
     if (assumptions) {
       const staples = Array.isArray(activeRecipe.staples) ? activeRecipe.staples.filter(Boolean) : [];
@@ -839,15 +891,28 @@
       if (event.target) event.target.value = '';
     });
 
-    $('#cookPhotoApply')?.addEventListener('click', () => {
+    $('#cookPhotoApply')?.addEventListener('click', async () => {
       const chosen = photoItems.filter((item) => item.selected);
       chosen.forEach((item) => selected.add(item.name));
       renderSelected();
       renderStaplesContext();
-      setPhotoStatus(chosen.length
-        ? 'Добавлено с фото: ' + chosen.length + '. Можно добавить ещё или продолжить.'
-        : 'Сначала выбери продукты на фото.');
-      if (chosen.length) {
+
+      if (!chosen.length) {
+        setPhotoStatus('Сначала выбери продукты на фото.');
+        return;
+      }
+      if (selected.size < 2) {
+        setPhotoStatus('Нужен ещё хотя бы один продукт — добавь его вручную.');
+        return;
+      }
+
+      const button = $('#cookPhotoApply');
+      const success = await generateInstantCook('none', {
+        button,
+        status: $('#cookPhotoStatus'),
+        source: 'photo',
+      });
+      if (success) {
         photoItems = [];
         renderPhotoResults();
       }
@@ -896,14 +961,26 @@
         renderStaplesContext();
         return;
       }
+      const refine = event.target.closest('[data-cook-refine]');
+      if (refine) {
+        generateInstantCook(refine.dataset.cookRefine || 'none', {
+          button: refine,
+          status: $('#cookRefineStatus'),
+          source: 'refine',
+        });
+        return;
+      }
       const alt = event.target.closest('[data-cook-alt-index]');
       if (alt) selectRecipe(Number(alt.dataset.cookAltIndex));
     });
 
-    $('#cookIngredientsNext')?.addEventListener('click', () => {
+    $('#cookIngredientsNext')?.addEventListener('click', async () => {
       if (selected.size < 2) return;
-      saveRecent();
-      showFlow('priority');
+      await generateInstantCook('none', {
+        button: $('#cookIngredientsNext'),
+        status: $('#cookInstantStatus'),
+        source: 'ingredients',
+      });
     });
 
     $$('[data-cook-priority]').forEach((button) => {
@@ -915,25 +992,11 @@
     });
 
     $('#cookPriorityNext')?.addEventListener('click', async () => {
-      const button = $('#cookPriorityNext');
-      const status = $('#cookAiStatus');
-      if (!button) return;
-      button.disabled = true;
-      const previousLabel = button.textContent;
-      button.textContent = aiEnabled ? 'Rinlo подбирает блюдо…' : 'Подбираю…';
-      if (status) status.textContent = aiEnabled ? 'Учитываю продукты, приоритет и твой контекст.' : '';
-
-      try {
-        const plan = await requestCookPlan();
-        renderResult(plan);
-        showFlow('result');
-      } catch (error) {
-        console.error('Cook AI failed', error);
-        if (status) status.textContent = 'Не получилось получить рецепт от Rinlo. Попробуй ещё раз.';
-      } finally {
-        button.textContent = previousLabel;
-        button.disabled = false;
-      }
+      await generateInstantCook(priority, {
+        button: $('#cookPriorityNext'),
+        status: $('#cookAiStatus'),
+        source: 'legacy-priority',
+      });
     });
 
     $('#cookStartCooking')?.addEventListener('click', () => {
@@ -990,7 +1053,7 @@
         const step = button.closest('[data-cook-step]')?.dataset.cookStep;
         if (step === 'ingredients') return closeFlow();
         if (step === 'priority') return showFlow('ingredients');
-        if (step === 'result') return showFlow('priority');
+        if (step === 'result') return showFlow('ingredients');
         if (step === 'cook') return showFlow('result');
         if (step === 'outcome') return showFlow('cook');
       });
