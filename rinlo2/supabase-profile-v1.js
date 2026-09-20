@@ -41,6 +41,10 @@
       profile.goal
       || profile.currentWeight
       || profile.targetWeight
+      || profile.sexForCalorie
+      || profile.ageYears
+      || profile.heightCm
+      || profile.activityLevel
       || (Array.isArray(profile.priorities) && profile.priorities.length)
       || (Array.isArray(profile.staples) && profile.staples.length)
     );
@@ -52,6 +56,10 @@
       goal: profile.goal || null,
       current_weight_kg: profile.currentWeight || null,
       target_weight_kg: profile.targetWeight || null,
+      sex_for_calorie: profile.sexForCalorie || null,
+      age_years: profile.ageYears || null,
+      height_cm: profile.heightCm || null,
+      activity_level: profile.activityLevel || null,
       priorities: Array.isArray(profile.priorities) ? profile.priorities : [],
       staples: Array.isArray(profile.staples) ? profile.staples : [],
       updated_at: profile.updatedAt || new Date().toISOString(),
@@ -63,6 +71,10 @@
       goal: row?.goal || null,
       currentWeight: row?.current_weight_kg == null ? null : Number(row.current_weight_kg),
       targetWeight: row?.target_weight_kg == null ? null : Number(row.target_weight_kg),
+      sexForCalorie: row?.sex_for_calorie || null,
+      ageYears: row?.age_years == null ? null : Number(row.age_years),
+      heightCm: row?.height_cm == null ? null : Number(row.height_cm),
+      activityLevel: row?.activity_level || null,
       priorities: Array.isArray(row?.priorities) ? row.priorities : [],
       staples: Array.isArray(row?.staples) ? row.staples : [],
       updatedAt: row?.updated_at || null,
@@ -169,7 +181,7 @@
   setTimeout(syncNow, 0);
 
   window.Rinlo2ProfileSync = {
-    version: 'v3-staples',
+    version: 'v4-calorie-plan-inputs',
     enabled,
     localOnly,
     fetchProfile,
