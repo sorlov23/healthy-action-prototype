@@ -384,6 +384,7 @@
     button.addEventListener('click', () => {
       document.querySelectorAll('[data-profile-goal]').forEach((item) => item.classList.remove('active'));
       button.classList.add('active');
+      renderProfilePreviewFromForm();
     });
   });
 
