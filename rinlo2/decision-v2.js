@@ -1,6 +1,14 @@
 (() => {
   const STORAGE_KEY = 'rinlo2-decisions-v2';
-  const DAY_TARGET = null;
+  function getCaloriePlan() {
+    return window.Rinlo2Foundation?.getCaloriePlan?.() || { status: 'incomplete' };
+  }
+
+  function getDailyTarget() {
+    const plan = getCaloriePlan();
+    return plan?.status === 'ready' ? Number(plan.targetMid || 0) || null : null;
+  }
+
   const flow = document.getElementById('decisionFlow');
   if (!flow) return;
 
@@ -433,7 +441,7 @@
         goal: requestGoal(profile),
         profile,
         decisionStage: analysis.decision_stage || 'choosing',
-        dailyTarget: DAY_TARGET || 0,
+        dailyTarget: getDailyTarget() || 0,
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
@@ -709,7 +717,7 @@
         goal: requestGoal(profile),
         profile,
         decisionStage: 'auto',
-        dailyTarget: DAY_TARGET || 0,
+        dailyTarget: getDailyTarget() || 0,
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
@@ -846,7 +854,7 @@
         goal: requestGoal(profile),
         profile,
         decisionStage: 'ready',
-        dailyTarget: DAY_TARGET || 0,
+        dailyTarget: getDailyTarget() || 0,
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
@@ -1084,7 +1092,7 @@
       goal: requestGoal(profile),
       profile,
       decisionStage: ['choosing','preparing','ready'].includes(decision.stage) ? decision.stage : 'choosing',
-      dailyTarget: DAY_TARGET || 0,
+      dailyTarget: getDailyTarget() || 0,
       dayCaloriesMin: day.min,
       dayCaloriesMax: day.max,
     });
@@ -2003,7 +2011,7 @@
         goal: requestGoal(profile),
         profile,
         decisionStage: stage,
-        dailyTarget: DAY_TARGET || 0,
+        dailyTarget: getDailyTarget() || 0,
         dayCaloriesMin: day.min,
         dayCaloriesMax: day.max,
       });
@@ -2088,13 +2096,23 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.17-cook-history',
+    version: 'decision-v2.18-calorie-plan',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
     importDecisions,
     recordCookDecision,
-    getDayContext: () => ({ target: DAY_TARGET, decisions: todayDecisions().length, calories: sumCalories() }),
+    getDayContext: () => {
+      const plan = getCaloriePlan();
+      return {
+        target: getDailyTarget(),
+        targetMin: plan?.status === 'ready' ? plan.targetMin : null,
+        targetMax: plan?.status === 'ready' ? plan.targetMax : null,
+        maintenance: plan?.status === 'ready' ? plan.maintenance : null,
+        decisions: todayDecisions().length,
+        calories: sumCalories(),
+      };
+    },
     showMemoryExplanation,
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
   };
