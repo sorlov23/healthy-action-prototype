@@ -494,3 +494,30 @@ button.home-mode-card>strong{font-size:24px;font-weight:500;text-align:right}
 .profile-calorie-plan[data-state="incomplete"]{background:#f6f7f8;border-color:rgba(17,19,21,.07)}
 .profile-calorie-plan[data-state="incomplete"]>small{color:#8a9298}
 .cook-nutrition-daily-fit{margin:0 0 14px;padding:9px 11px;border-radius:13px;background:#f5faeb;color:#5f6c51;font-size:9px;line-height:1.4;font-weight:750}
+
+.progress-v2-hero,.progress-v2-pattern,.progress-v2-feedback,.progress-v2-calories{margin-bottom:12px;border-radius:22px;border:1px solid rgba(17,19,21,.07);background:#fff;box-shadow:0 9px 28px rgba(17,19,21,.035)}
+.progress-v2-hero{padding:16px;background:linear-gradient(145deg,#111315,#25292c);color:#fff}
+.progress-v2-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.progress-v2-hero-top small{display:block;font-size:8px;font-weight:900;letter-spacing:.13em;color:rgba(255,255,255,.52)}
+.progress-v2-hero-top strong{display:block;margin-top:4px;font-size:28px;line-height:1;letter-spacing:-.045em}
+.progress-v2-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:13px;background:var(--rinlo-lime);color:#111315;font-size:18px;font-weight:900}
+.progress-v2-hero>p{margin:12px 0 0;font-size:10px;line-height:1.45;color:rgba(255,255,255,.65)}
+.progress-v2-split{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.progress-v2-split>span{padding:11px 12px;border-radius:14px;background:rgba(255,255,255,.07)}
+.progress-v2-split small{display:block;font-size:7px;font-weight:900;letter-spacing:.12em;color:rgba(255,255,255,.5)}
+.progress-v2-split b{display:block;margin-top:2px;font-size:18px}
+.progress-v2-pattern{padding:16px;background:linear-gradient(145deg,#f6fbe9,#fff)}
+.progress-v2-pattern>small,.progress-v2-feedback small,.progress-v2-calories small{font-size:8px;font-weight:900;letter-spacing:.12em;color:#7f898f}
+.progress-v2-pattern h2{margin:6px 0 7px;font-size:18px;line-height:1.15;letter-spacing:-.035em}
+.progress-v2-pattern p,.progress-v2-feedback>p,.progress-v2-calories>p{margin:0;font-size:10px;line-height:1.48;color:#747e84}
+.progress-v2-feedback,.progress-v2-calories{padding:15px}
+.progress-v2-feedback-head,.progress-v2-calories-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.progress-v2-feedback-head>div,.progress-v2-calories-head>div{min-width:0}
+.progress-v2-feedback-head strong,.progress-v2-calories-head strong{display:block;margin-top:4px;font-size:15px;line-height:1.22;letter-spacing:-.025em}
+.progress-v2-feedback-head>span{width:34px;height:34px;display:grid;place-items:center;flex:none;border-radius:12px;background:#f1f4f5;font-size:15px;font-weight:900}
+.progress-v2-feedback>p{margin-top:9px}
+.progress-v2-calories-head>span{font-size:20px;font-weight:900;color:#8a949a}
+.progress-v2-target{margin-top:12px;padding:12px;border-radius:15px;background:#f5faeb;border:1px solid rgba(123,182,38,.14)}
+.progress-v2-target small{display:block;color:#7a8a67}
+.progress-v2-target b{display:block;margin-top:3px;font-size:13px}
+.progress-v2-calories>p{margin-top:10px}
