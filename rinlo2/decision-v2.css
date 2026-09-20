@@ -521,3 +521,7 @@ button.home-mode-card>strong{font-size:24px;font-weight:500;text-align:right}
 .progress-v2-target small{display:block;color:#7a8a67}
 .progress-v2-target b{display:block;margin-top:3px;font-size:13px}
 .progress-v2-calories>p{margin-top:10px}
+
+.cook-memory-card{margin:10px 0 0;padding:13px 14px;border-radius:17px;background:linear-gradient(145deg,#f3f8e9,#fff);border:1px solid rgba(123,182,38,.16)}
+.cook-memory-card small{display:block;margin-bottom:5px;font-size:8px;font-weight:900;letter-spacing:.12em;color:#7a8b66}
+.cook-memory-card p{margin:0;font-size:10px;line-height:1.48;color:#626d5a}
