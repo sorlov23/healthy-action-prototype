@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v4-calorie-context', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v5-cook-memory', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -90,6 +90,11 @@ try {
   assert(cookHistory?.selected?.name === 'Курица с грибами и рисом', `cook_history_decision_missing:${JSON.stringify(cookHistory)}`);
   assert(cookHistory?.cook?.outcome === 'prepared' && cookHistory?.cook?.feedback === 'helpful',
     `cook_history_metadata_wrong:${JSON.stringify(cookHistory)}`);
+
+  const cookMemory = await page.evaluate(() => window.RinloCook?.getCookMemory?.());
+  assert(cookMemory?.preparedCount >= 1, `cook_memory_count_wrong:${JSON.stringify(cookMemory)}`);
+  assert((cookMemory?.helpfulRecipes || []).some((item) => item.name === 'Курица с грибами и рисом'),
+    `cook_memory_helpful_recipe_missing:${JSON.stringify(cookMemory)}`);
 
   await page.locator('[data-nav="history"]').last().click();
   await page.getByRole('heading', { name: 'История решений', exact: true }).waitFor({ state: 'visible' });
