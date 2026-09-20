@@ -150,6 +150,54 @@
             </label>
           </div>
 
+          <div class="profile-calorie-section">
+            <div class="profile-calorie-section-head">
+              <div>
+                <small class="profile-label">Мои параметры</small>
+                <p>Нужны только для расчёта дневной калорийности.</p>
+              </div>
+              <span>Mifflin–St Jeor</span>
+            </div>
+
+            <div class="profile-sex-options">
+              <button type="button" data-profile-sex="male">Мужской</button>
+              <button type="button" data-profile-sex="female">Женский</button>
+            </div>
+
+            <div class="profile-parameter-grid">
+              <label>
+                <span>Возраст</span>
+                <div><input id="profileAgeYears" type="number" inputmode="numeric" min="18" max="100" placeholder="—" /><b>лет</b></div>
+              </label>
+              <label>
+                <span>Рост</span>
+                <div><input id="profileHeightCm" type="number" inputmode="decimal" min="120" max="230" step="0.1" placeholder="—" /><b>см</b></div>
+              </label>
+            </div>
+
+            <label class="profile-activity-field">
+              <span>Активность</span>
+              <select id="profileActivityLevel">
+                <option value="">Выбрать</option>
+                <option value="sedentary">Низкая · почти без тренировок</option>
+                <option value="light">Лёгкая · 1–3 раза в неделю</option>
+                <option value="moderate">Средняя · 3–5 раз в неделю</option>
+                <option value="high">Высокая · 6–7 раз в неделю</option>
+                <option value="very_high">Очень высокая · тяжёлая нагрузка</option>
+              </select>
+            </label>
+
+            <article class="profile-calorie-plan" id="profileCaloriePlan" data-state="incomplete">
+              <small>ДНЕВНОЙ ОРИЕНТИР</small>
+              <strong id="profileCalorieTarget">Заполни параметры выше</strong>
+              <div class="profile-calorie-facts">
+                <span><small>Поддержание</small><b id="profileCalorieMaintenance">—</b></span>
+                <span><small>Обмен в покое</small><b id="profileCalorieBmr">—</b></span>
+              </div>
+              <p id="profileCalorieNote">Нужны пол для расчёта, возраст, рост, текущий вес и уровень активности.</p>
+            </article>
+          </div>
+
           <small class="profile-label priorities-label">Что важнее в спорных случаях</small>
           <div class="profile-priorities">
             <button type="button" data-profile-priority="satiety">Сытность</button>
@@ -190,8 +238,8 @@
         </article>
 
         <article class="profile-trust-card">
-          <b>Без скрытой математики</b>
-          <p>Вес и цель не превращаются в «точную норму калорий». Rinlo использует их только как контекст решения.</p>
+          <b>Расчёт, а не диагноз</b>
+          <p>Rinlo показывает оценочный диапазон по формуле Mifflin–St Jeor и активности. Фактическая потребность может отличаться, поэтому это ориентир, а не медицинское назначение.</p>
         </article>
 
         <button class="settings-entry-card" type="button" data-nav="settings">
