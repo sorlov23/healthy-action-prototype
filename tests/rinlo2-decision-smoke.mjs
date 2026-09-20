@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v5-cook-memory', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v6-memory-control', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -248,6 +248,21 @@ try {
   await page.locator('[data-nav="profile"]').last().click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
 
+  await page.locator('#personalModelCard').waitFor({ state: 'visible' });
+  const personalModelText = (await page.locator('#personalModelCard').textContent()) || '';
+  assert(personalModelText.includes('Курица с грибами и рисом'), `personal_model_signal_missing:${personalModelText}`);
+  assert((await page.locator('#profileBehaviorMemoryStatus').textContent())?.includes('Включено'), 'behavior_memory_default_wrong');
+
+  await page.locator('#profileBehaviorMemoryToggle').click();
+  let behaviorProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
+  assert(behaviorProfile?.behaviorMemoryEnabled === false, `behavior_memory_disable_failed:${JSON.stringify(behaviorProfile)}`);
+  assert((await page.locator('#personalModelCard').getAttribute('data-disabled')) === 'true', 'personal_model_disabled_state_missing');
+  assert((await page.locator('#profileBehaviorMemoryStatus').textContent())?.includes('Выключено'), 'behavior_memory_disabled_label_wrong');
+
+  await page.locator('#profileBehaviorMemoryToggle').click();
+  behaviorProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
+  assert(behaviorProfile?.behaviorMemoryEnabled === true, `behavior_memory_reenable_failed:${JSON.stringify(behaviorProfile)}`);
+
   await page.locator('#rinloMemoryCard').waitFor({ state: 'visible' });
   assert((await page.locator('#rinloMemoryCard').textContent())?.includes('без соуса'), 'profile_memory_missing');
   await page.getByRole('button', { name: /Не учитывать поправку:/ }).click();
@@ -275,6 +290,7 @@ try {
 
   const profileApi = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(profileApi?.goal === 'aware', `profile_goal_wrong:${JSON.stringify(profileApi)}`);
+  assert(profileApi?.behaviorMemoryEnabled === true, `profile_behavior_memory_wrong:${JSON.stringify(profileApi)}`);
   assert(profileApi?.currentWeight === 80 && profileApi?.targetWeight === 72, `profile_weight_wrong:${JSON.stringify(profileApi)}`);
   assert(profileApi?.sexForCalorie === 'male'
     && profileApi?.ageYears === 40
@@ -301,6 +317,7 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' });
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
+  assert(reloadedProfile?.behaviorMemoryEnabled === true, `profile_behavior_memory_persistence_failed:${JSON.stringify(reloadedProfile)}`);
   assert(reloadedProfile?.sexForCalorie === 'male'
     && reloadedProfile?.ageYears === 40
     && reloadedProfile?.heightCm === 180
