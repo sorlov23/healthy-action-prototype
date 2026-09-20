@@ -1382,7 +1382,7 @@
 
     const progressScreen = document.querySelector('[data-screen="progress"]');
     const patternCard = document.getElementById('progressPatternCard');
-    if (progressScreen && !document.getElementById('progressFeedbackCard')) {
+    if (progressScreen && !document.getElementById('progressFeedbackTitle')) {
       const card = document.createElement('article');
       card.id = 'progressFeedbackCard';
       card.className = 'progress-feedback-card';
