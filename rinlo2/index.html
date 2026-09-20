@@ -81,43 +81,54 @@
       </section>
 
       <section class="screen" data-screen="progress">
-        <p class="eyebrow dark">НЕ ДНЕВНИК. ПАТТЕРНЫ РЕШЕНИЙ.</p>
-        <h1 class="page-title">Что меняется</h1>
+        <p class="eyebrow dark">РЕАЛЬНЫЕ РЕШЕНИЯ · НЕ ДНЕВНИК</p>
+        <h1 class="page-title">Как ты выбираешь</h1>
 
-        <article class="progress-decision-card">
-          <div>
-            <small>Последние 7 дней</small>
-            <strong id="progressDecisionCount">Пока нет решений</strong>
+        <article class="progress-v2-hero">
+          <div class="progress-v2-hero-top">
+            <div>
+              <small>ПОСЛЕДНИЕ 7 ДНЕЙ</small>
+              <strong id="progressDecisionCount">Пока нет решений</strong>
+            </div>
+            <span class="progress-v2-mark" aria-hidden="true">↗</span>
           </div>
-          <span class="progress-signal" aria-hidden="true">↗</span>
-          <p>Rinlo смотрит не на идеальность питания, а на то, какие решения реально повторяются.</p>
+          <p id="progressDecisionBreakdown">Rinlo начнёт собирать картину после первых реальных решений.</p>
+          <div class="progress-v2-split">
+            <span><small>ПРИГОТОВИЛ</small><b id="progressCookCount">0</b></span>
+            <span><small>ВЫБРАЛ</small><b id="progressChooseCount">0</b></span>
+          </div>
         </article>
 
-        <div class="metric-grid decision-metrics">
-          <article>
-            <span class="metric-icon lime">↗</span>
-            <strong id="progressAdjustedCount">0</strong>
-            <p>решений потребовали небольшой корректировки</p>
-          </article>
-          <article>
-            <span class="metric-icon">✓</span>
-            <strong id="progressChosenAdjustmentCount">0</strong>
-            <p>раз выбран вариант с корректировкой</p>
-          </article>
-        </div>
-
-        <article class="insight-card" id="progressPatternCard">
-          <p class="eyebrow dark">ПОЛЕЗНЫЙ ПАТТЕРН</p>
+        <article class="progress-v2-pattern" id="progressPatternCard">
+          <small>ПОВТОРЯЮЩИЙСЯ ПАТТЕРН</small>
           <h2 id="progressPatternTitle">Нужно ещё несколько решений.</h2>
-          <p id="progressPatternText">После нескольких реальных выборов Rinlo покажет, что чаще всего помогает именно тебе.</p>
+          <p id="progressPatternText">После нескольких реальных действий Rinlo покажет то, что действительно повторяется — без догадок о тебе.</p>
         </article>
 
-        <article class="goal-context-card">
-          <div>
-            <small>Цель остаётся контекстом, а не оценкой еды</small>
-            <strong id="progressWeightContext">Вес не задан</strong>
+        <article class="progress-v2-feedback">
+          <div class="progress-v2-feedback-head">
+            <div>
+              <small>ЧТО СРАБАТЫВАЕТ</small>
+              <strong id="progressFeedbackTitle">Пока нет оценок</strong>
+            </div>
+            <span id="progressFeedbackSignal" aria-hidden="true">○</span>
           </div>
-          <span>Вес помогает персонализировать решения, но не превращает Rinlo в дневник калорий.</span>
+          <p id="progressFeedbackText">Оцени несколько рекомендаций — и здесь появится сигнал о качестве решений Rinlo.</p>
+        </article>
+
+        <article class="progress-v2-calories">
+          <div class="progress-v2-calories-head">
+            <div>
+              <small>СЕГОДНЯ В RINLO</small>
+              <strong id="progressTodayCalories">Пока нет сохранённых решений</strong>
+            </div>
+            <span>≈</span>
+          </div>
+          <div class="progress-v2-target">
+            <small>ТВОЙ ДНЕВНОЙ ОРИЕНТИР</small>
+            <b id="progressDailyTarget">Настрой в Профиле</b>
+          </div>
+          <p id="progressCalorieNote">Здесь учитываются только решения, сохранённые в Rinlo. Это не полный дневник питания и не «остаток калорий».</p>
         </article>
       </section>
 
