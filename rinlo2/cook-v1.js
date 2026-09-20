@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v4-calorie-context';
+  const VERSION = 'v5-cook-memory';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -147,6 +147,7 @@
   let photoBusy = false;
   let activeCookDecisionId = null;
   let activeCookDecisionCreatedAt = null;
+  let activeCookMemory = null;
 
   function readState() {
     try {
@@ -339,6 +340,120 @@
     list.textContent = staples.join(' · ');
   }
 
+
+  function memoryKey(value = '') {
+    return String(value || '').trim().toLowerCase().replace(/ё/g, 'е');
+  }
+
+  function ingredientOverlap(a = [], b = []) {
+    const left = new Set((Array.isArray(a) ? a : []).map(memoryKey).filter(Boolean));
+    const right = new Set((Array.isArray(b) ? b : []).map(memoryKey).filter(Boolean));
+    let count = 0;
+    left.forEach((item) => { if (right.has(item)) count += 1; });
+    return count;
+  }
+
+  function buildCookMemory() {
+    const now = Date.now();
+    const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+    const currentIngredients = [...selected];
+    const decisions = (window.Rinlo2Decisions?.getDecisions?.() || [])
+      .filter((decision) => {
+        if (decision?.source !== 'cook' || decision?.cook?.outcome !== 'prepared') return false;
+        const time = new Date(decision.createdAt || 0).getTime();
+        return Number.isFinite(time) && time >= cutoff;
+      })
+      .slice(0, 30);
+
+    const priorityCounts = {};
+    decisions.forEach((decision) => {
+      const value = String(decision.cook?.priority || '');
+      if (['fast','satiety','light','use','none'].includes(value) && value !== 'none') {
+        priorityCounts[value] = (priorityCounts[value] || 0) + 1;
+      }
+    });
+    const dominantEntry = Object.entries(priorityCounts).sort((a, b) => b[1] - a[1])[0] || null;
+    const dominantPriority = dominantEntry
+      && decisions.length >= 3
+      && dominantEntry[1] >= 2
+      && dominantEntry[1] / decisions.length >= 0.6
+      ? dominantEntry[0]
+      : '';
+
+    const timed = decisions.filter((decision) => Number(decision.cook?.duration || 0) > 0);
+    const quickCount = timed.filter((decision) => Number(decision.cook?.duration || 0) <= 20).length;
+    const quickMealPreference = timed.length >= 3 && quickCount >= 2 && quickCount / timed.length >= 0.6;
+
+    const simplify = (decision) => ({
+      name: String(decision.selected?.name || decision.original?.name || '').trim().slice(0, 120),
+      ingredients: Array.isArray(decision.cook?.ingredients)
+        ? decision.cook.ingredients.map(String).slice(0, 12)
+        : [],
+      priority: String(decision.cook?.priority || 'none'),
+      duration: Math.max(0, Number(decision.cook?.duration || 0)),
+      feedback: String(decision.cook?.feedback || ''),
+      overlap: ingredientOverlap(decision.cook?.ingredients || [], currentIngredients),
+    });
+
+    const rated = decisions.map(simplify);
+    const relevant = rated.filter((item) => item.overlap > 0);
+    const pool = relevant.length ? relevant : rated;
+
+    const helpfulRecipes = pool
+      .filter((item) => item.feedback === 'helpful' && item.name)
+      .sort((a, b) => b.overlap - a.overlap)
+      .slice(0, 4)
+      .map(({ overlap, ...item }) => item);
+
+    const notForMeRecipes = pool
+      .filter((item) => item.feedback === 'not_for_me' && item.name)
+      .sort((a, b) => b.overlap - a.overlap)
+      .slice(0, 4)
+      .map(({ overlap, ...item }) => item);
+
+    return {
+      preparedCount: decisions.length,
+      dominantPriority,
+      quickMealPreference,
+      helpfulRecipes,
+      notForMeRecipes,
+    };
+  }
+
+  function renderCookMemory(recipe, memory = activeCookMemory) {
+    const card = $('#cookMemoryContext');
+    const text = $('#cookMemoryText');
+    if (!card || !text) return;
+
+    const signals = [];
+    if (memory?.quickMealPreference && Number(recipe?.duration || 0) > 0 && Number(recipe.duration) <= 20) {
+      signals.push('У тебя уже несколько раз срабатывали блюда до 20 минут.');
+    }
+    if (memory?.dominantPriority === 'fast' && (priority === 'none' || priority === 'fast')) {
+      signals.push('В последних готовках часто повторялся приоритет «Быстро».');
+    }
+
+    const disliked = Array.isArray(memory?.notForMeRecipes) ? memory.notForMeRecipes : [];
+    const avoided = disliked.find((item) => memoryKey(item?.name) !== memoryKey(recipe?.name));
+    if (avoided?.name) {
+      signals.push(`Не повторяю «${avoided.name}»: раньше ты отметил этот вариант как «Не моё».`);
+    }
+
+    const liked = Array.isArray(memory?.helpfulRecipes) ? memory.helpfulRecipes : [];
+    const similar = liked.find((item) =>
+      item?.name
+      && memoryKey(item.name) !== memoryKey(recipe?.name)
+      && ingredientOverlap(item.ingredients || [], [...selected]) > 0
+    );
+    if (similar?.name) {
+      signals.push(`Есть положительный сигнал по похожему набору продуктов: «${similar.name}».`);
+    }
+
+    const visible = signals.slice(0, 2);
+    card.hidden = visible.length === 0;
+    text.textContent = visible.join(' ');
+  }
+
   function profileHint() {
     try {
       const data = JSON.parse(localStorage.getItem('rinlo2-foundation-state-v1') || '{}');
@@ -412,8 +527,7 @@
 
     const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
     const staples = getAvailableStaples();
-    const state = readState();
-    const recentCookOutcomes = (state.outcomes || []).slice(0, 6);
+    const cookMemory = buildCookMemory();
 
     const response = await fetch(`${base}/functions/v1/analyze-food`, {
       method: 'POST',
@@ -430,7 +544,7 @@
         staples,
         priority,
         profile,
-        recentCookOutcomes,
+        cookMemory,
       }),
     });
 
@@ -452,6 +566,7 @@
         ...data.cook.alternatives.map(normalizeAiRecipe),
       ].filter((recipe) => recipe.name && recipe.steps.length >= 3).slice(0, 3),
       meta: data.meta || {},
+      memory: cookMemory,
     };
   }
 
@@ -507,6 +622,7 @@
     photoBusy = false;
     activeCookDecisionId = null;
     activeCookDecisionCreatedAt = null;
+    activeCookMemory = null;
     const text = $('#cookIngredientText');
     if (text) text.value = '';
     const outcomeQuestion = $('#cookOutcomeQuestion');
@@ -567,6 +683,7 @@
   function renderResult(plan = null) {
     recommendations = plan?.recipes?.length === 3 ? plan.recipes : buildRecommendations();
     activeRecipe = recommendations[0];
+    activeCookMemory = plan?.memory || buildCookMemory();
     const title = $('#cookResultTitle');
     const duration = $('#cookResultDuration');
     const note = $('#cookResultNote');
@@ -575,6 +692,7 @@
     if (duration) duration.textContent = activeRecipe.duration + ' минут';
     if (note) note.textContent = activeRecipe.note;
     renderNutrition(activeRecipe);
+    renderCookMemory(activeRecipe);
     if (context) context.textContent = activeRecipe.note || (priorityLabel(priority) + ' · ' + profileHint());
 
     const assumptions = $('#cookResultAssumptions');
@@ -608,6 +726,7 @@
     $('#cookResultDuration').textContent = activeRecipe.duration + ' минут';
     $('#cookResultNote').textContent = activeRecipe.note;
     renderNutrition(activeRecipe);
+    renderCookMemory(activeRecipe);
     const assumptions = $('#cookResultAssumptions');
     if (assumptions) {
       const staples = Array.isArray(activeRecipe.staples) ? activeRecipe.staples.filter(Boolean) : [];
@@ -886,7 +1005,8 @@
     getSelected: () => [...selected],
     getAvailableStaples: () => getAvailableStaples(),
     getPhotoItems: () => photoItems.map((item) => ({ ...item })),
-    getActiveDecisionId: () => activeCookDecisionId
+    getActiveDecisionId: () => activeCookDecisionId,
+    getCookMemory: () => JSON.parse(JSON.stringify(buildCookMemory()))
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
