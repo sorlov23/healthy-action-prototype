@@ -62,6 +62,7 @@
       activity_level: profile.activityLevel || null,
       priorities: Array.isArray(profile.priorities) ? profile.priorities : [],
       staples: Array.isArray(profile.staples) ? profile.staples : [],
+      behavior_memory_enabled: profile.behaviorMemoryEnabled !== false,
       updated_at: profile.updatedAt || new Date().toISOString(),
     };
   }
@@ -77,6 +78,7 @@
       activityLevel: row?.activity_level || null,
       priorities: Array.isArray(row?.priorities) ? row.priorities : [],
       staples: Array.isArray(row?.staples) ? row.staples : [],
+      behaviorMemoryEnabled: row?.behavior_memory_enabled !== false,
       updatedAt: row?.updated_at || null,
     };
   }
@@ -181,7 +183,7 @@
   setTimeout(syncNow, 0);
 
   window.Rinlo2ProfileSync = {
-    version: 'v4-calorie-plan-inputs',
+    version: 'v5-behavior-memory-control',
     enabled,
     localOnly,
     fetchProfile,
