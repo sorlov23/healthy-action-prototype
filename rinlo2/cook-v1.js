@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v5-cook-memory';
+  const VERSION = 'v6-memory-control';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
