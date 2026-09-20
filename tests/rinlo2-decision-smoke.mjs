@@ -218,7 +218,7 @@ try {
   await page.getByRole('button', { name: 'Готово', exact: true }).click();
 
   await page.locator('[data-nav="progress"]').last().click();
-  await page.getByRole('heading', { name: 'Что меняется', exact: true }).waitFor({ state: 'visible' });
+  await page.getByRole('heading', { name: 'Как ты выбираешь', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#progressDecisionCount').textContent())?.includes('2 решения'), 'progress_decision_count_wrong');
   assert((await page.locator('#progressCookCount').textContent())?.trim() === '1', 'progress_cook_count_wrong');
   assert((await page.locator('#progressChooseCount').textContent())?.trim() === '1', 'progress_choose_count_wrong');
