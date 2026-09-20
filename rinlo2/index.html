@@ -464,7 +464,7 @@
           </div>
           <div class="cook-photo-chips" id="cookPhotoChips"></div>
           <p id="cookPhotoNote"></p>
-          <button class="cook-photo-apply" type="button" id="cookPhotoApply">Добавить выбранные</button>
+          <button class="cook-photo-apply" type="button" id="cookPhotoApply">Использовать выбранные →</button>
         </article>
 
         <div class="cook-input-divider"><span>или вручную</span></div>
@@ -509,7 +509,10 @@
           <span>Эти продукты отмечены в Профиле как «Обычно есть дома».</span>
         </article>
       </div>
-      <div class="flow-footer"><button class="btn primary wide" type="button" id="cookIngredientsNext" disabled>Продолжить →</button></div>
+      <div class="flow-footer">
+        <span class="cook-ai-status" id="cookInstantStatus" aria-live="polite"></span>
+        <button class="btn primary wide" type="button" id="cookIngredientsNext" disabled>Подобрать блюдо →</button>
+      </div>
     </section>
 
     <section class="cook-step" data-cook-step="priority">
@@ -547,6 +550,19 @@
         <p class="cook-nutrition-assumption" id="cookNutritionAssumption" hidden></p>
         <p class="cook-nutrition-daily-fit" id="cookNutritionDailyFit" hidden></p>
         <p class="cook-result-note" id="cookResultNote"></p>
+        <div class="cook-refine">
+          <div class="cook-refine-head">
+            <b>Хочется иначе?</b>
+            <span>перестрою решение в один тап</span>
+          </div>
+          <div class="cook-refine-actions">
+            <button type="button" data-cook-refine="fast">⚡ Быстрее</button>
+            <button type="button" data-cook-refine="satiety">🍽 Сытнее</button>
+            <button type="button" data-cook-refine="light">🌿 Полегче</button>
+            <button type="button" data-cook-refine="use">◎ Использовать продукты</button>
+          </div>
+          <span class="cook-refine-status" id="cookRefineStatus" aria-live="polite"></span>
+        </div>
         <article class="cook-why-card">
           <small>ПОЧЕМУ ЭТОТ ВАРИАНТ</small>
           <p id="cookResultContext"></p>
