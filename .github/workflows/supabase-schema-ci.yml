@@ -206,7 +206,7 @@ jobs:
 
       - name: Verify Rinlo Decisions profile ownership
         run: |
-          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'lose|male|40|180.0|moderate|satiety,calories|salt,vegetable_oil,garlic'
+          psql -Atq -v ON_ERROR_STOP=1 <<'SQL' | grep -qx 'lose|male|40|180.0|moderate|satiety,calories|salt,vegetable_oil,garlic|false'
           begin;
           insert into auth.users(id) values
             ('77777777-7777-4777-8777-777777777777'),
@@ -216,7 +216,7 @@ jobs:
           insert into public.rinlo_decision_profiles(
             user_id, goal, current_weight_kg, target_weight_kg,
             sex_for_calorie, age_years, height_cm, activity_level,
-            priorities, staples
+            priorities, staples, behavior_memory_enabled
           )
           values(
             '77777777-7777-4777-8777-777777777777',
@@ -228,7 +228,8 @@ jobs:
             180,
             'moderate',
             array['satiety','calories'],
-            array['salt','vegetable_oil','garlic']
+            array['salt','vegetable_oil','garlic'],
+            false
           )
           on conflict(user_id) do update set
             goal=excluded.goal,
@@ -238,8 +239,9 @@ jobs:
             activity_level=excluded.activity_level,
             priorities=excluded.priorities,
             staples=excluded.staples,
+            behavior_memory_enabled=excluded.behavior_memory_enabled,
             updated_at=now();
-          select goal || '|' || sex_for_calorie || '|' || age_years || '|' || height_cm || '|' || activity_level || '|' || array_to_string(priorities, ',') || '|' || array_to_string(staples, ',')
+          select goal || '|' || sex_for_calorie || '|' || age_years || '|' || height_cm || '|' || activity_level || '|' || array_to_string(priorities, ',') || '|' || array_to_string(staples, ',') || '|' || behavior_memory_enabled
           from public.rinlo_decision_profiles
           where user_id=auth.uid();
           rollback;
