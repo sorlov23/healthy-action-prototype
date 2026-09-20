@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v6-memory-control', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v7-instant-cook', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -60,13 +60,14 @@ try {
   assert((await page.locator('#cookIngredientCount').textContent()) === '3', 'cook_ingredient_count_wrong');
 
   await page.locator('#cookIngredientsNext').click();
-  await page.getByRole('heading', { name: 'Что сейчас важнее?', exact: true }).waitFor({ state: 'visible' });
-  await page.locator('[data-cook-priority="fast"]').click();
-  await page.locator('#cookPriorityNext').click();
-
   await page.getByRole('heading', { name: 'Курица с грибами и рисом', exact: true }).waitFor({ state: 'visible' });
+  assert(!(await page.getByRole('heading', { name: 'Что сейчас важнее?', exact: true }).isVisible().catch(() => false)), 'instant_cook_priority_step_should_be_skipped');
   assert((await page.locator('#cookResultDuration').textContent())?.includes('20'), 'cook_result_duration_missing');
   assert((await page.locator('#cookAlternatives button').count()) === 2, 'cook_alternatives_count_wrong');
+
+  await page.locator('[data-cook-refine="fast"]').click();
+  await page.getByRole('heading', { name: 'Курица с грибами и рисом', exact: true }).waitFor({ state: 'visible' });
+  assert(await page.locator('[data-cook-refine="fast"]').evaluate((el) => el.classList.contains('active')), 'instant_cook_fast_refine_missing');
 
   await page.locator('#cookStartCooking').click();
   await page.getByRole('heading', { name: 'Подготовь продукты', exact: true }).waitFor({ state: 'visible' });
