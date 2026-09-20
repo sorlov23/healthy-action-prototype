@@ -465,72 +465,105 @@
   }
 
   function progressPattern(items) {
-    const corpus = items.map((decision) => [
-      decision.question,
-      decision.selected?.name,
-      decision.original?.name,
-      decision.alternative?.name,
-      ...(decision.alternative?.diffs || []),
-      ...(decision.actionsNow || []),
-      decision.futureTip,
-    ].filter(Boolean).join(' ')).join(' ').toLowerCase();
+    const cook = items.filter((decision) => decision.source === 'cook');
+    const choose = items.filter((decision) => decision.source !== 'cook');
 
-    const patterns = [
-      {
-        score: (corpus.match(/напит|кола|zero|сок|лимонад|кофе/g) || []).length,
-        title: 'Чаще всего помогает корректировать напиток.',
-        text: 'Основную идею еды можно оставить, а заметную разницу часто даёт напиток без сахара или более простой вариант.',
-      },
-      {
-        score: (corpus.match(/соус|майон|масл|заправ/g) || []).length,
-        title: 'Чаще всего разница — в соусе или добавках.',
-        text: 'Rinlo будет сначала искать небольшую корректировку, а не предлагать полностью менять блюдо.',
-      },
-      {
-        score: (corpus.match(/порц|добавк|втор(ая|ую)|ещ[её]/g) || []).length,
-        title: 'Самый частый рычаг — порция и добавка.',
-        text: 'Для готовой еды это особенно полезно: менять приготовленное не нужно, важнее то, что ещё можно сделать сейчас.',
-      },
-      {
-        score: (corpus.match(/гарнир|фри|картош|хлеб/g) || []).length,
-        title: 'Чаще всего можно сохранить основное блюдо.',
-        text: 'Изменение гарнира или необязательной добавки нередко даёт больше пользы, чем полная замена еды.',
-      },
-    ].sort((a, b) => b.score - a.score);
+    if (cook.length >= 2) {
+      const fast = cook.filter((decision) => decision.cook?.priority === 'fast').length;
+      if (fast >= 2 && fast / cook.length >= 0.5) {
+        return {
+          title: 'Когда готовишь, чаще выбираешь «быстро».',
+          text: `${fast} из ${cook.length} приготовленных решений за неделю были с приоритетом скорости.`,
+        };
+      }
 
-    if (patterns[0]?.score > 0) return patterns[0];
+      const timed = cook.filter((decision) => Number(decision.cook?.duration || 0) > 0);
+      const quick = timed.filter((decision) => Number(decision.cook?.duration || 0) <= 20).length;
+      if (quick >= 2 && timed.length && quick / timed.length >= 0.5) {
+        return {
+          title: 'В готовке повторяются блюда до 20 минут.',
+          text: `${quick} из ${timed.length} приготовленных вариантов укладывались примерно в 20 минут.`,
+        };
+      }
+
+      const ingredientCounts = new Map();
+      cook.forEach((decision) => {
+        [...new Set(Array.isArray(decision.cook?.ingredients) ? decision.cook.ingredients : [])]
+          .forEach((name) => {
+            const label = String(name || '').trim();
+            if (!label) return;
+            const key = label.toLowerCase().replace(/ё/g, 'е');
+            const current = ingredientCounts.get(key) || { label, count: 0 };
+            current.count += 1;
+            ingredientCounts.set(key, current);
+          });
+      });
+      const topIngredient = [...ingredientCounts.values()].sort((a, b) => b.count - a.count)[0];
+      if (topIngredient?.count >= 2) {
+        return {
+          title: `В готовке повторяется: ${topIngredient.label}.`,
+          text: `Этот продукт встречался в ${topIngredient.count} приготовленных решениях за последние 7 дней.`,
+        };
+      }
+    }
+
+    if (cook.length >= 2 && cook.length > choose.length) {
+      return {
+        title: 'На этой неделе Rinlo чаще помогал готовить дома.',
+        text: `${cook.length} приготовленных решений против ${choose.length} ситуаций выбора готовой еды.`,
+      };
+    }
+
+    if (choose.length >= 2 && choose.length > cook.length) {
+      return {
+        title: 'На этой неделе Rinlo чаще помогал выбирать готовую еду.',
+        text: `${choose.length} ситуаций выбора против ${cook.length} приготовленных решений.`,
+      };
+    }
+
+    const chosenAdjustment = choose.filter((decision) => decision.selected?.kind === 'alternative').length;
+    if (chosenAdjustment >= 2) {
+      return {
+        title: 'В готовом выборе ты несколько раз выбрал предложенную корректировку.',
+        text: `${chosenAdjustment} раза за неделю исходный вариант был заменён на предложенную Rinlo альтернативу.`,
+      };
+    }
+
     return {
-      title: 'Ты чаще улучшаешь выбор без полной замены блюда.',
-      text: 'Rinlo будет продолжать искать небольшие действия, которые реально доступны в момент решения.',
+      title: 'Пока нет одного устойчивого паттерна.',
+      text: 'Готовка и выбор пока распределены без явного повторяющегося сценария. Rinlo продолжит смотреть на реальные действия.',
     };
   }
 
   function renderProgress() {
     const countNode = document.getElementById('progressDecisionCount');
-    const adjustedNode = document.getElementById('progressAdjustedCount');
-    const chosenNode = document.getElementById('progressChosenAdjustmentCount');
-    const patternTitle = document.getElementById('progressPatternTitle');
-    const patternText = document.getElementById('progressPatternText');
-    const weightNode = document.getElementById('progressWeightContext');
-    const feedbackTitle = document.getElementById('progressFeedbackTitle');
-    const feedbackText = document.getElementById('progressFeedbackText');
-    const feedbackSignal = document.getElementById('progressFeedbackSignal');
     if (!countNode) return;
 
     const recent = decisionsSince(7);
-    const adjusted = recent.filter((decision) =>
-      ['fits_with_adjustment', 'better_alternative'].includes(decision.decisionState)
-      || Boolean(decision.alternative)
-    ).length;
-    const chosenAdjustment = recent.filter((decision) =>
-      decision.selected?.kind === 'alternative'
-    ).length;
+    const cook = recent.filter((decision) => decision.source === 'cook');
+    const choose = recent.filter((decision) => decision.source !== 'cook');
+    const cookNode = document.getElementById('progressCookCount');
+    const chooseNode = document.getElementById('progressChooseCount');
+    const breakdownNode = document.getElementById('progressDecisionBreakdown');
+    const patternTitle = document.getElementById('progressPatternTitle');
+    const patternText = document.getElementById('progressPatternText');
+    const feedbackTitle = document.getElementById('progressFeedbackTitle');
+    const feedbackText = document.getElementById('progressFeedbackText');
+    const feedbackSignal = document.getElementById('progressFeedbackSignal');
+    const todayCaloriesNode = document.getElementById('progressTodayCalories');
+    const dailyTargetNode = document.getElementById('progressDailyTarget');
+    const calorieNote = document.getElementById('progressCalorieNote');
 
     countNode.textContent = recent.length
       ? `${recent.length} ${decisionWord(recent.length)}`
       : 'Пока нет решений';
-    if (adjustedNode) adjustedNode.textContent = String(adjusted);
-    if (chosenNode) chosenNode.textContent = String(chosenAdjustment);
+    if (cookNode) cookNode.textContent = String(cook.length);
+    if (chooseNode) chooseNode.textContent = String(choose.length);
+    if (breakdownNode) {
+      breakdownNode.textContent = recent.length
+        ? `${cook.length} приготовил · ${choose.length} выбрал. Только действия, которые были сохранены в Rinlo.`
+        : 'Rinlo начнёт собирать картину после первых реальных решений.';
+    }
 
     if (patternTitle && patternText) {
       if (recent.length < 3) {
@@ -544,31 +577,43 @@
       }
     }
 
-    const feedbackStats = window.Rinlo2Feedback?.getRecentStats?.(30) || { total: 0, helpful: 0, notHelpful: 0 };
+    const chooseFeedback = window.Rinlo2Feedback?.getRecentStats?.(7) || { total: 0, helpful: 0, notHelpful: 0 };
+    const cookRated = cook.filter((decision) => ['helpful','not_for_me'].includes(decision.cook?.feedback));
+    const cookHelpful = cookRated.filter((decision) => decision.cook?.feedback === 'helpful').length;
+    const cookNotHelpful = cookRated.filter((decision) => decision.cook?.feedback === 'not_for_me').length;
+    const feedbackStats = {
+      total: chooseFeedback.total + cookRated.length,
+      helpful: chooseFeedback.helpful + cookHelpful,
+      notHelpful: chooseFeedback.notHelpful + cookNotHelpful,
+    };
+
     if (feedbackTitle && feedbackText) {
       if (feedbackStats.total > 0) {
-        feedbackTitle.textContent = `${feedbackStats.helpful} из ${feedbackStats.total} ответов отмечены полезными`;
+        feedbackTitle.textContent = `${feedbackStats.helpful} из ${feedbackStats.total} рекомендаций отмечены полезными`;
         feedbackText.textContent = feedbackStats.notHelpful
-          ? `Ещё ${feedbackStats.notHelpful} ${feedbackStats.notHelpful === 1 ? 'ответ не помог' : 'ответа не помогли'} — это отдельный сигнал качества, а не правило о твоей еде.`
-          : 'Пока все оценённые ответы были полезными. Это сигнал качества советов, а не оценка твоего питания.';
+          ? `${feedbackStats.notHelpful} ${feedbackStats.notHelpful === 1 ? 'оценка показывает' : 'оценки показывают'}, что ответ не сработал. Это сигнал для будущих рекомендаций, а не оценка твоего питания.`
+          : 'Все оценённые рекомендации за последние 7 дней были отмечены полезными.';
         if (feedbackSignal) feedbackSignal.textContent = feedbackStats.helpful === feedbackStats.total ? '✓' : '↗';
       } else {
         feedbackTitle.textContent = 'Пока нет оценок';
-        feedbackText.textContent = 'После пары оценок здесь будет видно, насколько ответы Rinlo реально помогают принимать решения.';
+        feedbackText.textContent = 'Оцени несколько рекомендаций — и здесь появится сигнал о качестве решений Rinlo.';
         if (feedbackSignal) feedbackSignal.textContent = '○';
       }
     }
 
-    const foundation = window.Rinlo2Foundation?.getState?.() || {};
-    const current = Number(foundation.currentWeight);
-    const target = Number(foundation.targetWeight);
-    if (weightNode) {
-      if (Number.isFinite(current) && current > 0 && Number.isFinite(target) && target > 0) {
-        const fmt = (value) => value.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-        weightNode.textContent = `${fmt(current)} → ${fmt(target)} кг`;
-      } else {
-        weightNode.textContent = 'Вес не задан';
-      }
+    const today = todayDecisions();
+    const dayCalories = sumCalories(today);
+    const plan = getCaloriePlan();
+    if (todayCaloriesNode) todayCaloriesNode.textContent = formatCalories(dayCalories);
+    if (dailyTargetNode) {
+      dailyTargetNode.textContent = plan?.status === 'ready'
+        ? `${Number(plan.targetMin).toLocaleString('ru-RU')}–${Number(plan.targetMax).toLocaleString('ru-RU')} ккал/день`
+        : 'Настрой в Профиле';
+    }
+    if (calorieNote) {
+      calorieNote.textContent = today.length
+        ? `Учтено ${today.length} ${today.length === 1 ? 'сохранённое решение' : 'сохранённых решения'}. Это не полный дневник питания и не «остаток калорий».`
+        : 'Здесь учитываются только решения, сохранённые в Rinlo. Это не полный дневник питания и не «остаток калорий».';
     }
   }
 
@@ -2096,7 +2141,7 @@
   updateQuestionState();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.18-calorie-plan',
+    version: 'decision-v2.19-progress-v2',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
