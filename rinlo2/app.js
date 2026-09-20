@@ -12,6 +12,10 @@
     onboardingDone: false,
     currentWeight: null,
     targetWeight: null,
+    sexForCalorie: null,
+    ageYears: null,
+    heightCm: null,
+    activityLevel: null,
     goal: null,
     priorities: [],
     staples: [],
@@ -55,6 +59,21 @@
     'salt','pepper','vegetable_oil','butter','garlic','onion',
     'eggs','rice','buckwheat','pasta','flour','milk','cheese','sour_cream','soy_sauce'
   ]);
+  const allowedSexForCalorie = new Set(['male','female']);
+  const activityFactors = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    high: 1.725,
+    very_high: 1.9,
+  };
+  const activityLabels = {
+    sedentary: 'низкая активность',
+    light: 'лёгкая активность',
+    moderate: 'средняя активность',
+    high: 'высокая активность',
+    very_high: 'очень высокая активность',
+  };
 
   function optionalNumber(value) {
     if (value === null || value === undefined || value === '') return null;
@@ -66,13 +85,94 @@
     const goal = allowedGoals.has(input.goal) ? input.goal : null;
     const currentWeight = optionalNumber(input.currentWeight);
     const targetWeight = optionalNumber(input.targetWeight);
+    const sexForCalorie = allowedSexForCalorie.has(input.sexForCalorie) ? input.sexForCalorie : null;
+    const ageYearsRaw = optionalNumber(input.ageYears);
+    const ageYears = ageYearsRaw && ageYearsRaw >= 18 && ageYearsRaw <= 100 ? Math.round(ageYearsRaw) : null;
+    const heightCmRaw = optionalNumber(input.heightCm);
+    const heightCm = heightCmRaw && heightCmRaw >= 120 && heightCmRaw <= 230 ? Math.round(heightCmRaw * 10) / 10 : null;
+    const activityLevel = Object.prototype.hasOwnProperty.call(activityFactors, input.activityLevel)
+      ? input.activityLevel
+      : null;
     const priorities = Array.isArray(input.priorities)
       ? [...new Set(input.priorities.filter((item) => allowedPriorities.has(item)))].slice(0, 4)
       : [];
     const staples = Array.isArray(input.staples)
       ? [...new Set(input.staples.filter((item) => allowedStaples.has(item)))].slice(0, 15)
       : [];
-    return { goal, currentWeight, targetWeight, priorities, staples };
+    return { goal, currentWeight, targetWeight, sexForCalorie, ageYears, heightCm, activityLevel, priorities, staples };
+  }
+
+  function roundTo50(value) {
+    return Math.round(Number(value || 0) / 50) * 50;
+  }
+
+  function calculateCaloriePlan(input = {}) {
+    const profile = normalizeProfile(input);
+    const missing = [];
+    if (!profile.sexForCalorie) missing.push('sex');
+    if (!profile.ageYears) missing.push('age');
+    if (!profile.heightCm) missing.push('height');
+    if (!profile.currentWeight) missing.push('weight');
+    if (!profile.activityLevel) missing.push('activity');
+
+    if (missing.length) {
+      return {
+        status: 'incomplete',
+        missing,
+        formula: 'Mifflin–St Jeor',
+        targetMin: null,
+        targetMax: null,
+        targetMid: null,
+        maintenance: null,
+        bmr: null,
+        activityFactor: profile.activityLevel ? activityFactors[profile.activityLevel] : null,
+      };
+    }
+
+    const sexOffset = profile.sexForCalorie === 'male' ? 5 : -161;
+    const bmrRaw = (10 * profile.currentWeight)
+      + (6.25 * profile.heightCm)
+      - (5 * profile.ageYears)
+      + sexOffset;
+    const activityFactor = activityFactors[profile.activityLevel];
+    const maintenanceRaw = bmrRaw * activityFactor;
+
+    let targetMinRaw;
+    let targetMaxRaw;
+    if (profile.goal === 'lose') {
+      targetMinRaw = maintenanceRaw * 0.8;
+      targetMaxRaw = maintenanceRaw * 0.9;
+    } else {
+      targetMinRaw = maintenanceRaw * 0.95;
+      targetMaxRaw = maintenanceRaw * 1.05;
+    }
+
+    const targetMin = Math.max(0, roundTo50(targetMinRaw));
+    const targetMax = Math.max(targetMin, roundTo50(targetMaxRaw));
+    const maintenance = Math.max(0, roundTo50(maintenanceRaw));
+    const bmr = Math.max(0, Math.round(bmrRaw));
+
+    return {
+      status: 'ready',
+      formula: 'Mifflin–St Jeor',
+      bmr,
+      maintenance,
+      targetMin,
+      targetMax,
+      targetMid: roundTo50((targetMin + targetMax) / 2),
+      activityFactor,
+      activityLabel: activityLabels[profile.activityLevel] || '',
+      goal: profile.goal || 'aware',
+      deficitPercentMin: profile.goal === 'lose' ? 10 : 0,
+      deficitPercentMax: profile.goal === 'lose' ? 20 : 0,
+    };
+  }
+
+  function formatCalorieRange(plan) {
+    if (!plan || plan.status !== 'ready') return '—';
+    return plan.targetMin === plan.targetMax
+      ? `${plan.targetMin.toLocaleString('ru-RU')} ккал/день`
+      : `${plan.targetMin.toLocaleString('ru-RU')}–${plan.targetMax.toLocaleString('ru-RU')} ккал/день`;
   }
 
   function goalLabel(goal) {
@@ -87,17 +187,34 @@
     document.querySelectorAll('[data-profile-goal]').forEach((button) => {
       button.classList.toggle('active', button.dataset.profileGoal === profile.goal);
     });
-    document.querySelectorAll('[data-profile-priority]').forEach((button) => {
+    document.querySelectorAll('[data-profile-sex]').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('[data-profile-sex]').forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      renderProfilePreviewFromForm();
+    });
+  });
+
+  document.querySelectorAll('[data-profile-priority]').forEach((button) => {
       button.classList.toggle('active', profile.priorities.includes(button.dataset.profilePriority));
     });
     document.querySelectorAll('[data-profile-staple]').forEach((button) => {
       button.classList.toggle('active', profile.staples.includes(button.dataset.profileStaple));
     });
+    document.querySelectorAll('[data-profile-sex]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.profileSex === profile.sexForCalorie);
+    });
 
     const current = document.getElementById('profileCurrentWeight');
     const target = document.getElementById('profileTargetWeight');
+    const age = document.getElementById('profileAgeYears');
+    const height = document.getElementById('profileHeightCm');
+    const activity = document.getElementById('profileActivityLevel');
     if (current && document.activeElement !== current) current.value = profile.currentWeight ?? '';
     if (target && document.activeElement !== target) target.value = profile.targetWeight ?? '';
+    if (age && document.activeElement !== age) age.value = profile.ageYears ?? '';
+    if (height && document.activeElement !== height) height.value = profile.heightCm ?? '';
+    if (activity && document.activeElement !== activity) activity.value = profile.activityLevel || '';
 
     const title = document.getElementById('profileSummaryTitle');
     const text = document.getElementById('profileSummaryText');
@@ -106,7 +223,38 @@
     if (profile.currentWeight && profile.targetWeight) {
       parts.push(`${profile.currentWeight.toLocaleString('ru-RU')} → ${profile.targetWeight.toLocaleString('ru-RU')} кг`);
     }
+    const caloriePlan = calculateCaloriePlan(profile);
+    if (caloriePlan.status === 'ready') parts.push(formatCalorieRange(caloriePlan));
     if (title) title.textContent = parts.length ? parts.join(' · ') : 'Контекст пока минимальный';
+
+    const calorieCard = document.getElementById('profileCaloriePlan');
+    const calorieTarget = document.getElementById('profileCalorieTarget');
+    const calorieMaintenance = document.getElementById('profileCalorieMaintenance');
+    const calorieBmr = document.getElementById('profileCalorieBmr');
+    const calorieNote = document.getElementById('profileCalorieNote');
+    if (calorieCard) calorieCard.dataset.state = caloriePlan.status;
+    if (calorieTarget) {
+      calorieTarget.textContent = caloriePlan.status === 'ready'
+        ? formatCalorieRange(caloriePlan)
+        : 'Заполни параметры выше';
+    }
+    if (calorieMaintenance) {
+      calorieMaintenance.textContent = caloriePlan.status === 'ready'
+        ? `≈ ${caloriePlan.maintenance.toLocaleString('ru-RU')} ккал`
+        : '—';
+    }
+    if (calorieBmr) {
+      calorieBmr.textContent = caloriePlan.status === 'ready'
+        ? `≈ ${caloriePlan.bmr.toLocaleString('ru-RU')} ккал`
+        : '—';
+    }
+    if (calorieNote) {
+      calorieNote.textContent = caloriePlan.status === 'ready'
+        ? (profile.goal === 'lose'
+            ? 'Диапазон рассчитан примерно на 10–20% ниже поддержки. Это ориентир, а не медицинское назначение.'
+            : 'Диапазон близок к расчётной поддержке. Это ориентир, а не медицинское назначение.')
+        : 'Нужны пол для расчёта, возраст, рост, текущий вес и уровень активности.';
+    }
 
     const priorityLabels = {
       satiety: 'сытность',
@@ -128,7 +276,7 @@
   function applyDecisionProfile(profile, { silent = false, updatedAt = null } = {}) {
     const normalized = normalizeProfile(profile);
     const nextUpdatedAt = updatedAt || (!silent ? new Date().toISOString() : state.profileUpdatedAt || null);
-    state = { ...state, ...normalized, profileVersion: 3, profileUpdatedAt: nextUpdatedAt };
+    state = { ...state, ...normalized, profileVersion: 4, profileUpdatedAt: nextUpdatedAt };
     saveState();
     renderProfile();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-applied', {
@@ -207,7 +355,7 @@
     state.goal = allowedGoals.has(activeGoal) ? activeGoal : 'lose';
     state.priorities = Array.isArray(state.priorities) ? state.priorities : [];
     state.staples = Array.isArray(state.staples) ? state.staples : [];
-    state.profileVersion = 3;
+    state.profileVersion = 4;
     state.profileUpdatedAt = new Date().toISOString();
     saveState();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
@@ -247,18 +395,53 @@
     button.addEventListener('click', () => button.classList.toggle('active'));
   });
 
-  document.getElementById('saveDecisionProfile')?.addEventListener('click', () => {
-    const goal = document.querySelector('[data-profile-goal].active')?.dataset.profileGoal || null;
-    const currentWeight = optionalNumber(document.getElementById('profileCurrentWeight')?.value || '');
-    const targetWeight = optionalNumber(document.getElementById('profileTargetWeight')?.value || '');
-    const priorities = [...document.querySelectorAll('[data-profile-priority].active')]
-      .map((button) => button.dataset.profilePriority)
-      .filter(Boolean);
-    const staples = [...document.querySelectorAll('[data-profile-staple].active')]
-      .map((button) => button.dataset.profileStaple)
-      .filter(Boolean);
+  function profileFromForm() {
+    return {
+      goal: document.querySelector('[data-profile-goal].active')?.dataset.profileGoal || null,
+      currentWeight: optionalNumber(document.getElementById('profileCurrentWeight')?.value || ''),
+      targetWeight: optionalNumber(document.getElementById('profileTargetWeight')?.value || ''),
+      sexForCalorie: document.querySelector('[data-profile-sex].active')?.dataset.profileSex || null,
+      ageYears: optionalNumber(document.getElementById('profileAgeYears')?.value || ''),
+      heightCm: optionalNumber(document.getElementById('profileHeightCm')?.value || ''),
+      activityLevel: document.getElementById('profileActivityLevel')?.value || null,
+      priorities: [...document.querySelectorAll('[data-profile-priority].active')]
+        .map((button) => button.dataset.profilePriority)
+        .filter(Boolean),
+      staples: [...document.querySelectorAll('[data-profile-staple].active')]
+        .map((button) => button.dataset.profileStaple)
+        .filter(Boolean),
+    };
+  }
 
-    const profile = applyDecisionProfile({ goal, currentWeight, targetWeight, priorities, staples });
+  function renderProfilePreviewFromForm() {
+    const profile = normalizeProfile(profileFromForm());
+    const plan = calculateCaloriePlan(profile);
+    const calorieCard = document.getElementById('profileCaloriePlan');
+    const calorieTarget = document.getElementById('profileCalorieTarget');
+    const calorieMaintenance = document.getElementById('profileCalorieMaintenance');
+    const calorieBmr = document.getElementById('profileCalorieBmr');
+    const calorieNote = document.getElementById('profileCalorieNote');
+    if (calorieCard) calorieCard.dataset.state = plan.status;
+    if (calorieTarget) calorieTarget.textContent = plan.status === 'ready' ? formatCalorieRange(plan) : 'Заполни параметры выше';
+    if (calorieMaintenance) calorieMaintenance.textContent = plan.status === 'ready' ? `≈ ${plan.maintenance.toLocaleString('ru-RU')} ккал` : '—';
+    if (calorieBmr) calorieBmr.textContent = plan.status === 'ready' ? `≈ ${plan.bmr.toLocaleString('ru-RU')} ккал` : '—';
+    if (calorieNote) {
+      calorieNote.textContent = plan.status === 'ready'
+        ? (profile.goal === 'lose'
+            ? 'Диапазон рассчитан примерно на 10–20% ниже поддержки. Это ориентир, а не медицинское назначение.'
+            : 'Диапазон близок к расчётной поддержке. Это ориентир, а не медицинское назначение.')
+        : 'Нужны пол для расчёта, возраст, рост, текущий вес и уровень активности.';
+    }
+  }
+
+  ['profileCurrentWeight','profileTargetWeight','profileAgeYears','profileHeightCm','profileActivityLevel'].forEach((id) => {
+    const element = document.getElementById(id);
+    element?.addEventListener('input', renderProfilePreviewFromForm);
+    element?.addEventListener('change', renderProfilePreviewFromForm);
+  });
+
+  document.getElementById('saveDecisionProfile')?.addEventListener('click', () => {
+    const profile = applyDecisionProfile(profileFromForm());
     const status = document.getElementById('profileSaveState');
     if (status) status.textContent = 'Сохранено';
     showToast('Контекст для решений обновлён');
@@ -293,9 +476,17 @@
   renderProfile();
 
   window.Rinlo2Foundation = {
-    version: 'foundation-v4-staples',
+    version: 'foundation-v5-calorie-plan',
     getState: () => ({ ...state }),
-    getDecisionProfile: () => ({ ...normalizeProfile(state), updatedAt: state.profileUpdatedAt || null }),
+    getDecisionProfile: () => {
+      const profile = normalizeProfile(state);
+      return {
+        ...profile,
+        caloriePlan: calculateCaloriePlan(profile),
+        updatedAt: state.profileUpdatedAt || null,
+      };
+    },
+    getCaloriePlan: () => calculateCaloriePlan(state),
     applyDecisionProfile: (profile, options = {}) => applyDecisionProfile(profile, options),
     navigate: showScreen,
     reset() {
