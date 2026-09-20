@@ -19,6 +19,7 @@
     goal: null,
     priorities: [],
     staples: [],
+    behaviorMemoryEnabled: true,
     profileUpdatedAt: null,
     activeScreen: 'home'
   };
@@ -99,7 +100,8 @@
     const staples = Array.isArray(input.staples)
       ? [...new Set(input.staples.filter((item) => allowedStaples.has(item)))].slice(0, 15)
       : [];
-    return { goal, currentWeight, targetWeight, sexForCalorie, ageYears, heightCm, activityLevel, priorities, staples };
+    const behaviorMemoryEnabled = input.behaviorMemoryEnabled !== false;
+    return { goal, currentWeight, targetWeight, sexForCalorie, ageYears, heightCm, activityLevel, priorities, staples, behaviorMemoryEnabled };
   }
 
   function roundTo50(value) {
@@ -215,6 +217,13 @@
     if (age && document.activeElement !== age) age.value = profile.ageYears ?? '';
     if (height && document.activeElement !== height) height.value = profile.heightCm ?? '';
     if (activity && document.activeElement !== activity) activity.value = profile.activityLevel || '';
+    const memoryToggle = document.getElementById('profileBehaviorMemoryToggle');
+    const memoryStatus = document.getElementById('profileBehaviorMemoryStatus');
+    if (memoryToggle) {
+      memoryToggle.setAttribute('aria-pressed', profile.behaviorMemoryEnabled ? 'true' : 'false');
+      memoryToggle.dataset.enabled = profile.behaviorMemoryEnabled ? 'true' : 'false';
+    }
+    if (memoryStatus) memoryStatus.textContent = profile.behaviorMemoryEnabled ? 'Включено' : 'Выключено';
 
     const title = document.getElementById('profileSummaryTitle');
     const text = document.getElementById('profileSummaryText');
@@ -276,7 +285,7 @@
   function applyDecisionProfile(profile, { silent = false, updatedAt = null } = {}) {
     const normalized = normalizeProfile(profile);
     const nextUpdatedAt = updatedAt || (!silent ? new Date().toISOString() : state.profileUpdatedAt || null);
-    state = { ...state, ...normalized, profileVersion: 4, profileUpdatedAt: nextUpdatedAt };
+    state = { ...state, ...normalized, profileVersion: 5, profileUpdatedAt: nextUpdatedAt };
     saveState();
     renderProfile();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-applied', {
@@ -355,7 +364,7 @@
     state.goal = allowedGoals.has(activeGoal) ? activeGoal : 'lose';
     state.priorities = Array.isArray(state.priorities) ? state.priorities : [];
     state.staples = Array.isArray(state.staples) ? state.staples : [];
-    state.profileVersion = 4;
+    state.profileVersion = 5;
     state.profileUpdatedAt = new Date().toISOString();
     saveState();
     window.dispatchEvent(new CustomEvent('rinlo2:profile-changed', {
@@ -411,6 +420,7 @@
       staples: [...document.querySelectorAll('[data-profile-staple].active')]
         .map((button) => button.dataset.profileStaple)
         .filter(Boolean),
+      behaviorMemoryEnabled: document.getElementById('profileBehaviorMemoryToggle')?.getAttribute('aria-pressed') !== 'false',
     };
   }
 
@@ -439,6 +449,21 @@
     const element = document.getElementById(id);
     element?.addEventListener('input', renderProfilePreviewFromForm);
     element?.addEventListener('change', renderProfilePreviewFromForm);
+  });
+
+  document.getElementById('profileBehaviorMemoryToggle')?.addEventListener('click', () => {
+    const button = document.getElementById('profileBehaviorMemoryToggle');
+    if (!button) return;
+    const next = button.getAttribute('aria-pressed') !== 'true';
+    button.setAttribute('aria-pressed', next ? 'true' : 'false');
+    button.dataset.enabled = next ? 'true' : 'false';
+    const status = document.getElementById('profileBehaviorMemoryStatus');
+    if (status) status.textContent = next ? 'Включено' : 'Выключено';
+    const profile = applyDecisionProfile({ ...profileFromForm(), behaviorMemoryEnabled: next });
+    window.dispatchEvent(new CustomEvent('rinlo2:behavior-memory-changed', {
+      detail: { enabled: profile.behaviorMemoryEnabled }
+    }));
+    showToast(next ? 'Поведенческая память включена' : 'Поведенческая память выключена');
   });
 
   document.getElementById('saveDecisionProfile')?.addEventListener('click', () => {
@@ -477,7 +502,7 @@
   renderProfile();
 
   window.Rinlo2Foundation = {
-    version: 'foundation-v5-calorie-plan',
+    version: 'foundation-v6-personal-model',
     getState: () => ({ ...state }),
     getDecisionProfile: () => {
       const profile = normalizeProfile(state);
