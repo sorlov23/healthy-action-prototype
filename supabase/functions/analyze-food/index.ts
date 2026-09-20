@@ -529,6 +529,18 @@ Deno.serve(async (req: Request) => {
     const allowedPriorities = new Set(["fast", "satiety", "light", "use", "none"]);
     const priority = allowedPriorities.has(String(body?.priority || "")) ? String(body.priority) : "none";
     const rawProfile = body?.profile && typeof body.profile === "object" ? body.profile : {};
+    const rawCaloriePlan = rawProfile?.caloriePlan && typeof rawProfile.caloriePlan === "object"
+      ? rawProfile.caloriePlan
+      : {};
+    const caloriePlan = rawCaloriePlan.status === "ready"
+      && Number(rawCaloriePlan.targetMin || 0) > 0
+      && Number(rawCaloriePlan.targetMax || 0) > 0
+      ? {
+          targetMin: Math.round(Number(rawCaloriePlan.targetMin)),
+          targetMax: Math.round(Number(rawCaloriePlan.targetMax)),
+          maintenance: Math.round(Number(rawCaloriePlan.maintenance || 0)),
+        }
+      : null;
     const recentCookOutcomes = Array.isArray(body?.recentCookOutcomes)
       ? body.recentCookOutcomes.slice(0, 6).map((item: any) => ({
           recipe: String(item?.recipe || "").slice(0, 120),
@@ -573,7 +585,8 @@ Deno.serve(async (req: Request) => {
       "Если нужно масло, соль, перец или другая базовая вещь, она допустима только если есть в списке staples; перечисли её в assumed_staples.",
       "Основной рецепт должен быть самым подходящим под приоритет пользователя. Две альтернативы должны заметно отличаться по способу или характеру блюда.",
       "Не морализируй, не называй еду хорошей/плохой, не ставь диагнозы и не обещай снижение веса.",
-      "Цель профиля — слабый контекст, а не медицинское основание.",
+      "Цель профиля и дневной калорийный ориентир — слабый контекст, а не медицинское основание.",
+      "Не пытайся сделать каждый приём пищи фиксированной долей дневной калорийности; используй диапазон только как дополнительный ориентир при выборе между сопоставимыми вариантами.",
       "Для сырого мяса и птицы обязательно давай безопасную инструкцию: приготовить полностью; не советуй пробовать сырое мясо.",
       "Верни строго JSON по схеме.",
     ].join(" ");
@@ -584,6 +597,7 @@ Deno.serve(async (req: Request) => {
       `Главный приоритет: ${priorityLabels[priority]}.`,
       profileGoal ? `Цель профиля: ${profileGoal}.` : "",
       profilePriorities.length ? `Дополнительные предпочтения профиля: ${profilePriorities.join(", ")}.` : "",
+      caloriePlan ? `Расчётный дневной ориентир пользователя: ${caloriePlan.targetMin}–${caloriePlan.targetMax} ккал; расчётная поддержка около ${caloriePlan.maintenance} ккал. Это ориентир, а не жёсткий лимит.` : "",
       recentCookOutcomes.length ? `Последние результаты Cook Flow: ${JSON.stringify(recentCookOutcomes)}.` : "",
       "Сформируй одно основное блюдо и ровно две альтернативы.",
     ].filter(Boolean).join(" ");
