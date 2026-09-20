@@ -683,7 +683,7 @@
   }
 
   function renderRefineState() {
-    $('[data-cook-refine]').forEach((button) => {
+    $$('[data-cook-refine]').forEach((button) => {
       button.classList.toggle('active', button.dataset.cookRefine === priority);
     });
   }
@@ -697,7 +697,7 @@
     const targets = button ? [button] : [];
     const previousLabels = new Map(targets.map((item) => [item, item.textContent]));
     targets.forEach((item) => { item.disabled = true; });
-    $('[data-cook-refine]').forEach((item) => { item.disabled = true; });
+    $$('[data-cook-refine]').forEach((item) => { item.disabled = true; });
 
     if (button) {
       button.textContent = aiEnabled
@@ -727,7 +727,7 @@
         item.textContent = label;
         item.disabled = false;
       });
-      $('[data-cook-refine]').forEach((item) => { item.disabled = false; });
+      $$('[data-cook-refine]').forEach((item) => { item.disabled = false; });
       renderRefineState();
     }
   }
