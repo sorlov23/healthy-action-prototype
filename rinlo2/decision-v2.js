@@ -610,6 +610,15 @@
     };
   }
 
+  function escapePersonalModelText(value = '') {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function renderPersonalModel() {
     const card = document.getElementById('personalModelCard');
     const host = document.getElementById('personalModelSignals');
@@ -622,8 +631,8 @@
 
     card.dataset.disabled = enabled ? 'false' : 'true';
     host.innerHTML = model.signals.map((signal) =>
-      '<article class="personal-model-signal"><span>' + escapeHtml(signal.icon) + '</span><div><b>' +
-      escapeHtml(signal.title) + '</b><small>' + escapeHtml(signal.detail) + '</small></div></article>'
+      '<article class="personal-model-signal"><span>' + escapePersonalModelText(signal.icon) + '</span><div><b>' +
+      escapePersonalModelText(signal.title) + '</b><small>' + escapePersonalModelText(signal.detail) + '</small></div></article>'
     ).join('');
     empty.hidden = model.signals.length > 0;
     if (!model.signals.length) {
