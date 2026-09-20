@@ -220,9 +220,12 @@ try {
   await page.locator('[data-nav="progress"]').last().click();
   await page.getByRole('heading', { name: 'Что меняется', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#progressDecisionCount').textContent())?.includes('2 решения'), 'progress_decision_count_wrong');
-  assert((await page.locator('#progressChosenAdjustmentCount').textContent())?.trim() === '1', 'progress_adjustment_count_wrong');
-  assert((await page.locator('#progressFeedbackTitle').textContent())?.includes('0 из 1'), 'progress_feedback_quality_wrong');
-  assert((await page.locator('#progressFeedbackText').textContent())?.includes('1 ответ не помог'), 'progress_feedback_negative_signal_missing');
+  assert((await page.locator('#progressCookCount').textContent())?.trim() === '1', 'progress_cook_count_wrong');
+  assert((await page.locator('#progressChooseCount').textContent())?.trim() === '1', 'progress_choose_count_wrong');
+  assert((await page.locator('#progressDecisionBreakdown').textContent())?.includes('1 приготовил · 1 выбрал'), 'progress_breakdown_wrong');
+  assert((await page.locator('#progressFeedbackTitle').textContent())?.includes('1 из 2'), 'progress_feedback_quality_wrong');
+  assert((await page.locator('#progressFeedbackText').textContent())?.includes('1 оценка'), 'progress_feedback_negative_signal_missing');
+  assert((await page.locator('#progressDailyTarget').textContent())?.includes('Настрой в Профиле'), 'progress_target_should_be_missing_before_profile');
 
   await page.locator('[data-nav="home"]').last().click();
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
@@ -305,6 +308,13 @@ try {
     && reloadedProfile.staples.includes('vegetable_oil')
     && reloadedProfile.staples.includes('garlic'),
     `profile_staples_persistence_failed:${JSON.stringify(reloadedProfile)}`);
+
+  await page.locator('[data-nav="progress"]').last().click();
+  await page.getByRole('heading', { name: 'Как ты выбираешь', exact: true }).waitFor({ state: 'visible' });
+  const progressTargetAfterProfile = (await page.locator('#progressDailyTarget').textContent()) || '';
+  assert(progressTargetAfterProfile.includes('2 550–2 800') || progressTargetAfterProfile.includes('2 550–2 800'),
+    `progress_daily_target_wrong:${progressTargetAfterProfile}`);
+  assert((await page.locator('#progressTodayCalories').textContent())?.includes('540'), 'progress_today_calories_wrong');
 
   await page.locator('[data-nav="profile"]').last().click();
   await page.getByRole('heading', { name: 'Профиль', exact: true }).waitFor({ state: 'visible' });
