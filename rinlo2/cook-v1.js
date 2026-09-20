@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v3-photo-ingredients';
+  const VERSION = 'v4-calorie-context';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
