@@ -541,14 +541,34 @@ Deno.serve(async (req: Request) => {
           maintenance: Math.round(Number(rawCaloriePlan.maintenance || 0)),
         }
       : null;
-    const recentCookOutcomes = Array.isArray(body?.recentCookOutcomes)
-      ? body.recentCookOutcomes.slice(0, 6).map((item: any) => ({
-          recipe: String(item?.recipe || "").slice(0, 120),
-          priority: String(item?.priority || "").slice(0, 30),
-          outcome: String(item?.outcome || "").slice(0, 30),
-          feedback: String(item?.feedback || "").slice(0, 30),
-        }))
-      : [];
+    const rawCookMemory = body?.cookMemory && typeof body.cookMemory === "object"
+      ? body.cookMemory
+      : {};
+    const allowedMemoryPriorities = new Set(["fast", "satiety", "light", "use"]);
+    const normalizeMemoryRecipe = (item: any) => ({
+      name: String(item?.name || "").trim().slice(0, 120),
+      ingredients: cleanStringList(item?.ingredients, 12),
+      priority: allowedPriorities.has(String(item?.priority || ""))
+        ? String(item.priority)
+        : "none",
+      duration: Math.max(0, Math.min(180, Math.round(Number(item?.duration || 0)))),
+      feedback: String(item?.feedback || "").slice(0, 30),
+    });
+    const cookMemory = {
+      preparedCount: Math.max(0, Math.min(100, Math.round(Number(rawCookMemory.preparedCount || 0)))),
+      dominantPriority: allowedMemoryPriorities.has(String(rawCookMemory.dominantPriority || ""))
+        ? String(rawCookMemory.dominantPriority)
+        : "",
+      quickMealPreference: rawCookMemory.quickMealPreference === true,
+      helpfulRecipes: (Array.isArray(rawCookMemory.helpfulRecipes) ? rawCookMemory.helpfulRecipes : [])
+        .map(normalizeMemoryRecipe)
+        .filter((item: any) => item.name)
+        .slice(0, 4),
+      notForMeRecipes: (Array.isArray(rawCookMemory.notForMeRecipes) ? rawCookMemory.notForMeRecipes : [])
+        .map(normalizeMemoryRecipe)
+        .filter((item: any) => item.name)
+        .slice(0, 4),
+    };
 
     const model = Deno.env.get("RINLO_DECISION_MODEL")
       || Deno.env.get("RINLO_VISION_MODEL")
@@ -586,6 +606,11 @@ Deno.serve(async (req: Request) => {
       "Основной рецепт должен быть самым подходящим под приоритет пользователя. Две альтернативы должны заметно отличаться по способу или характеру блюда.",
       "Не морализируй, не называй еду хорошей/плохой, не ставь диагнозы и не обещай снижение веса.",
       "Цель профиля и дневной калорийный ориентир — слабый контекст, а не медицинское основание.",
+      "Cook Memory содержит только наблюдаемые прошлые действия. Используй её как слабый персональный сигнал, а не как характеристику личности пользователя.",
+      "Явный текущий приоритет пользователя всегда важнее Cook Memory.",
+      "Рецепты с feedback=helpful — положительный сигнал, но не приказ повторять их.",
+      "Рецепты из notForMeRecipes не предлагай снова в том же или почти идентичном виде, если из текущих продуктов есть разумная альтернатива.",
+      "Не делай из памяти выводов об аллергиях, непереносимости, здоровье или запретах, которых пользователь явно не сообщал.",
       "Не пытайся сделать каждый приём пищи фиксированной долей дневной калорийности; используй диапазон только как дополнительный ориентир при выборе между сопоставимыми вариантами.",
       "Для сырого мяса и птицы обязательно давай безопасную инструкцию: приготовить полностью; не советуй пробовать сырое мясо.",
       "Верни строго JSON по схеме.",
@@ -598,7 +623,7 @@ Deno.serve(async (req: Request) => {
       profileGoal ? `Цель профиля: ${profileGoal}.` : "",
       profilePriorities.length ? `Дополнительные предпочтения профиля: ${profilePriorities.join(", ")}.` : "",
       caloriePlan ? `Расчётный дневной ориентир пользователя: ${caloriePlan.targetMin}–${caloriePlan.targetMax} ккал; расчётная поддержка около ${caloriePlan.maintenance} ккал. Это ориентир, а не жёсткий лимит.` : "",
-      recentCookOutcomes.length ? `Последние результаты Cook Flow: ${JSON.stringify(recentCookOutcomes)}.` : "",
+      cookMemory.preparedCount ? `Cook Memory за последние недели: ${JSON.stringify(cookMemory)}.` : "",
       "Сформируй одно основное блюдо и ровно две альтернативы.",
     ].filter(Boolean).join(" ");
 
@@ -639,9 +664,38 @@ Deno.serve(async (req: Request) => {
       if (!cook.primary.name || cook.primary.steps.length < 3 || cook.alternatives.length !== 2) {
         return json({ error: "invalid_cook_response" }, 502);
       }
+
+      const recipeKey = (value: unknown) => String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/ё/g, "е")
+        .replace(/[^a-zа-я0-9]+/gi, " ")
+        .trim();
+      const avoided = new Set(cookMemory.notForMeRecipes.map((item: any) => recipeKey(item.name)).filter(Boolean));
+      if (avoided.has(recipeKey(cook.primary.name))) {
+        const replacementIndex = cook.alternatives.findIndex((item: any) => !avoided.has(recipeKey(item.name)));
+        if (replacementIndex >= 0) {
+          const previousPrimary = cook.primary;
+          cook.primary = cook.alternatives[replacementIndex];
+          cook.alternatives[replacementIndex] = previousPrimary;
+        }
+      }
+
       return json({
         cook,
-        meta: { model, provider: "google-gemini", userId, mode: "cook" },
+        meta: {
+          model,
+          provider: "google-gemini",
+          userId,
+          mode: "cook",
+          cookMemory: {
+            preparedCount: cookMemory.preparedCount,
+            helpfulCount: cookMemory.helpfulRecipes.length,
+            notForMeCount: cookMemory.notForMeRecipes.length,
+            dominantPriority: cookMemory.dominantPriority || null,
+            quickMealPreference: cookMemory.quickMealPreference,
+          },
+        },
       });
     } catch {
       return json({ error: "invalid_cook_response" }, 502);
