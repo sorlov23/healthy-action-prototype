@@ -250,7 +250,25 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
         goal: 'lose',
         priorities: ['satiety', 'simplicity'],
       },
-      recentCookOutcomes: [],
+      cookMemory: {
+        preparedCount: 4,
+        dominantPriority: 'fast',
+        quickMealPreference: true,
+        helpfulRecipes: [{
+          name: 'Курица с грибами',
+          ingredients: ['Куриное филе', 'Сыр'],
+          priority: 'fast',
+          duration: 18,
+          feedback: 'helpful',
+        }],
+        notForMeRecipes: [{
+          name: 'Куриный омлет с сыром',
+          ingredients: ['Куриное филе', 'Яйца', 'Сыр'],
+          priority: 'fast',
+          duration: 15,
+          feedback: 'not_for_me',
+        }],
+      },
     }),
   });
 
@@ -261,7 +279,18 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
   if (cookPayload?.meta?.mode !== 'cook' || cookPayload?.meta?.provider !== 'google-gemini') {
     throw new Error(`cook_unexpected_meta:${JSON.stringify(cookPayload?.meta || {})}`);
   }
+
+  if (cookPayload?.meta?.cookMemory?.preparedCount !== 4
+      || cookPayload?.meta?.cookMemory?.helpfulCount !== 1
+      || cookPayload?.meta?.cookMemory?.notForMeCount !== 1
+      || cookPayload?.meta?.cookMemory?.dominantPriority !== 'fast'
+      || cookPayload?.meta?.cookMemory?.quickMealPreference !== true) {
+    throw new Error(`cook_memory_meta_wrong:${JSON.stringify(cookPayload?.meta?.cookMemory || {})}`);
+  }
   const cookPrimary = cookPayload?.cook?.primary;
+  if (String(cookPrimary?.name || '').trim().toLowerCase() === 'куриный омлет с сыром') {
+    throw new Error(`cook_memory_repeated_disliked_recipe:${cookPrimary?.name}`);
+  }
   if (!cookPrimary?.name || !Array.isArray(cookPrimary?.steps) || cookPrimary.steps.length < 3) {
     throw new Error(`cook_primary_invalid:${JSON.stringify(cookPayload?.cook || {})}`);
   }
@@ -322,6 +351,7 @@ function silentWavDataUrl(durationSeconds = 0.35, sampleRate = 8000) {
       ingredientsUsed: cookPayload.cook.primary.ingredients_used,
       steps: cookPayload.cook.primary.steps.map((step) => step.title),
       nutrition: cookPayload.cook.primary.nutrition,
+      memory: cookPayload.meta.cookMemory,
     },
   }, null, 2));
 })().catch((error) => {
