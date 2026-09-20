@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v3-photo-ingredients', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v4-calorie-context', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -251,6 +251,13 @@ try {
   await page.locator('[data-profile-goal="aware"]').click();
   await page.locator('#profileCurrentWeight').fill('80');
   await page.locator('#profileTargetWeight').fill('72');
+  await page.locator('[data-profile-sex="male"]').click();
+  await page.locator('#profileAgeYears').fill('40');
+  await page.locator('#profileHeightCm').fill('180');
+  await page.locator('#profileActivityLevel').selectOption('moderate');
+  assert((await page.locator('#profileCalorieTarget').textContent())?.includes('2 550–2 800')
+    || (await page.locator('#profileCalorieTarget').textContent())?.includes('2 550–2 800'),
+    'profile_calorie_preview_wrong');
   await page.locator('[data-profile-priority="satiety"]').click();
   await page.locator('[data-profile-priority="simplicity"]').click();
   await page.locator('[data-profile-staple="salt"]').click();
@@ -261,6 +268,17 @@ try {
   const profileApi = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(profileApi?.goal === 'aware', `profile_goal_wrong:${JSON.stringify(profileApi)}`);
   assert(profileApi?.currentWeight === 80 && profileApi?.targetWeight === 72, `profile_weight_wrong:${JSON.stringify(profileApi)}`);
+  assert(profileApi?.sexForCalorie === 'male'
+    && profileApi?.ageYears === 40
+    && profileApi?.heightCm === 180
+    && profileApi?.activityLevel === 'moderate',
+    `profile_calorie_inputs_wrong:${JSON.stringify(profileApi)}`);
+  assert(profileApi?.caloriePlan?.status === 'ready'
+    && profileApi.caloriePlan.bmr === 1730
+    && profileApi.caloriePlan.maintenance === 2700
+    && profileApi.caloriePlan.targetMin === 2550
+    && profileApi.caloriePlan.targetMax === 2800,
+    `profile_calorie_plan_wrong:${JSON.stringify(profileApi?.caloriePlan)}`);
   assert(Array.isArray(profileApi?.priorities) && profileApi.priorities.includes('satiety') && profileApi.priorities.includes('simplicity'), `profile_priorities_wrong:${JSON.stringify(profileApi)}`);
   assert(Array.isArray(profileApi?.staples)
     && profileApi.staples.includes('salt')
@@ -275,6 +293,13 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' });
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
+  assert(reloadedProfile?.sexForCalorie === 'male'
+    && reloadedProfile?.ageYears === 40
+    && reloadedProfile?.heightCm === 180
+    && reloadedProfile?.activityLevel === 'moderate'
+    && reloadedProfile?.caloriePlan?.targetMin === 2550
+    && reloadedProfile?.caloriePlan?.targetMax === 2800,
+    `profile_calorie_persistence_failed:${JSON.stringify(reloadedProfile)}`);
   assert(Array.isArray(reloadedProfile?.staples)
     && reloadedProfile.staples.includes('salt')
     && reloadedProfile.staples.includes('vegetable_oil')
