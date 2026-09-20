@@ -534,11 +534,13 @@
   function renderNutrition(recipe) {
     const box = $('#cookResultNutrition');
     const assumption = $('#cookNutritionAssumption');
+    const dailyFit = $('#cookNutritionDailyFit');
     const n = recipe?.nutrition;
     const hasNutrition = Boolean(n && (n.calorieMax || n.proteinMax || n.fatMax || n.carbsMax));
     if (box) box.hidden = !hasNutrition;
     if (!hasNutrition) {
       if (assumption) assumption.hidden = true;
+      if (dailyFit) dailyFit.hidden = true;
       return;
     }
     $('#cookNutritionCalories').textContent = nutritionRange(n.calorieMin, n.calorieMax);
@@ -548,6 +550,17 @@
     if (assumption) {
       assumption.hidden = !n.assumption;
       assumption.textContent = n.assumption ? 'Оценка на порцию: ' + n.assumption : '';
+    }
+    if (dailyFit) {
+      const plan = window.Rinlo2Foundation?.getCaloriePlan?.() || {};
+      if (plan.status === 'ready' && plan.targetMin > 0 && plan.targetMax > 0 && n.calorieMin > 0 && n.calorieMax > 0) {
+        const minPercent = Math.max(1, Math.round((n.calorieMin / plan.targetMax) * 100));
+        const maxPercent = Math.max(minPercent, Math.round((n.calorieMax / plan.targetMin) * 100));
+        dailyFit.hidden = false;
+        dailyFit.textContent = `≈ ${minPercent}–${maxPercent}% твоего дневного ориентира ${plan.targetMin.toLocaleString('ru-RU')}–${plan.targetMax.toLocaleString('ru-RU')} ккал`;
+      } else {
+        dailyFit.hidden = true;
+      }
     }
   }
 
