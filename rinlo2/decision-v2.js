@@ -389,7 +389,8 @@
     const explicit = window.Rinlo2Foundation?.getDecisionProfile?.()
       || window.Rinlo2Foundation?.getState?.()
       || {};
-    const recent = decisionsSince(7);
+    const behaviorMemoryEnabled = explicit.behaviorMemoryEnabled !== false;
+    const recent = behaviorMemoryEnabled ? decisionsSince(7) : [];
     const recentAdjustedCount = recent.filter((decision) =>
       ['fits_with_adjustment', 'better_alternative'].includes(decision.decisionState)
       || Boolean(decision.alternative)
@@ -407,6 +408,7 @@
       currentWeight: Number(explicit.currentWeight) > 0 ? Number(explicit.currentWeight) : null,
       targetWeight: Number(explicit.targetWeight) > 0 ? Number(explicit.targetWeight) : null,
       priorities: Array.isArray(explicit.priorities) ? explicit.priorities.slice(0, 4) : [],
+      behaviorMemoryEnabled,
       recentDecisionCount: recent.length,
       recentAdjustedCount,
       recentChosenAdjustmentCount,
@@ -533,6 +535,102 @@
       title: 'Пока нет одного устойчивого паттерна.',
       text: 'Готовка и выбор пока распределены без явного повторяющегося сценария. Rinlo продолжит смотреть на реальные действия.',
     };
+  }
+
+
+  function personalModelSignals() {
+    const recent = decisionsSince(30);
+    const cook = recent.filter((decision) => decision.source === 'cook' && decision.cook?.outcome === 'prepared');
+    const choose = recent.filter((decision) => decision.source !== 'cook');
+    const signals = [];
+
+    if (cook.length >= 3) {
+      const priorityLabels = { fast: 'Быстро', satiety: 'Сытно', light: 'Полегче', use: 'Использовать продукты' };
+      const counts = {};
+      cook.forEach((decision) => {
+        const key = String(decision.cook?.priority || '');
+        if (priorityLabels[key]) counts[key] = (counts[key] || 0) + 1;
+      });
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      if (top && top[1] >= 2 && top[1] / cook.length >= 0.6) {
+        signals.push({
+          icon: '↗',
+          title: `В готовке повторяется «${priorityLabels[top[0]]}»`,
+          detail: `${top[1]} из ${cook.length} приготовленных решений за 30 дней.`,
+        });
+      }
+
+      const timed = cook.filter((decision) => Number(decision.cook?.duration || 0) > 0);
+      const quick = timed.filter((decision) => Number(decision.cook?.duration || 0) <= 20).length;
+      if (timed.length >= 3 && quick >= 2 && quick / timed.length >= 0.6) {
+        signals.push({
+          icon: '20',
+          title: 'Часто срабатывают блюда до 20 минут',
+          detail: `${quick} из ${timed.length} приготовленных блюд укладывались примерно в 20 минут.`,
+        });
+      }
+    }
+
+    const liked = cook.filter((decision) => decision.cook?.feedback === 'helpful');
+    if (liked.length) {
+      const latest = liked[0];
+      const name = String(latest.selected?.name || latest.original?.name || '').trim();
+      if (name) signals.push({
+        icon: '✓',
+        title: `Положительный сигнал: «${name}»`,
+        detail: 'Ты приготовил этот вариант и отметил рекомендацию как полезную.',
+      });
+    }
+
+    const disliked = cook.filter((decision) => decision.cook?.feedback === 'not_for_me');
+    if (disliked.length) {
+      const latest = disliked[0];
+      const name = String(latest.selected?.name || latest.original?.name || '').trim();
+      if (name) signals.push({
+        icon: '–',
+        title: `Не повторять без причины: «${name}»`,
+        detail: 'Ты отметил этот вариант как «Не моё». Это слабый отрицательный сигнал, а не запрет.',
+      });
+    }
+
+    const chosenAlternatives = choose.filter((decision) => decision.selected?.kind === 'alternative').length;
+    if (choose.length >= 3 && chosenAlternatives >= 2 && chosenAlternatives / choose.length >= 0.5) {
+      signals.push({
+        icon: '⇄',
+        title: 'Часто выбираешь предложенную альтернативу',
+        detail: `${chosenAlternatives} из ${choose.length} сохранённых выборов за 30 дней были скорректированными вариантами.`,
+      });
+    }
+
+    return {
+      decisionCount: recent.length,
+      cookCount: cook.length,
+      chooseCount: choose.length,
+      signals: signals.slice(0, 4),
+    };
+  }
+
+  function renderPersonalModel() {
+    const card = document.getElementById('personalModelCard');
+    const host = document.getElementById('personalModelSignals');
+    const empty = document.getElementById('personalModelEmpty');
+    if (!card || !host || !empty) return;
+
+    const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
+    const enabled = profile.behaviorMemoryEnabled !== false;
+    const model = personalModelSignals();
+
+    card.dataset.disabled = enabled ? 'false' : 'true';
+    host.innerHTML = model.signals.map((signal) =>
+      '<article class="personal-model-signal"><span>' + escapeHtml(signal.icon) + '</span><div><b>' +
+      escapeHtml(signal.title) + '</b><small>' + escapeHtml(signal.detail) + '</small></div></article>'
+    ).join('');
+    empty.hidden = model.signals.length > 0;
+    if (!model.signals.length) {
+      empty.textContent = model.decisionCount >= 1
+        ? `Есть ${model.decisionCount} ${decisionWord(model.decisionCount)} за 30 дней, но устойчивого поведенческого сигнала пока нет.`
+        : 'Пока данных мало. После нескольких реальных решений здесь появятся наблюдаемые паттерны.';
+    }
   }
 
   function renderProgress() {
@@ -2140,8 +2238,22 @@
   renderProgress();
   updateQuestionState();
 
+  window.addEventListener('rinlo2:profile-applied', () => {
+    renderProgress();
+    renderPersonalModel();
+  });
+  window.addEventListener('rinlo2:behavior-memory-changed', renderPersonalModel);
+  window.addEventListener('rinlo2:decision-saved', () => {
+    renderProgress();
+    renderPersonalModel();
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-nav="profile"]')) setTimeout(renderPersonalModel, 0);
+  });
+  renderPersonalModel();
+
   window.Rinlo2Decisions = {
-    version: 'decision-v2.19-progress-v2',
+    version: 'decision-v2.20-personal-model',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
@@ -2159,6 +2271,8 @@
       };
     },
     showMemoryExplanation,
+    renderPersonalModel,
+    getPersonalModel: () => JSON.parse(JSON.stringify(personalModelSignals())),
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
   };
 })();
