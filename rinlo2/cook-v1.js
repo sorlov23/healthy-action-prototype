@@ -527,7 +527,9 @@
 
     const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
     const staples = getAvailableStaples();
-    const cookMemory = buildCookMemory();
+    const cookMemory = profile.behaviorMemoryEnabled === false
+      ? { preparedCount: 0, dominantPriority: '', quickMealPreference: false, helpfulRecipes: [], notForMeRecipes: [] }
+      : buildCookMemory();
 
     const response = await fetch(`${base}/functions/v1/analyze-food`, {
       method: 'POST',
