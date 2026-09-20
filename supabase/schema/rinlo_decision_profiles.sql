@@ -30,6 +30,7 @@ create table public.rinlo_decision_profiles (
         'sour_cream','soy_sauce'
       ]::text[]
     ),
+  behavior_memory_enabled boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
