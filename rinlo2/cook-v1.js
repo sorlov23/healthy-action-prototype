@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v7-instant-cook';
+  const VERSION = 'v8-portions';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -148,6 +148,7 @@
   let activeCookDecisionId = null;
   let activeCookDecisionCreatedAt = null;
   let activeCookMemory = null;
+  let selectedServings = 2;
 
   function readState() {
     try {
@@ -625,6 +626,7 @@
     activeCookDecisionId = null;
     activeCookDecisionCreatedAt = null;
     activeCookMemory = null;
+    selectedServings = 2;
     const text = $('#cookIngredientText');
     if (text) text.value = '';
     const outcomeQuestion = $('#cookOutcomeQuestion');
@@ -651,11 +653,13 @@
 
   function renderNutrition(recipe) {
     const box = $('#cookResultNutrition');
+    const head = $('#cookNutritionHead');
     const assumption = $('#cookNutritionAssumption');
     const dailyFit = $('#cookNutritionDailyFit');
     const n = recipe?.nutrition;
     const hasNutrition = Boolean(n && (n.calorieMax || n.proteinMax || n.fatMax || n.carbsMax));
     if (box) box.hidden = !hasNutrition;
+    if (head) head.hidden = !hasNutrition;
     if (!hasNutrition) {
       if (assumption) assumption.hidden = true;
       if (dailyFit) dailyFit.hidden = true;
@@ -679,6 +683,53 @@
       } else {
         dailyFit.hidden = true;
       }
+    }
+  }
+
+  function servingWord(value) {
+    const n = Math.max(1, Math.round(Number(value || 1)));
+    if (n === 1) return 'порцию';
+    if (n >= 2 && n <= 4) return 'порции';
+    return 'порций';
+  }
+
+  function scaledNutritionRange(min, max, multiplier = 1, suffix = '') {
+    const factor = Math.max(1, Number(multiplier || 1));
+    const a = Math.round(Number(min || 0) * factor);
+    const b = Math.round(Number(max || 0) * factor);
+    if (!a && !b) return '—';
+    if (!a || a === b) return String(b || a) + suffix;
+    return a + '–' + b + suffix;
+  }
+
+  function renderPortions(recipe = activeRecipe) {
+    const card = $('#cookPortions');
+    if (!card) return;
+    card.hidden = !recipe;
+    $('[data-cook-servings]').forEach((button) => {
+      button.classList.toggle('active', Number(button.dataset.cookServings) === selectedServings);
+    });
+
+    const servingContext = $('#cookServingContext');
+    if (servingContext) servingContext.textContent = `Готовим на ${selectedServings} ${servingWord(selectedServings)}`;
+
+    const n = recipe?.nutrition;
+    const totalCalories = $('#cookTotalCalories');
+    const totalMacros = $('#cookTotalMacros');
+    if (!n || !(n.calorieMax || n.proteinMax || n.fatMax || n.carbsMax)) {
+      if (totalCalories) totalCalories.textContent = 'Оценка появится для AI-рецепта';
+      if (totalMacros) totalMacros.textContent = 'БЖУ на всё блюдо пока недоступно';
+      return;
+    }
+
+    if (totalCalories) {
+      totalCalories.textContent = '≈ ' + scaledNutritionRange(n.calorieMin, n.calorieMax, selectedServings, ' ккал');
+    }
+    if (totalMacros) {
+      totalMacros.textContent =
+        'Б ' + scaledNutritionRange(n.proteinMin, n.proteinMax, selectedServings) +
+        ' · Ж ' + scaledNutritionRange(n.fatMin, n.fatMax, selectedServings) +
+        ' · У ' + scaledNutritionRange(n.carbsMin, n.carbsMax, selectedServings) + ' г';
     }
   }
 
@@ -744,6 +795,7 @@
     if (duration) duration.textContent = activeRecipe.duration + ' минут';
     if (note) note.textContent = activeRecipe.note;
     renderNutrition(activeRecipe);
+    renderPortions(activeRecipe);
     renderCookMemory(activeRecipe);
     renderRefineState();
     if (context) context.textContent = activeRecipe.note || (priorityLabel(priority) + ' · ' + profileHint());
@@ -779,6 +831,7 @@
     $('#cookResultDuration').textContent = activeRecipe.duration + ' минут';
     $('#cookResultNote').textContent = activeRecipe.note;
     renderNutrition(activeRecipe);
+    renderPortions(activeRecipe);
     renderCookMemory(activeRecipe);
     renderRefineState();
     const assumptions = $('#cookResultAssumptions');
@@ -794,6 +847,7 @@
     if (!activeRecipe) return;
     const steps = activeRecipe.steps || [];
     const item = steps[stepIndex] || steps[0];
+    renderPortions(activeRecipe);
     $('#cookStepCounter').textContent = (stepIndex + 1) + ' из ' + steps.length;
     $('#cookStepTitle').textContent = item[0];
     $('#cookStepText').textContent = item[2] > 0 ? item[1] + ' · примерно ' + item[2] + ' мин.' : item[1];
@@ -818,6 +872,7 @@
       priority,
       outcome: 'prepared',
       feedback,
+      servings: selectedServings,
     });
     if (savedId) activeCookDecisionId = savedId;
     return savedId;
@@ -833,7 +888,8 @@
       ingredients: [...selected],
       priority,
       outcome: kind,
-      feedback
+      feedback,
+      servings: selectedServings
     });
     state.outcomes = state.outcomes.slice(0, 40);
     writeState(state);
@@ -852,7 +908,8 @@
       ingredients: [...selected],
       priority,
       outcome: 'prepared',
-      feedback
+      feedback,
+      servings: selectedServings
     });
     state.outcomes = state.outcomes.slice(0, 40);
     writeState(state);
@@ -959,6 +1016,15 @@
         selected.delete(remove.dataset.cookRemove);
         renderSelected();
         renderStaplesContext();
+        return;
+      }
+      const servings = event.target.closest('[data-cook-servings]');
+      if (servings) {
+        const nextServings = Number(servings.dataset.cookServings);
+        if ([1, 2, 4].includes(nextServings)) {
+          selectedServings = nextServings;
+          renderPortions(activeRecipe);
+        }
         return;
       }
       const refine = event.target.closest('[data-cook-refine]');
@@ -1071,7 +1137,8 @@
     getAvailableStaples: () => getAvailableStaples(),
     getPhotoItems: () => photoItems.map((item) => ({ ...item })),
     getActiveDecisionId: () => activeCookDecisionId,
-    getCookMemory: () => JSON.parse(JSON.stringify(buildCookMemory()))
+    getCookMemory: () => JSON.parse(JSON.stringify(buildCookMemory())),
+    getServings: () => selectedServings
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
