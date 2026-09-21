@@ -541,6 +541,10 @@
         <p class="eyebrow dark">Я БЫ ПРИГОТОВИЛ</p>
         <h1 id="cookResultTitle">Курица с грибами и рисом</h1>
         <div class="cook-result-time" id="cookResultDuration">20 минут</div>
+        <div class="cook-nutrition-head" id="cookNutritionHead" hidden>
+          <span>НА 1 ПОРЦИЮ</span>
+          <small>оценка</small>
+        </div>
         <div class="cook-nutrition" id="cookResultNutrition" hidden>
           <div><small>ККАЛ</small><b id="cookNutritionCalories">—</b></div>
           <div><small>БЕЛКИ</small><b id="cookNutritionProtein">—</b></div>
@@ -548,6 +552,23 @@
           <div><small>УГЛЕВОДЫ</small><b id="cookNutritionCarbs">—</b></div>
         </div>
         <p class="cook-nutrition-assumption" id="cookNutritionAssumption" hidden></p>
+
+        <article class="cook-portions" id="cookPortions" hidden>
+          <div class="cook-portions-head">
+            <div><small>СКОЛЬКО ПОРЦИЙ</small><b>На сколько человек готовим?</b></div>
+            <div class="cook-portion-options">
+              <button type="button" data-cook-servings="1">1</button>
+              <button type="button" data-cook-servings="2" class="active">2</button>
+              <button type="button" data-cook-servings="4">4</button>
+            </div>
+          </div>
+          <div class="cook-total-nutrition" id="cookTotalNutrition">
+            <small>ИТОГО НА ВСЁ БЛЮДО</small>
+            <strong id="cookTotalCalories">—</strong>
+            <span id="cookTotalMacros">—</span>
+          </div>
+          <p>Количество ингредиентов ориентировочное: увеличивай или уменьшай их пропорционально выбранному числу порций.</p>
+        </article>
         <p class="cook-nutrition-daily-fit" id="cookNutritionDailyFit" hidden></p>
         <p class="cook-result-note" id="cookResultNote"></p>
         <div class="cook-refine">
@@ -583,6 +604,7 @@
     <section class="cook-step" data-cook-step="cook">
       <header class="flow-header"><button type="button" data-cook-back aria-label="Назад">←</button><b id="cookActiveRecipe">Готовим</b><span></span></header>
       <div class="flow-body cook-mode-body">
+        <div class="cook-serving-context" id="cookServingContext">Готовим на 2 порции</div>
         <div class="cook-progress-track"><span id="cookStepBar"></span></div>
         <p class="eyebrow dark" id="cookStepCounter">1 из 5</p>
         <h1 id="cookStepTitle">Подготовь продукты</h1>
