@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v7-instant-cook', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v8-portions', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -64,6 +64,11 @@ try {
   assert(!(await page.getByRole('heading', { name: 'Что сейчас важнее?', exact: true }).isVisible().catch(() => false)), 'instant_cook_priority_step_should_be_skipped');
   assert((await page.locator('#cookResultDuration').textContent())?.includes('20'), 'cook_result_duration_missing');
   assert((await page.locator('#cookAlternatives button').count()) === 2, 'cook_alternatives_count_wrong');
+  assert(await page.locator('#cookPortions').isVisible(), 'cook_portions_missing');
+  assert((await page.evaluate(() => window.RinloCook?.getServings?.())) === 2, 'cook_default_servings_wrong');
+  await page.locator('[data-cook-servings="4"]').click();
+  assert((await page.evaluate(() => window.RinloCook?.getServings?.())) === 4, 'cook_servings_switch_failed');
+  assert(await page.locator('[data-cook-servings="4"]').evaluate((el) => el.classList.contains('active')), 'cook_servings_active_state_missing');
 
   await page.locator('[data-cook-refine="fast"]').click();
   await page.getByRole('heading', { name: 'Курица с грибами и рисом', exact: true }).waitFor({ state: 'visible' });
@@ -71,6 +76,7 @@ try {
 
   await page.locator('#cookStartCooking').click();
   await page.getByRole('heading', { name: 'Подготовь продукты', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#cookServingContext').textContent())?.includes('4 порции'), 'cook_serving_context_wrong');
   assert((await page.locator('#cookStepCounter').textContent()) === '1 из 5', 'cook_step_counter_wrong');
   for (let i = 0; i < 5; i += 1) await page.locator('#cookStepNext').click();
 
@@ -89,7 +95,9 @@ try {
     (window.Rinlo2Decisions?.getDecisions?.() || []).find((item) => item.source === 'cook')
   );
   assert(cookHistory?.selected?.name === 'Курица с грибами и рисом', `cook_history_decision_missing:${JSON.stringify(cookHistory)}`);
-  assert(cookHistory?.cook?.outcome === 'prepared' && cookHistory?.cook?.feedback === 'helpful',
+  assert(cookHistory?.cook?.outcome === 'prepared'
+    && cookHistory?.cook?.feedback === 'helpful'
+    && cookHistory?.cook?.servings === 4,
     `cook_history_metadata_wrong:${JSON.stringify(cookHistory)}`);
 
   const cookMemory = await page.evaluate(() => window.RinloCook?.getCookMemory?.());
