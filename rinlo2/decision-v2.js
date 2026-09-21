@@ -1932,9 +1932,11 @@
       use: 'Использовать продукты',
       none: 'Без приоритета',
     };
+    const servings = [1, 2, 4].includes(Number(payload.servings)) ? Number(payload.servings) : 2;
     const contextParts = [
       priorityLabels[payload.priority] || '',
       Number(recipe.duration || 0) > 0 ? `${Math.round(Number(recipe.duration))} минут` : '',
+      `${servings} ${servings === 1 ? 'порция' : (servings <= 4 ? 'порции' : 'порций')}`,
     ].filter(Boolean);
 
     const cook = {
@@ -1944,6 +1946,7 @@
       outcome: String(payload.outcome || 'prepared'),
       feedback: String(payload.feedback || ''),
       duration: Math.max(0, Number(recipe.duration || 0)),
+      servings,
       nutrition: recipe.nutrition && typeof recipe.nutrition === 'object'
         ? JSON.parse(JSON.stringify(recipe.nutrition))
         : null,
@@ -2262,7 +2265,7 @@
   renderPersonalModel();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.20-personal-model',
+    version: 'decision-v2.21-portions',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
