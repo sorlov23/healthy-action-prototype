@@ -1625,6 +1625,149 @@
     document.getElementById('saveCorrection')?.addEventListener('click', saveCorrectionFromSheet);
   }
 
+  function localChooseRefinement(decision, mode) {
+    const next = JSON.parse(JSON.stringify(decision || {}));
+    const original = next.original || {};
+    const alternative = next.alternative || null;
+
+    if ((mode === 'light' || mode === 'calories') && alternative && next.stage !== 'ready') {
+      next.title = mode === 'calories' ? 'Есть вариант легче по калориям' : 'Можно сделать полегче';
+      next.icon = '✓';
+      next.tone = 'good';
+      next.explanation = mode === 'calories'
+        ? 'Сохранил исходную идею, но выбрал более лёгкую версию с меньшей оценочной калорийностью.'
+        : 'Сохранил исходную идею блюда, но убрал самый тяжёлый элемент.';
+      next.calories = alternative.calories || next.calories;
+      next.context = mode === 'calories' ? 'облегчённый вариант' : 'полегче';
+      next.fit = 'Это не запрет исходного варианта — просто более лёгкая версия той же идеи.';
+      next.original = {
+        ...alternative,
+        thumb: original.thumb || alternative.thumb || 'food-salad',
+      };
+      next.alternative = null;
+      next.actionsNow = [];
+      next.futureTip = '';
+      return next;
+    }
+
+    if (mode === 'satiety') {
+      next.title = 'Можно сделать сытнее';
+      next.explanation = 'Сам вариант можно оставить, а сытость повысить за счёт более белкового или объёмного дополнения, а не просто большей порции.';
+      next.context = 'акцент на сытость';
+      next.fit = next.stage === 'ready'
+        ? 'Если еда уже готова, добавь подходящий белковый или овощной компонент, не меняя всё блюдо.'
+        : 'Если выбор ещё открыт, лучше усилить белок или овощи, а не просто увеличить размер порции.';
+      next.actionsNow = ['Добавить белковый компонент или овощи вместо простого увеличения порции.'];
+      return next;
+    }
+
+    if ((mode === 'light' || mode === 'calories') && next.stage === 'ready') {
+      next.title = mode === 'calories' ? 'Можно немного снизить калорийность сейчас' : 'Можно сделать полегче сейчас';
+      next.explanation = 'Блюдо уже готово, поэтому Rinlo не подменяет его другим. Меняем только то, что ещё реально изменить.';
+      next.fit = 'Можно уменьшить соус, сладкий напиток или часть гарнира, если они ещё не съедены.';
+      next.actionsNow = ['Измени только то, что ещё можно убрать или заменить прямо сейчас.'];
+      return next;
+    }
+
+    return next;
+  }
+
+  const chooseRefinePrompts = {
+    light: 'Сделай решение полегче, сохранив исходную идею еды. Не предлагай жёсткий запрет.',
+    satiety: 'Сделай вариант сытнее. Не увеличивай порцию автоматически: сначала подумай о белке, клетчатке и составе.',
+    calories: 'Снизь калорийность с минимальным изменением исходной идеи. Не превращай это в запрет еды.',
+    alternative: 'Предложи другой практичный вариант той же идеи, если выбор ещё открыт.',
+  };
+
+  async function refineChooseDecision(mode) {
+    if (!currentDecision || !chooseRefinePrompts[mode]) return false;
+
+    if (mode === 'alternative' && currentDecision.stage !== 'ready' && currentDecision.alternative) {
+      renderAlternative(currentDecision);
+      showStep('alternative');
+      return true;
+    }
+
+    const status = document.getElementById('chooseRefineStatus');
+    const buttons = [...document.querySelectorAll('[data-choose-refine]')];
+    const activeButton = document.querySelector(`[data-choose-refine="${mode}"]`);
+    buttons.forEach((button) => { button.disabled = true; });
+    if (activeButton) activeButton.classList.add('active');
+    if (status) status.textContent = 'Перестраиваю решение…';
+
+    const baseQuestion = String(currentDecision.question || currentDecision.original?.name || '').trim();
+    const source = currentDecision.source || 'text';
+    const stage = currentDecision.stage || inferDecisionStage(baseQuestion);
+    const keepId = currentDecision.id;
+    const keepCreatedAt = currentDecision.createdAt;
+
+    try {
+      if (window.RinloVision?.localOnly === true || typeof window.RinloVision?.analyzeText !== 'function') {
+        currentDecision = localChooseRefinement(currentDecision, mode);
+        currentDecision.id = keepId;
+        currentDecision.createdAt = keepCreatedAt;
+        currentDecision.source = source;
+        currentDecision.question = baseQuestion;
+        currentDecision.refinement = mode;
+        renderResult(currentDecision);
+        showStep('result');
+        if (status) status.textContent = 'Готово.';
+        return true;
+      }
+
+      const profile = buildDecisionProfile(baseQuestion);
+      const day = sumCalories();
+      const requestText = [
+        `Исходная ситуация пользователя: ${baseQuestion}`,
+        currentDecision.original?.name ? `Текущий вариант: ${currentDecision.original.name}` : '',
+        `Новое пожелание пользователя: ${chooseRefinePrompts[mode]}`,
+        'Не проси повторно описывать исходную ситуацию. Если данных достаточно, сразу дай обновлённое решение.',
+      ].filter(Boolean).join('\n');
+
+      const response = await window.RinloVision.analyzeText(requestText, {
+        goal: requestGoal(profile),
+        profile,
+        decisionStage: stage,
+        dailyTarget: getDailyTarget() || 0,
+        dayCaloriesMin: day.min,
+        dayCaloriesMax: day.max,
+      });
+      const analysis = response?.analysis;
+      if (!analysis) throw new Error('empty_choose_refinement');
+
+      if (analysis.status === 'needs_clarification') {
+        if (status) {
+          status.textContent = analysis.clarifying_question
+            ? `Нужно уточнить: ${analysis.clarifying_question}`
+            : 'Без дополнительного уточнения надёжно перестроить вариант не получилось.';
+        }
+        return false;
+      }
+
+      analysis.__memoryAppliedCount = profile.recentCorrections.length;
+      analysis.__memorySources = profile.recentCorrections;
+      const next = visionDecision(baseQuestion, analysis, source);
+      next.id = keepId;
+      next.createdAt = keepCreatedAt;
+      next.question = baseQuestion;
+      next.refinement = mode;
+      currentDecision = next;
+      renderResult(currentDecision);
+      showStep('result');
+      if (status) status.textContent = 'Готово.';
+      return true;
+    } catch (error) {
+      console.error('Instant Choose refinement failed', error);
+      if (status) status.textContent = 'Не получилось перестроить решение. Исходный вариант сохранён.';
+      return false;
+    } finally {
+      buttons.forEach((button) => { button.disabled = false; });
+      setTimeout(() => {
+        if (activeButton) activeButton.classList.remove('active');
+      }, 350);
+    }
+  }
+
   function renderResult(decision) {
     resultQuestion.textContent = decision.question;
     const memoryNote = document.getElementById('memoryAppliedNote');
@@ -1664,6 +1807,8 @@
 
     const hasAlternative = decision.stage !== 'ready' && Boolean(decision.alternative);
     showAlternativeButton.hidden = !hasAlternative;
+    const alternativeRefine = document.querySelector('[data-choose-refine="alternative"]');
+    if (alternativeRefine) alternativeRefine.hidden = decision.stage === 'ready';
     saveOriginalButton.textContent = hasAlternative ? 'Оставить как есть' : 'Сохранить решение';
     saveOriginalButton.classList.toggle('primary', !hasAlternative);
     saveOriginalButton.classList.toggle('secondary', hasAlternative);
@@ -2200,6 +2345,10 @@
     }
   });
 
+  document.querySelectorAll('[data-choose-refine]').forEach((button) => {
+    button.addEventListener('click', () => refineChooseDecision(button.dataset.chooseRefine || ''));
+  });
+
   showAlternativeButton?.addEventListener('click', () => {
     if (!currentDecision?.alternative) return;
     renderAlternative(currentDecision);
@@ -2265,7 +2414,7 @@
   renderPersonalModel();
 
   window.Rinlo2Decisions = {
-    version: 'decision-v2.21-portions',
+    version: 'decision-v2.22-instant-choose',
     openAsk,
     openPhoto: openPhotoPicker,
     getDecisions: () => decisions.map((item) => JSON.parse(JSON.stringify(item))),
@@ -2284,6 +2433,7 @@
     },
     showMemoryExplanation,
     renderPersonalModel,
+    refineChoose: refineChooseDecision,
     getPersonalModel: () => JSON.parse(JSON.stringify(personalModelSignals())),
     clearDecisions() { decisions = []; localStorage.removeItem(STORAGE_KEY); location.reload(); }
   };
