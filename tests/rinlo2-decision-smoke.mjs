@@ -144,6 +144,7 @@ try {
   await page.getByRole('heading', { name: 'Можно брать', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#resultCalories').textContent())?.includes('320'), 'photo_flow_result_missing');
   assert(await page.locator('#showAlternative').isHidden(), 'ready_photo_should_not_offer_alternative');
+  assert(await page.locator('[data-choose-refine="alternative"]').isHidden(), 'ready_photo_should_hide_other_variant_refine');
   await page.locator('[data-flow-step="result"] [data-flow-back]').click();
   await page.getByRole('heading', { name: 'Что на фото?', exact: true }).waitFor({ state: 'visible' });
   await page.locator('[data-flow-step="photo"] [data-flow-back]').click();
@@ -161,6 +162,16 @@ try {
   await page.getByRole('heading', { name: 'Можно, но лучше аккуратнее', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#resultCalories').textContent())?.includes('820'), 'result_calories_missing');
   assert((await page.locator('#prospectiveCalorieValue').textContent())?.includes('820'), 'prospective_original_calories_missing');
+
+  await page.locator('[data-choose-refine="calories"]').click();
+  await page.getByRole('heading', { name: 'Есть вариант легче по калориям', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.locator('#resultCalories').textContent())?.includes('540'), 'instant_choose_calorie_refine_missing');
+  assert((await page.locator('#chooseRefineStatus').textContent())?.includes('Готово'), 'instant_choose_refine_status_missing');
+
+  await page.locator('[data-flow-step="result"] [data-flow-back]').click();
+  await page.locator('#decisionQuestion').fill('Можно сегодня бургер и колу?');
+  await page.getByRole('button', { name: 'Получить ответ', exact: false }).click();
+  await page.getByRole('heading', { name: 'Можно, но лучше аккуратнее', exact: true }).waitFor({ state: 'visible' });
 
   await page.locator('#resultFeedbackCard').getByRole('button', { name: 'Полезно', exact: true }).click();
   assert((await page.locator('#resultFeedbackCard [data-feedback-status]').textContent())?.includes('полезное'), 'result_feedback_helpful_missing');
