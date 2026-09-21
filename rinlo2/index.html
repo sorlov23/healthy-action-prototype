@@ -750,6 +750,20 @@
           <small>НА БУДУЩЕЕ</small>
           <p id="futureTip"></p>
         </article>
+
+        <div class="choose-refine" id="chooseRefine">
+          <div class="choose-refine-head">
+            <b>Хочется иначе?</b>
+            <span>изменю решение без нового вопроса</span>
+          </div>
+          <div class="choose-refine-actions">
+            <button type="button" data-choose-refine="light">🌿 Полегче</button>
+            <button type="button" data-choose-refine="satiety">🍽 Сытнее</button>
+            <button type="button" data-choose-refine="calories">↓ Меньше калорий</button>
+            <button type="button" data-choose-refine="alternative">↻ Другой вариант</button>
+          </div>
+          <span class="choose-refine-status" id="chooseRefineStatus" aria-live="polite"></span>
+        </div>
       </div>
       <div class="flow-footer stacked"><button class="btn primary wide" id="showAlternative">Показать вариант лучше</button><button class="btn secondary wide" id="saveOriginal">Оставить как есть</button></div>
     </section>
