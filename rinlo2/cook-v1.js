@@ -706,7 +706,7 @@
     const card = $('#cookPortions');
     if (!card) return;
     card.hidden = !recipe;
-    $('[data-cook-servings]').forEach((button) => {
+    $$('[data-cook-servings]').forEach((button) => {
       button.classList.toggle('active', Number(button.dataset.cookServings) === selectedServings);
     });
 
