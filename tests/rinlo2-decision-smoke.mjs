@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v11-decision-learning', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v12-home-personalization', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -358,7 +358,7 @@ try {
     `cook_profile_staples_missing:${JSON.stringify(cookStaples)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.RinloCook?.version === 'v11-decision-learning');
+  await page.waitForFunction(() => window.RinloCook?.version === 'v12-home-personalization');
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
   assert(reloadedProfile?.behaviorMemoryEnabled === true, `profile_behavior_memory_persistence_failed:${JSON.stringify(reloadedProfile)}`);
@@ -416,7 +416,7 @@ try {
   await page.locator('#cookFlow').waitFor({ state: 'hidden' });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.RinloCook?.version === 'v11-decision-learning');
+  await page.waitForFunction(() => window.RinloCook?.version === 'v12-home-personalization');
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
   const timingSamplesAfterReload = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
   assert(timingSamplesAfterReload.some((item) =>
@@ -449,6 +449,18 @@ try {
   });
   assert(learnedMemory?.decisionSignalCount >= 3 && learnedMemory?.dominantRefinement === 'light',
     `decision_learning_pattern_missing:${JSON.stringify(learnedMemory)}`);
+
+  await page.evaluate(() => window.dispatchEvent(new Event('rinlo2:behavior-memory-changed')));
+  await page.locator('#homePersonalizationNote').waitFor({ state: 'visible' });
+  assert((await page.locator('#homePersonalizationText').textContent())?.includes('Полегче'),
+    `home_personalization_pattern_missing:${await page.locator('#homePersonalizationText').textContent()}`);
+  const homePersonalizationGeometry = await page.locator('#homePersonalizationNote').evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, width: rect.width, viewport: document.documentElement.clientWidth };
+  });
+  assert(homePersonalizationGeometry.left >= 0
+    && homePersonalizationGeometry.right <= homePersonalizationGeometry.viewport + 1,
+    `home_personalization_overflow:${JSON.stringify(homePersonalizationGeometry)}`);
 
   await page.locator('[data-nav="progress"]').last().click();
   await page.getByRole('heading', { name: 'Как ты выбираешь', exact: true }).waitFor({ state: 'visible' });
