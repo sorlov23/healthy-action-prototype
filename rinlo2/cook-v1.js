@@ -159,10 +159,11 @@
       const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       return {
         recent: Array.isArray(state.recent) ? state.recent : [],
-        outcomes: Array.isArray(state.outcomes) ? state.outcomes : []
+        outcomes: Array.isArray(state.outcomes) ? state.outcomes : [],
+        timings: Array.isArray(state.timings) ? state.timings : []
       };
     } catch {
-      return { recent: [], outcomes: [] };
+      return { recent: [], outcomes: [], timings: [] };
     }
   }
 
