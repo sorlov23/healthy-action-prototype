@@ -560,6 +560,11 @@ Deno.serve(async (req: Request) => {
         ? String(rawCookMemory.dominantPriority)
         : "",
       quickMealPreference: rawCookMemory.quickMealPreference === true,
+      decisionSignalCount: Math.max(0, Math.min(100, Math.round(Number(rawCookMemory.decisionSignalCount || 0)))),
+      dominantRefinement: allowedMemoryPriorities.has(String(rawCookMemory.dominantRefinement || ""))
+        ? String(rawCookMemory.dominantRefinement)
+        : "",
+      alternativeChoiceRate: Math.max(0, Math.min(1, Number(rawCookMemory.alternativeChoiceRate || 0))),
       helpfulRecipes: (Array.isArray(rawCookMemory.helpfulRecipes) ? rawCookMemory.helpfulRecipes : [])
         .map(normalizeMemoryRecipe)
         .filter((item: any) => item.name)
@@ -607,6 +612,9 @@ Deno.serve(async (req: Request) => {
       "Не морализируй, не называй еду хорошей/плохой, не ставь диагнозы и не обещай снижение веса.",
       "Цель профиля и дневной калорийный ориентир — слабый контекст, а не медицинское основание.",
       "Cook Memory содержит только наблюдаемые прошлые действия. Используй её как слабый персональный сигнал, а не как характеристику личности пользователя.",
+      "Decision Learning внутри Cook Memory отражает только принятые zero-prompt решения: что пользователь в итоге выбрал перед готовкой. Это не явная вкусовая оценка.",
+      "Если dominantRefinement задан и текущий priority=none, используй его только как слабый tie-breaker между одинаково разумными вариантами; не превращай его в постоянное правило.",
+      "Высокий alternativeChoiceRate означает лишь, что первые предложения часто менялись. Не выводи из этого конкретный вкус или запрет — используй сигнал только для более точного выбора основного варианта.",
       "Явный текущий приоритет пользователя всегда важнее Cook Memory.",
       "Рецепты с feedback=helpful — положительный сигнал, но не приказ повторять их.",
       "Рецепты из notForMeRecipes не предлагай снова в том же или почти идентичном виде, если из текущих продуктов есть разумная альтернатива.",
@@ -623,7 +631,7 @@ Deno.serve(async (req: Request) => {
       profileGoal ? `Цель профиля: ${profileGoal}.` : "",
       profilePriorities.length ? `Дополнительные предпочтения профиля: ${profilePriorities.join(", ")}.` : "",
       caloriePlan ? `Расчётный дневной ориентир пользователя: ${caloriePlan.targetMin}–${caloriePlan.targetMax} ккал; расчётная поддержка около ${caloriePlan.maintenance} ккал. Это ориентир, а не жёсткий лимит.` : "",
-      cookMemory.preparedCount ? `Cook Memory за последние недели: ${JSON.stringify(cookMemory)}.` : "",
+      (cookMemory.preparedCount || cookMemory.decisionSignalCount) ? `Cook Memory за последние недели: ${JSON.stringify(cookMemory)}.` : "",
       "Сформируй одно основное блюдо и ровно две альтернативы.",
     ].filter(Boolean).join(" ");
 
@@ -694,6 +702,9 @@ Deno.serve(async (req: Request) => {
             notForMeCount: cookMemory.notForMeRecipes.length,
             dominantPriority: cookMemory.dominantPriority || null,
             quickMealPreference: cookMemory.quickMealPreference,
+            decisionSignalCount: cookMemory.decisionSignalCount,
+            dominantRefinement: cookMemory.dominantRefinement || null,
+            alternativeChoiceRate: cookMemory.alternativeChoiceRate,
           },
         },
       });
