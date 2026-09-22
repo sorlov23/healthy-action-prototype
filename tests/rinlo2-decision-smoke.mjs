@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v8-portions', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v9-home-zero-prompt', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -114,6 +114,15 @@ try {
   await page.locator('[data-history-filter="all"]').click();
   await page.locator('[data-nav="home"]').last().click();
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
+  assert(await page.locator('#homeRepeatCard').isVisible(), 'home_repeat_card_missing');
+  assert((await page.locator('#homeRepeatTitle').textContent())?.includes('Курица с грибами и рисом'), 'home_repeat_recipe_wrong');
+  await page.locator('#homeRepeatCook').click();
+  await page.getByRole('heading', { name: 'Курица с грибами и рисом', exact: true }).waitFor({ state: 'visible' });
+  assert((await page.evaluate(() => window.RinloCook?.getServings?.())) === 4, 'home_repeat_servings_not_restored');
+  await page.locator('[data-cook-step="result"] [data-cook-back]').click();
+  await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-cook-step="ingredients"] [data-cook-back]').click();
+  await page.locator('#cookFlow').waitFor({ state: 'hidden' });
 
   await page.locator('[data-action="voice"]').click();
   const voiceStep = page.locator('[data-flow-step="voice"]');
@@ -242,6 +251,22 @@ try {
 
   await page.getByRole('button', { name: 'Готово', exact: true }).click();
 
+  await page.locator('[data-nav="home"]').last().click();
+  await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
+  const zeroPromptIngredients = await page.evaluate(() => window.RinloCook?.getZeroPromptIngredients?.() || []);
+  assert(zeroPromptIngredients.includes('Яйца') && zeroPromptIngredients.includes('Сыр'),
+    `home_zero_prompt_ingredients_wrong:${JSON.stringify(zeroPromptIngredients)}`);
+  assert((await page.locator('#homeSuggestReadiness').textContent())?.includes('без ввода'), 'home_zero_prompt_not_ready');
+  await page.locator('#homeSuggestNow').click();
+  await page.getByRole('heading', { name: 'Яйца с сыром', exact: true }).waitFor({ state: 'visible' });
+  const timingSamples = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
+  assert(timingSamples.some((item) => item.source === 'home-zero-prompt' && Number(item.ms) >= 0),
+    `home_zero_prompt_timing_missing:${JSON.stringify(timingSamples)}`);
+  await page.locator('[data-cook-step="result"] [data-cook-back]').click();
+  await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-cook-step="ingredients"] [data-cook-back]').click();
+  await page.locator('#cookFlow').waitFor({ state: 'hidden' });
+
   await page.locator('[data-nav="progress"]').last().click();
   await page.getByRole('heading', { name: 'Как ты выбираешь', exact: true }).waitFor({ state: 'visible' });
   assert((await page.locator('#progressDecisionCount').textContent())?.includes('2 решения'), 'progress_decision_count_wrong');
@@ -306,6 +331,8 @@ try {
   await page.locator('[data-profile-staple="salt"]').click();
   await page.locator('[data-profile-staple="vegetable_oil"]').click();
   await page.locator('[data-profile-staple="garlic"]').click();
+  await page.locator('[data-profile-staple="eggs"]').click();
+  await page.locator('[data-profile-staple="cheese"]').click();
   await page.getByRole('button', { name: 'Сохранить контекст', exact: true }).click();
 
   const profileApi = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
@@ -327,7 +354,9 @@ try {
   assert(Array.isArray(profileApi?.staples)
     && profileApi.staples.includes('salt')
     && profileApi.staples.includes('vegetable_oil')
-    && profileApi.staples.includes('garlic'),
+    && profileApi.staples.includes('garlic')
+    && profileApi.staples.includes('eggs')
+    && profileApi.staples.includes('cheese'),
     `profile_staples_wrong:${JSON.stringify(profileApi)}`);
 
   const cookStaples = await page.evaluate(() => window.RinloCook?.getAvailableStaples?.() || []);
@@ -348,7 +377,9 @@ try {
   assert(Array.isArray(reloadedProfile?.staples)
     && reloadedProfile.staples.includes('salt')
     && reloadedProfile.staples.includes('vegetable_oil')
-    && reloadedProfile.staples.includes('garlic'),
+    && reloadedProfile.staples.includes('garlic')
+    && reloadedProfile.staples.includes('eggs')
+    && reloadedProfile.staples.includes('cheese'),
     `profile_staples_persistence_failed:${JSON.stringify(reloadedProfile)}`);
 
   await page.locator('[data-nav="progress"]').last().click();
