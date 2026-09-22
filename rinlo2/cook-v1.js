@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v8-portions';
+  const VERSION = 'v9-home-zero-prompt';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -27,6 +27,10 @@
     sour_cream: 'Сметана',
     soy_sauce: 'Соевый соус',
   };
+
+  const ZERO_PROMPT_STAPLES = new Set([
+    'eggs','rice','buckwheat','pasta','flour','milk','cheese','sour_cream'
+  ]);
 
   const COMMON = [
     'Яйца','Куриное филе','Свинина','Говядина','Фарш','Сыр','Творог',
@@ -330,6 +334,149 @@
       .map((id) => STAPLE_LABELS[id])
       .filter(Boolean)
       .filter((label) => !chosenToday.has(label.toLowerCase()));
+  }
+
+  function getZeroPromptIngredients() {
+    const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
+    return (Array.isArray(profile.staples) ? profile.staples : [])
+      .filter((id) => ZERO_PROMPT_STAPLES.has(id))
+      .map((id) => STAPLE_LABELS[id])
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  function getLatestHelpfulCook() {
+    return (window.Rinlo2Decisions?.getDecisions?.() || [])
+      .find((decision) =>
+        decision?.source === 'cook'
+        && decision?.cook?.outcome === 'prepared'
+        && decision?.cook?.feedback === 'helpful'
+        && Array.isArray(decision?.cook?.steps)
+        && decision.cook.steps.length >= 2
+      ) || null;
+  }
+
+  function renderHomeSmartActions() {
+    const suggestContext = $('#homeSuggestContext');
+    const readiness = $('#homeSuggestReadiness');
+    const repeatCard = $('#homeRepeatCard');
+    const repeatTitle = $('#homeRepeatTitle');
+    const repeatMeta = $('#homeRepeatMeta');
+
+    const ingredients = getZeroPromptIngredients();
+    if (suggestContext) {
+      suggestContext.textContent = ingredients.length >= 2
+        ? ingredients.slice(0, 4).join(' · ')
+        : 'Использую продукты из «Обычно есть дома»';
+    }
+    if (readiness) {
+      readiness.textContent = ingredients.length >= 2
+        ? 'Можно получить решение без ввода'
+        : 'Нужно хотя бы 2 базовых продукта в Профиле';
+    }
+
+    const helpful = getLatestHelpfulCook();
+    if (repeatCard && repeatTitle && repeatMeta) {
+      repeatCard.hidden = !helpful;
+      if (helpful) {
+        repeatTitle.textContent = helpful.selected?.name || helpful.original?.name || 'Удачный вариант';
+        const duration = Number(helpful.cook?.duration || 0);
+        const servings = Number(helpful.cook?.servings || 0);
+        repeatMeta.textContent = [
+          duration > 0 ? duration + ' минут' : '',
+          servings > 0 ? servings + (servings === 1 ? ' порция' : ' порции') : '',
+          'ты отметил 👍',
+        ].filter(Boolean).join(' · ');
+      }
+    }
+  }
+
+  function buildSavedRecipe(decision) {
+    if (!decision?.cook) return null;
+    const name = String(decision.selected?.name || decision.original?.name || '').trim();
+    if (!name) return null;
+    const steps = (Array.isArray(decision.cook.steps) ? decision.cook.steps : [])
+      .map((step) => [
+        String(step?.title || '').trim(),
+        String(step?.instruction || '').trim(),
+        Math.max(0, Number(step?.minutes || 0)),
+      ])
+      .filter((step) => step[0] && step[1]);
+    if (steps.length < 2) return null;
+
+    return {
+      name,
+      duration: Math.max(0, Number(decision.cook.duration || 0)),
+      note: 'Ты уже готовил этот вариант и отметил рекомендацию как полезную.',
+      ingredients: Array.isArray(decision.cook.ingredients) ? decision.cook.ingredients.map(String) : [],
+      staples: Array.isArray(decision.cook.staples) ? decision.cook.staples.map(String) : [],
+      steps,
+      nutrition: decision.cook.nutrition && typeof decision.cook.nutrition === 'object'
+        ? { ...decision.cook.nutrition }
+        : null,
+    };
+  }
+
+  async function suggestFromHome() {
+    const ingredients = getZeroPromptIngredients();
+    if (ingredients.length < 2) {
+      resetFlow();
+      showFlow('ingredients');
+      const status = $('#cookInstantStatus');
+      if (status) status.textContent = 'Добавь хотя бы 2 базовых продукта — вручную или в Профиле → «Обычно есть дома».';
+      return false;
+    }
+
+    resetFlow();
+    ingredients.forEach((item) => selected.add(item));
+    renderSelected();
+    renderStaplesContext();
+
+    const startedAt = performance.now();
+    const success = await generateInstantCook('none', {
+      button: $('#homeSuggestNow'),
+      status: $('#homeSuggestStatus'),
+      source: 'home-zero-prompt',
+    });
+    if (success) {
+      const elapsed = Math.max(0, Math.round(performance.now() - startedAt));
+      const state = readState();
+      state.timings = Array.isArray(state.timings) ? state.timings : [];
+      state.timings.unshift({
+        at: new Date().toISOString(),
+        source: 'home-zero-prompt',
+        ms: elapsed,
+      });
+      state.timings = state.timings.slice(0, 20);
+      writeState(state);
+    }
+    return success;
+  }
+
+  function repeatHelpfulCook() {
+    const decision = getLatestHelpfulCook();
+    const recipe = buildSavedRecipe(decision);
+    if (!decision || !recipe) return false;
+
+    resetFlow();
+    (decision.cook?.ingredients || []).forEach((item) => selected.add(String(item)));
+    priority = String(decision.cook?.priority || 'none');
+    selectedServings = [1,2,4].includes(Number(decision.cook?.servings))
+      ? Number(decision.cook.servings)
+      : 2;
+
+    const fallbacks = buildRecommendations().filter((item) => item.name !== recipe.name).slice(0, 2);
+    while (fallbacks.length < 2) {
+      const generic = genericRecipe([...selected], fallbacks.length);
+      if (!fallbacks.some((item) => item.name === generic.name) && generic.name !== recipe.name) fallbacks.push(generic);
+      else break;
+    }
+    recommendations = [recipe, ...fallbacks].slice(0, 3);
+    activeRecipe = recipe;
+    activeCookMemory = buildCookMemory();
+    renderResult({ recipes: recommendations, memory: activeCookMemory });
+    showFlow('result');
+    return true;
   }
 
   function renderStaplesContext() {
@@ -924,6 +1071,14 @@
       showFlow('ingredients');
     });
 
+    $('#homeSuggestNow')?.addEventListener('click', async () => {
+      await suggestFromHome();
+    });
+
+    $('#homeRepeatCook')?.addEventListener('click', () => {
+      repeatHelpfulCook();
+    });
+
     $('#cookRecentHomeUse')?.addEventListener('click', () => {
       resetFlow();
       readState().recent.forEach((item) => selected.add(item));
@@ -1128,6 +1283,10 @@
     renderRecent();
     renderSelected();
     renderStaplesContext();
+    renderHomeSmartActions();
+    window.addEventListener('rinlo2:profile-applied', renderHomeSmartActions);
+    window.addEventListener('rinlo2:decision-saved', renderHomeSmartActions);
+    window.addEventListener('rinlo2:behavior-memory-changed', renderHomeSmartActions);
   }
 
   window.RinloCook = {
@@ -1138,7 +1297,14 @@
     getPhotoItems: () => photoItems.map((item) => ({ ...item })),
     getActiveDecisionId: () => activeCookDecisionId,
     getCookMemory: () => JSON.parse(JSON.stringify(buildCookMemory())),
-    getServings: () => selectedServings
+    getServings: () => selectedServings,
+    getZeroPromptIngredients: () => getZeroPromptIngredients(),
+    suggestFromHome,
+    repeatHelpfulCook,
+    getDecisionTimings: () => {
+      const state = readState();
+      return Array.isArray(state.timings) ? state.timings.map((item) => ({ ...item })) : [];
+    }
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
