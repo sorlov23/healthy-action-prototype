@@ -601,6 +601,9 @@ button.home-mode-card>strong{font-size:24px;font-weight:500;text-align:right}
 .home-suggest-footer strong{font-size:18px;color:var(--rinlo-lime)}
 .home-suggest-status{min-height:0;font-size:9px;line-height:1.4;color:rgba(255,255,255,.68)}
 .home-suggest-status:empty{display:none}
+.home-personalization-note{display:flex;align-items:flex-start;gap:8px;margin:-1px 2px 10px;padding:0 2px;color:#69736a;font-size:9px;line-height:1.45}
+.home-personalization-note>span:first-child{flex:none;color:#78a934;font-size:11px;line-height:1.25}
+.home-personalization-note[hidden]{display:none}
 .home-repeat-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:12px 13px;border-radius:18px;background:#f5faeb;border:1px solid rgba(123,182,38,.16)}
 .home-repeat-card>div{min-width:0}
 .home-repeat-card small{display:block;font-size:8px;font-weight:900;letter-spacing:.12em;color:#7b8b68}
