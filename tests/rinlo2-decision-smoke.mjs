@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v9-home-zero-prompt', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v10-home-decision-loop', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -358,7 +358,7 @@ try {
     `cook_profile_staples_missing:${JSON.stringify(cookStaples)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.RinloCook?.version === 'v9-home-zero-prompt');
+  await page.waitForFunction(() => window.RinloCook?.version === 'v10-home-decision-loop');
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
   assert(reloadedProfile?.behaviorMemoryEnabled === true, `profile_behavior_memory_persistence_failed:${JSON.stringify(reloadedProfile)}`);
@@ -389,21 +389,41 @@ try {
   assert(zeroPromptSelected.includes('Яйца') && zeroPromptSelected.includes('Сыр'),
     `home_zero_prompt_selected_wrong:${JSON.stringify(zeroPromptSelected)}`);
   assert(((await page.locator('#cookResultTitle').textContent()) || '').trim().length > 0, 'home_zero_prompt_result_missing');
+  assert((await page.locator('#cookStartCooking').textContent())?.includes('Готовлю это'),
+    'home_zero_prompt_accept_cta_missing');
+  const timingsBeforeDecision = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
+  assert(!timingsBeforeDecision.some((item) => item.source === 'home-zero-prompt'),
+    `home_zero_prompt_timing_should_wait_for_decision:${JSON.stringify(timingsBeforeDecision)}`);
+
+  const alternative = page.locator('#cookAlternatives [data-cook-alt-index]').first();
+  await alternative.click();
+  const chosenZeroPromptRecipe = ((await page.locator('#cookResultTitle').textContent()) || '').trim();
+  await page.locator('#cookStartCooking').click();
+  await page.locator('[data-cook-step="cook"].active').waitFor({ state: 'visible' });
+
   const timingSamples = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
   const zeroPromptTiming = timingSamples.find((item) => item.source === 'home-zero-prompt' && Number(item.ms) >= 0);
   assert(zeroPromptTiming, `home_zero_prompt_timing_missing:${JSON.stringify(timingSamples)}`);
+  assert(zeroPromptTiming.recipe === chosenZeroPromptRecipe,
+    `home_zero_prompt_recipe_not_captured:${JSON.stringify(zeroPromptTiming)}`);
+  assert(zeroPromptTiming.usedAlternative === true && zeroPromptTiming.refined === false,
+    `home_zero_prompt_path_metadata_wrong:${JSON.stringify(zeroPromptTiming)}`);
+
+  await page.locator('[data-cook-step="cook"] [data-cook-back]').click();
   await page.locator('[data-cook-step="result"] [data-cook-back]').click();
   await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
   await page.locator('[data-cook-step="ingredients"] [data-cook-back]').click();
   await page.locator('#cookFlow').waitFor({ state: 'hidden' });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.RinloCook?.version === 'v9-home-zero-prompt');
+  await page.waitForFunction(() => window.RinloCook?.version === 'v10-home-decision-loop');
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
   const timingSamplesAfterReload = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
   assert(timingSamplesAfterReload.some((item) =>
     item.source === zeroPromptTiming.source
     && item.at === zeroPromptTiming.at
+    && item.recipe === zeroPromptTiming.recipe
+    && item.usedAlternative === true
     && Number(item.ms) === Number(zeroPromptTiming.ms)),
     `home_zero_prompt_timing_not_persisted:${JSON.stringify(timingSamplesAfterReload)}`);
 
