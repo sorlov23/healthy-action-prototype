@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v11-decision-learning';
+  const VERSION = 'v12-home-personalization';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -362,6 +362,8 @@
   function renderHomeSmartActions() {
     const suggestContext = $('#homeSuggestContext');
     const readiness = $('#homeSuggestReadiness');
+    const personalizationNote = $('#homePersonalizationNote');
+    const personalizationText = $('#homePersonalizationText');
     const repeatCard = $('#homeRepeatCard');
     const repeatTitle = $('#homeRepeatTitle');
     const repeatMeta = $('#homeRepeatMeta');
@@ -376,6 +378,27 @@
       readiness.textContent = ingredients.length >= 2
         ? 'Можно получить решение без ввода'
         : 'Нужно хотя бы 2 базовых продукта в Профиле';
+    }
+
+    if (personalizationNote && personalizationText) {
+      const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
+      const memory = profile.behaviorMemoryEnabled === false ? null : buildCookMemory();
+      const labels = {
+        fast: 'Быстрее',
+        satiety: 'Сытнее',
+        light: 'Полегче',
+        use: 'Использовать продукты',
+      };
+      let message = '';
+      if (ingredients.length >= 2 && memory?.dominantRefinement && labels[memory.dominantRefinement]) {
+        message = `В последних быстрых решениях ты чаще выбирал «${labels[memory.dominantRefinement]}» — учту это в первом варианте.`;
+      } else if (ingredients.length >= 2
+        && Number(memory?.decisionSignalCount || 0) >= 3
+        && Number(memory?.alternativeChoiceRate || 0) >= 0.67) {
+        message = 'Первый вариант часто менялся — постараюсь точнее попасть сразу.';
+      }
+      personalizationText.textContent = message;
+      personalizationNote.hidden = !message;
     }
 
     const helpful = getLatestHelpfulCook();
