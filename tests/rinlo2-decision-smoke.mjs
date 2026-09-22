@@ -374,7 +374,11 @@ try {
     `home_zero_prompt_ingredients_wrong:${JSON.stringify(zeroPromptIngredients)}`);
   assert((await page.locator('#homeSuggestReadiness').textContent())?.includes('без ввода'), 'home_zero_prompt_not_ready');
   await page.locator('#homeSuggestNow').click();
-  await page.getByRole('heading', { name: 'Яйца с сыром', exact: true }).waitFor({ state: 'visible' });
+  await page.locator('[data-cook-step="result"].active').waitFor({ state: 'visible' });
+  const zeroPromptSelected = await page.evaluate(() => window.RinloCook?.getSelected?.() || []);
+  assert(zeroPromptSelected.includes('Яйца') && zeroPromptSelected.includes('Сыр'),
+    `home_zero_prompt_selected_wrong:${JSON.stringify(zeroPromptSelected)}`);
+  assert(((await page.locator('#cookResultTitle').textContent()) || '').trim().length > 0, 'home_zero_prompt_result_missing');
   const timingSamples = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
   assert(timingSamples.some((item) => item.source === 'home-zero-prompt' && Number(item.ms) >= 0),
     `home_zero_prompt_timing_missing:${JSON.stringify(timingSamples)}`);
