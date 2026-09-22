@@ -38,7 +38,7 @@ try {
   assert(homeGeometry.cards.every((card) => card.height >= 100 && card.left >= 0 && card.right <= 390), `home_mode_card_geometry:${JSON.stringify(homeGeometry)}`);
   assert(homeGeometry.cards[0].bottom < homeGeometry.cards[1].top, `home_mode_cards_not_stacked:${JSON.stringify(homeGeometry)}`);
 
-  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v10-home-decision-loop', 'cook_bridge_missing');
+  assert((await page.evaluate(() => window.RinloCook?.version)) === 'v11-decision-learning', 'cook_bridge_missing');
   assert((await page.evaluate(() => window.RinloVision?.version)) === 'v1.6-cook-ingredients', 'vision_bridge_version_wrong');
   assert((await page.evaluate(() => typeof window.RinloVision?.analyzeIngredientsPhoto)) === 'function', 'ingredient_photo_method_missing');
   await page.locator('#cookStart').click();
@@ -358,7 +358,7 @@ try {
     `cook_profile_staples_missing:${JSON.stringify(cookStaples)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.RinloCook?.version === 'v10-home-decision-loop');
+  await page.waitForFunction(() => window.RinloCook?.version === 'v11-decision-learning');
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
   assert(reloadedProfile?.behaviorMemoryEnabled === true, `profile_behavior_memory_persistence_failed:${JSON.stringify(reloadedProfile)}`);
@@ -416,7 +416,7 @@ try {
   await page.locator('#cookFlow').waitFor({ state: 'hidden' });
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.RinloCook?.version === 'v10-home-decision-loop');
+  await page.waitForFunction(() => window.RinloCook?.version === 'v11-decision-learning');
   await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
   const timingSamplesAfterReload = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
   assert(timingSamplesAfterReload.some((item) =>
@@ -426,6 +426,29 @@ try {
     && item.usedAlternative === true
     && Number(item.ms) === Number(zeroPromptTiming.ms)),
     `home_zero_prompt_timing_not_persisted:${JSON.stringify(timingSamplesAfterReload)}`);
+
+  const decisionLearningState = await page.evaluate(() => window.RinloCook?.getState?.());
+  const acceptedSignal = (decisionLearningState?.signals || []).find((item) =>
+    item.source === 'home-zero-prompt'
+    && item.acceptedRecipe === zeroPromptTiming.recipe
+  );
+  assert(acceptedSignal?.usedAlternative === true && acceptedSignal?.initialRecipe,
+    `decision_learning_signal_missing:${JSON.stringify(decisionLearningState?.signals)}`);
+
+  const learnedMemory = await page.evaluate(() => {
+    const key = 'rinlo2-cook-v1';
+    const state = JSON.parse(localStorage.getItem(key) || '{}');
+    const now = new Date().toISOString();
+    state.signals = Array.isArray(state.signals) ? state.signals : [];
+    state.signals.unshift(
+      { at: now, source: 'home-zero-prompt', initialRecipe: 'Вариант A', acceptedRecipe: 'Вариант B', usedAlternative: false, refinement: 'light' },
+      { at: now, source: 'home-zero-prompt', initialRecipe: 'Вариант C', acceptedRecipe: 'Вариант D', usedAlternative: false, refinement: 'light' }
+    );
+    localStorage.setItem(key, JSON.stringify(state));
+    return window.RinloCook?.getCookMemory?.();
+  });
+  assert(learnedMemory?.decisionSignalCount >= 3 && learnedMemory?.dominantRefinement === 'light',
+    `decision_learning_pattern_missing:${JSON.stringify(learnedMemory)}`);
 
   await page.locator('[data-nav="progress"]').last().click();
   await page.getByRole('heading', { name: 'Как ты выбираешь', exact: true }).waitFor({ state: 'visible' });
