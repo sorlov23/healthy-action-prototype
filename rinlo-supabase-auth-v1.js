@@ -45,18 +45,21 @@
     return Boolean(session?.access_token && Number(session.expires_at || 0) > Math.floor(Date.now() / 1000) + refreshSkewSeconds);
   }
 
-  async function authRequest(path, body, bearer = publishableKey) {
+  async function authFetch(method, path, { body = null, bearer = publishableKey, redirectTo = '' } = {}) {
     if (!enabled) throw new Error('supabase_auth_disabled');
-    const response = await fetch(`${base}/auth/v1${path}`, {
-      method: 'POST',
+    const query = redirectTo
+      ? `${path.includes('?') ? '&' : '?'}redirect_to=${encodeURIComponent(redirectTo)}`
+      : '';
+    const response = await fetch(`${base}/auth/v1${path}${query}`, {
+      method,
       cache: 'no-store',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
         apikey: publishableKey,
         Authorization: `Bearer ${bearer}`,
       },
-      body: JSON.stringify(body || {}),
+      ...(body ? { body: JSON.stringify(body) } : {}),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -68,13 +71,113 @@
     return data;
   }
 
+  async function authRequest(path, body, bearer = publishableKey) {
+    return authFetch('POST', path, { body: body || {}, bearer });
+  }
+
+  function dispatchAuth(event, session) {
+    window.dispatchEvent(new CustomEvent('rinlo:supabase-auth', {
+      detail: {
+        event,
+        userId: session?.user?.id || null,
+        user: session?.user || null,
+      },
+    }));
+  }
+
+  async function fetchCurrentUser(accessToken) {
+    if (!accessToken) throw new Error('supabase_auth_missing_access_token');
+    const data = await authFetch('GET', '/user', { bearer: accessToken });
+    return data?.user || data || null;
+  }
+
+  async function getUser() {
+    const session = await ensureSession();
+    if (!session?.access_token) return null;
+    const user = await fetchCurrentUser(session.access_token);
+    if (!user?.id) return null;
+    const saved = saveSession({ ...session, user });
+    dispatchAuth('USER_UPDATED', saved);
+    return user;
+  }
+
+  async function updateUser(attributes = {}, options = {}) {
+    const session = await ensureSession();
+    if (!session?.access_token) throw new Error('supabase_auth_missing_session');
+    const data = await authFetch('PUT', '/user', {
+      bearer: session.access_token,
+      body: attributes,
+      redirectTo: options.emailRedirectTo || '',
+    });
+    const user = data?.user || data || null;
+    if (!user?.id) throw new Error('supabase_auth_invalid_user_response');
+    const saved = saveSession({ ...session, user });
+    dispatchAuth('USER_UPDATED', saved);
+    return user;
+  }
+
+  async function requestEmailProtection(email, options = {}) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error('invalid_email');
+    }
+    return updateUser({ email: normalized }, {
+      emailRedirectTo: options.emailRedirectTo || '',
+    });
+  }
+
+  async function resendEmailChange(email, options = {}) {
+    const normalized = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error('invalid_email');
+    }
+    await authFetch('POST', '/resend', {
+      body: {
+        email: normalized,
+        type: 'email_change',
+        gotrue_meta_security: { captcha_token: null },
+      },
+      redirectTo: options.emailRedirectTo || '',
+    });
+    return { email: normalized };
+  }
+
+  function validatePassword(password) {
+    const value = String(password || '');
+    if (value.length < 8) throw new Error('password_too_short');
+    return value;
+  }
+
+  async function setRecoveryPassword(password) {
+    const value = validatePassword(password);
+    return updateUser({ password: value });
+  }
+
+  async function signInWithPassword(email, password) {
+    const normalized = String(email || '').trim().toLowerCase();
+    const value = validatePassword(password);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new Error('invalid_email');
+    }
+    const data = await authFetch('POST', '/token?grant_type=password', {
+      body: {
+        email: normalized,
+        password: value,
+        gotrue_meta_security: { captcha_token: null },
+      },
+    });
+    const session = saveSession(data);
+    dispatchAuth('SIGNED_IN', session);
+    return session;
+  }
+
   async function createAnonymousSession() {
     const data = await authRequest('/signup', {
       data: { client: 'rinlo-pwa', schema_version: 1 },
       gotrue_meta_security: { captcha_token: null },
     });
     const session = saveSession(data);
-    window.dispatchEvent(new CustomEvent('rinlo:supabase-auth', { detail: { event: 'SIGNED_IN', userId: session.user.id } }));
+    dispatchAuth('SIGNED_IN', session);
     return session;
   }
 
@@ -84,7 +187,7 @@
     });
     // GoTrue may omit user in edge cases; preserve the known user identity.
     const session = saveSession({ ...data, user: data.user || current.user });
-    window.dispatchEvent(new CustomEvent('rinlo:supabase-auth', { detail: { event: 'TOKEN_REFRESHED', userId: session.user.id } }));
+    dispatchAuth('TOKEN_REFRESHED', session);
     return session;
   }
 
@@ -112,6 +215,13 @@
     return ensurePromise;
   }
 
+  async function refreshCurrentSession() {
+    if (!enabled) return null;
+    const current = readSession();
+    if (!current?.refresh_token) return ensureSession();
+    return refreshSession(current);
+  }
+
   async function getAccessToken() {
     const session = await ensureSession();
     return session?.access_token || null;
@@ -122,12 +232,19 @@
   });
 
   window.RinloSupabaseAuth = {
-    version: 'v1',
+    version: 'v3-recovery-password',
     enabled,
     projectUrl: base,
     ensureSession,
+    refreshCurrentSession,
     getSession: readSession,
     getAccessToken,
+    getUser,
+    updateUser,
+    requestEmailProtection,
+    resendEmailChange,
+    setRecoveryPassword,
+    signInWithPassword,
     getUserId: () => readSession()?.user?.id || null,
     clearLocalSession: clearSession,
   };

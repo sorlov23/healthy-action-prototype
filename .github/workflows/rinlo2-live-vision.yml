@@ -1,0 +1,21 @@
+name: rinlo2 live gemini vision
+
+on:
+  pull_request:
+    paths:
+      - 'tests/rinlo2-live-vision.cjs'
+      - 'supabase/functions/analyze-food/**'
+      - 'runtime-config.js'
+      - '.github/workflows/rinlo2-live-vision.yml'
+
+jobs:
+  live-vision-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe Supabase Edge Function and Gemini
+        run: node tests/rinlo2-live-vision.cjs
