@@ -119,6 +119,16 @@ try {
   await page.locator('#homeRepeatCook').click();
   await page.getByRole('heading', { name: 'Курица с грибами и рисом', exact: true }).waitFor({ state: 'visible' });
   assert((await page.evaluate(() => window.RinloCook?.getServings?.())) === 4, 'home_repeat_servings_not_restored');
+  assert((await page.locator('#cookResultNote').textContent())?.includes('уже готовил'),
+    'home_repeat_should_restore_saved_recipe_snapshot');
+  await page.locator('#cookStartCooking').click();
+  const savedFirstStep = cookHistory?.cook?.steps?.[0];
+  assert(savedFirstStep?.title && savedFirstStep?.instruction, `home_repeat_saved_step_missing:${JSON.stringify(cookHistory?.cook?.steps)}`);
+  assert((await page.locator('#cookStepTitle').textContent())?.trim() === savedFirstStep.title,
+    `home_repeat_step_title_not_restored:${await page.locator('#cookStepTitle').textContent()}`);
+  assert((await page.locator('#cookStepText').textContent())?.includes(savedFirstStep.instruction),
+    `home_repeat_step_text_not_restored:${await page.locator('#cookStepText').textContent()}`);
+  await page.locator('[data-cook-step="cook"] [data-cook-back]').click();
   await page.locator('[data-cook-step="result"] [data-cook-back]').click();
   await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
   await page.locator('[data-cook-step="ingredients"] [data-cook-back]').click();
@@ -380,12 +390,22 @@ try {
     `home_zero_prompt_selected_wrong:${JSON.stringify(zeroPromptSelected)}`);
   assert(((await page.locator('#cookResultTitle').textContent()) || '').trim().length > 0, 'home_zero_prompt_result_missing');
   const timingSamples = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
-  assert(timingSamples.some((item) => item.source === 'home-zero-prompt' && Number(item.ms) >= 0),
-    `home_zero_prompt_timing_missing:${JSON.stringify(timingSamples)}`);
+  const zeroPromptTiming = timingSamples.find((item) => item.source === 'home-zero-prompt' && Number(item.ms) >= 0);
+  assert(zeroPromptTiming, `home_zero_prompt_timing_missing:${JSON.stringify(timingSamples)}`);
   await page.locator('[data-cook-step="result"] [data-cook-back]').click();
   await page.getByRole('heading', { name: 'Что есть из продуктов?', exact: true }).waitFor({ state: 'visible' });
   await page.locator('[data-cook-step="ingredients"] [data-cook-back]').click();
   await page.locator('#cookFlow').waitFor({ state: 'hidden' });
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.RinloCook?.version === 'v9-home-zero-prompt');
+  await page.getByRole('heading', { name: 'Что будем есть?', exact: true }).waitFor({ state: 'visible' });
+  const timingSamplesAfterReload = await page.evaluate(() => window.RinloCook?.getDecisionTimings?.() || []);
+  assert(timingSamplesAfterReload.some((item) =>
+    item.source === zeroPromptTiming.source
+    && item.at === zeroPromptTiming.at
+    && Number(item.ms) === Number(zeroPromptTiming.ms)),
+    `home_zero_prompt_timing_not_persisted:${JSON.stringify(timingSamplesAfterReload)}`);
 
   await page.locator('[data-nav="progress"]').last().click();
   await page.getByRole('heading', { name: 'Как ты выбираешь', exact: true }).waitFor({ state: 'visible' });
