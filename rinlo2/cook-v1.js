@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v10-home-decision-loop';
+  const VERSION = 'v11-decision-learning';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -161,10 +161,11 @@
       return {
         recent: Array.isArray(state.recent) ? state.recent : [],
         outcomes: Array.isArray(state.outcomes) ? state.outcomes : [],
-        timings: Array.isArray(state.timings) ? state.timings : []
+        timings: Array.isArray(state.timings) ? state.timings : [],
+        signals: Array.isArray(state.signals) ? state.signals : []
       };
     } catch {
-      return { recent: [], outcomes: [], timings: [] };
+      return { recent: [], outcomes: [], timings: [], signals: [] };
     }
   }
 
@@ -439,6 +440,8 @@
       startedWallAt: new Date().toISOString(),
       usedAlternative: false,
       refined: false,
+      refinement: '',
+      initialRecipe: '',
     };
     const success = await generateInstantCook('none', {
       button: $('#homeSuggestNow'),
@@ -458,14 +461,26 @@
       source: 'home-zero-prompt',
       ms: elapsed,
       recipe: String(activeRecipe.name || ''),
+      initialRecipe: String(zeroPromptDecision.initialRecipe || activeRecipe.name || ''),
       usedAlternative: Boolean(zeroPromptDecision.usedAlternative),
       refined: Boolean(zeroPromptDecision.refined),
+      refinement: String(zeroPromptDecision.refinement || ''),
       servings: selectedServings,
     };
     const state = readState();
     state.timings = Array.isArray(state.timings) ? state.timings : [];
     state.timings.unshift(sample);
     state.timings = state.timings.slice(0, 20);
+    state.signals = Array.isArray(state.signals) ? state.signals : [];
+    state.signals.unshift({
+      at: sample.at,
+      source: sample.source,
+      initialRecipe: sample.initialRecipe,
+      acceptedRecipe: sample.recipe,
+      usedAlternative: sample.usedAlternative,
+      refinement: sample.refinement,
+    });
+    state.signals = state.signals.slice(0, 40);
     writeState(state);
     zeroPromptDecision = null;
     return sample;
@@ -550,6 +565,32 @@
     const quickCount = timed.filter((decision) => Number(decision.cook?.duration || 0) <= 20).length;
     const quickMealPreference = timed.length >= 3 && quickCount >= 2 && quickCount / timed.length >= 0.6;
 
+    const decisionSignals = (readState().signals || [])
+      .filter((signal) => {
+        if (signal?.source !== 'home-zero-prompt') return false;
+        const time = new Date(signal.at || 0).getTime();
+        return Number.isFinite(time) && time >= cutoff;
+      })
+      .slice(0, 30);
+    const refinementCounts = {};
+    decisionSignals.forEach((signal) => {
+      const value = String(signal?.refinement || '');
+      if (['fast','satiety','light','use'].includes(value)) {
+        refinementCounts[value] = (refinementCounts[value] || 0) + 1;
+      }
+    });
+    const refinementEntry = Object.entries(refinementCounts).sort((a, b) => b[1] - a[1])[0] || null;
+    const dominantRefinement = refinementEntry
+      && decisionSignals.length >= 3
+      && refinementEntry[1] >= 2
+      && refinementEntry[1] / decisionSignals.length >= 0.5
+      ? refinementEntry[0]
+      : '';
+    const alternativeCount = decisionSignals.filter((signal) => signal?.usedAlternative === true).length;
+    const alternativeChoiceRate = decisionSignals.length >= 3
+      ? Math.round((alternativeCount / decisionSignals.length) * 100) / 100
+      : 0;
+
     const simplify = (decision) => ({
       name: String(decision.selected?.name || decision.original?.name || '').trim().slice(0, 120),
       ingredients: Array.isArray(decision.cook?.ingredients)
@@ -581,6 +622,9 @@
       preparedCount: decisions.length,
       dominantPriority,
       quickMealPreference,
+      decisionSignalCount: decisionSignals.length,
+      dominantRefinement,
+      alternativeChoiceRate,
       helpfulRecipes,
       notForMeRecipes,
     };
@@ -597,6 +641,18 @@
     }
     if (memory?.dominantPriority === 'fast' && (priority === 'none' || priority === 'fast')) {
       signals.push('В последних готовках часто повторялся приоритет «Быстро».');
+    }
+    const refinementLabels = {
+      fast: 'Быстрее',
+      satiety: 'Сытнее',
+      light: 'Полегче',
+      use: 'Использовать продукты',
+    };
+    if (priority === 'none' && memory?.dominantRefinement && refinementLabels[memory.dominantRefinement]) {
+      signals.push(`В последних быстрых решениях ты несколько раз выбирал «${refinementLabels[memory.dominantRefinement]}» после первого варианта.`);
+    }
+    if (Number(memory?.alternativeChoiceRate || 0) >= 0.67 && Number(memory?.decisionSignalCount || 0) >= 3) {
+      signals.push('В последних быстрых решениях ты часто менял первый вариант — стараюсь точнее попадать сразу.');
     }
 
     const disliked = Array.isArray(memory?.notForMeRecipes) ? memory.notForMeRecipes : [];
@@ -694,7 +750,7 @@
     const profile = window.Rinlo2Foundation?.getDecisionProfile?.() || {};
     const staples = getAvailableStaples();
     const cookMemory = profile.behaviorMemoryEnabled === false
-      ? { preparedCount: 0, dominantPriority: '', quickMealPreference: false, helpfulRecipes: [], notForMeRecipes: [] }
+      ? { preparedCount: 0, dominantPriority: '', quickMealPreference: false, decisionSignalCount: 0, dominantRefinement: '', alternativeChoiceRate: 0, helpfulRecipes: [], notForMeRecipes: [] }
       : buildCookMemory();
 
     const response = await fetch(`${base}/functions/v1/analyze-food`, {
@@ -933,7 +989,10 @@
       const plan = await requestCookPlan();
       renderResult(plan);
       showFlow('result');
-      if (zeroPromptDecision && source === 'refine') zeroPromptDecision.refined = true;
+      if (zeroPromptDecision && source === 'refine') {
+        zeroPromptDecision.refined = true;
+        zeroPromptDecision.refinement = priority;
+      }
       if (status) status.textContent = '';
       return true;
     } catch (error) {
@@ -953,6 +1012,9 @@
   function renderResult(plan = null) {
     recommendations = plan?.recipes?.length === 3 ? plan.recipes : buildRecommendations();
     activeRecipe = recommendations[0];
+    if (zeroPromptDecision && !zeroPromptDecision.initialRecipe) {
+      zeroPromptDecision.initialRecipe = String(activeRecipe?.name || '');
+    }
     activeCookMemory = plan?.memory || buildCookMemory();
     const title = $('#cookResultTitle');
     const duration = $('#cookResultDuration');
