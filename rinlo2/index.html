@@ -23,7 +23,34 @@
         <section class="rinlo-home-focus">
           <p class="eyebrow dark">RINLO · FOOD DECISIONS</p>
           <h1>Что будем есть?</h1>
-          <p class="home-focus-lead">Не надо придумывать промпт. Скажи, какая ситуация — Rinlo поможет решить, что приготовить или выбрать прямо сейчас.</p>
+          <p class="home-focus-lead">Не надо придумывать промпт. Rinlo может предложить конкретное блюдо сам — или помочь, если ты уже знаешь ситуацию.</p>
+
+          <button class="home-suggest-card" type="button" id="homeSuggestNow">
+            <span class="home-suggest-kicker">ZERO-PROMPT</span>
+            <span class="home-suggest-main">
+              <span class="home-suggest-icon" aria-hidden="true">✦</span>
+              <span>
+                <b>Предложи мне</b>
+                <small id="homeSuggestContext">Использую то, что обычно есть дома</small>
+              </span>
+            </span>
+            <span class="home-suggest-footer">
+              <small id="homeSuggestReadiness">Проверяю домашнюю базу…</small>
+              <strong aria-hidden="true">→</strong>
+            </span>
+            <span class="home-suggest-status" id="homeSuggestStatus" aria-live="polite"></span>
+          </button>
+
+          <article class="home-repeat-card" id="homeRepeatCard" hidden>
+            <div>
+              <small>УЖЕ СРАБОТАЛО</small>
+              <b id="homeRepeatTitle">—</b>
+              <span id="homeRepeatMeta">Ты готовил это и отметил 👍</span>
+            </div>
+            <button type="button" id="homeRepeatCook">Повторить →</button>
+          </article>
+
+          <div class="home-mode-divider"><span>или задай ситуацию</span></div>
 
           <button class="home-mode-card cook-mode-card" type="button" id="cookStart">
             <span class="home-mode-icon" aria-hidden="true">🍳</span>
