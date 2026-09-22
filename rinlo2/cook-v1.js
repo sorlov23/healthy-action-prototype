@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v9-home-zero-prompt';
+  const VERSION = 'v10-home-decision-loop';
   const STORAGE_KEY = 'rinlo2-cook-v1';
   const config = window.HEALTHY_ACTION_CONFIG || {};
   const auth = window.RinloSupabaseAuth;
@@ -153,6 +153,7 @@
   let activeCookDecisionCreatedAt = null;
   let activeCookMemory = null;
   let selectedServings = 2;
+  let zeroPromptDecision = null;
 
   function readState() {
     try {
@@ -433,25 +434,41 @@
     renderSelected();
     renderStaplesContext();
 
-    const startedAt = performance.now();
+    zeroPromptDecision = {
+      startedAt: performance.now(),
+      startedWallAt: new Date().toISOString(),
+      usedAlternative: false,
+      refined: false,
+    };
     const success = await generateInstantCook('none', {
       button: $('#homeSuggestNow'),
       status: $('#homeSuggestStatus'),
       source: 'home-zero-prompt',
     });
-    if (success) {
-      const elapsed = Math.max(0, Math.round(performance.now() - startedAt));
-      const state = readState();
-      state.timings = Array.isArray(state.timings) ? state.timings : [];
-      state.timings.unshift({
-        at: new Date().toISOString(),
-        source: 'home-zero-prompt',
-        ms: elapsed,
-      });
-      state.timings = state.timings.slice(0, 20);
-      writeState(state);
-    }
+    if (!success) zeroPromptDecision = null;
     return success;
+  }
+
+  function completeZeroPromptDecision() {
+    if (!zeroPromptDecision || !activeRecipe) return null;
+    const elapsed = Math.max(0, Math.round(performance.now() - zeroPromptDecision.startedAt));
+    const sample = {
+      at: new Date().toISOString(),
+      startedAt: zeroPromptDecision.startedWallAt,
+      source: 'home-zero-prompt',
+      ms: elapsed,
+      recipe: String(activeRecipe.name || ''),
+      usedAlternative: Boolean(zeroPromptDecision.usedAlternative),
+      refined: Boolean(zeroPromptDecision.refined),
+      servings: selectedServings,
+    };
+    const state = readState();
+    state.timings = Array.isArray(state.timings) ? state.timings : [];
+    state.timings.unshift(sample);
+    state.timings = state.timings.slice(0, 20);
+    writeState(state);
+    zeroPromptDecision = null;
+    return sample;
   }
 
   function repeatHelpfulCook() {
@@ -775,6 +792,7 @@
     activeCookDecisionCreatedAt = null;
     activeCookMemory = null;
     selectedServings = 2;
+    zeroPromptDecision = null;
     const text = $('#cookIngredientText');
     if (text) text.value = '';
     const outcomeQuestion = $('#cookOutcomeQuestion');
@@ -915,6 +933,7 @@
       const plan = await requestCookPlan();
       renderResult(plan);
       showFlow('result');
+      if (zeroPromptDecision && source === 'refine') zeroPromptDecision.refined = true;
       if (status) status.textContent = '';
       return true;
     } catch (error) {
@@ -942,6 +961,8 @@
     if (title) title.textContent = activeRecipe.name;
     if (duration) duration.textContent = activeRecipe.duration + ' минут';
     if (note) note.textContent = activeRecipe.note;
+    const startCooking = $('#cookStartCooking');
+    if (startCooking) startCooking.textContent = zeroPromptDecision ? 'Готовлю это →' : 'Готовим →';
     renderNutrition(activeRecipe);
     renderPortions(activeRecipe);
     renderCookMemory(activeRecipe);
@@ -975,6 +996,7 @@
   function selectRecipe(index) {
     activeRecipe = recommendations[index] || recommendations[0];
     if (!activeRecipe) return;
+    if (zeroPromptDecision && Number(index) > 0) zeroPromptDecision.usedAlternative = true;
     $('#cookResultTitle').textContent = activeRecipe.name;
     $('#cookResultDuration').textContent = activeRecipe.duration + ' минут';
     $('#cookResultNote').textContent = activeRecipe.note;
@@ -1222,6 +1244,7 @@
     });
 
     $('#cookStartCooking')?.addEventListener('click', () => {
+      completeZeroPromptDecision();
       stepIndex = 0;
       $('#cookActiveRecipe').textContent = activeRecipe?.name || 'Готовим';
       renderCookStep();
@@ -1302,6 +1325,8 @@
     getZeroPromptIngredients: () => getZeroPromptIngredients(),
     suggestFromHome,
     repeatHelpfulCook,
+    completeZeroPromptDecision,
+    getPendingZeroPromptDecision: () => zeroPromptDecision ? { ...zeroPromptDecision } : null,
     getDecisionTimings: () => {
       const state = readState();
       return Array.isArray(state.timings) ? state.timings.map((item) => ({ ...item })) : [];
