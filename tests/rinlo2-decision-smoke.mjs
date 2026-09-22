@@ -364,6 +364,7 @@ try {
     `cook_profile_staples_missing:${JSON.stringify(cookStaples)}`);
 
   await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.RinloCook?.version === 'v9-home-zero-prompt');
   const reloadedProfile = await page.evaluate(() => window.Rinlo2Foundation?.getDecisionProfile?.());
   assert(reloadedProfile?.goal === 'aware' && reloadedProfile?.currentWeight === 80 && reloadedProfile?.targetWeight === 72, `profile_persistence_failed:${JSON.stringify(reloadedProfile)}`);
   assert(reloadedProfile?.behaviorMemoryEnabled === true, `profile_behavior_memory_persistence_failed:${JSON.stringify(reloadedProfile)}`);
