@@ -3,83 +3,169 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#101827">
+  <meta name="theme-color" content="#111a2a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Fit74">
+  <meta name="format-detection" content="telephone=no">
   <link rel="icon" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="stylesheet" href="./v2.css?v=2">
   <title>Fit74</title>
-  <style>
-    :root{--bg:#f3f6f4;--card:#fff;--ink:#101827;--muted:#6d7787;--line:#e3e8e5;--mint:#68d5bb;--amber:#f4c761;--red:#ed776e;--shadow:0 12px 35px rgba(19,32,42,.08)}
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}body{padding:env(safe-area-inset-top) 0 calc(90px + env(safe-area-inset-bottom))}.hidden{display:none!important}.boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--ink);color:#fff;font-size:38px;font-weight:850;z-index:99}.auth-view{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-card{width:min(100%,420px);background:var(--card);border-radius:28px;padding:28px;box-shadow:var(--shadow)}.logo-mark{width:68px;height:68px;border-radius:22px;background:var(--ink);color:var(--mint);display:grid;place-items:center;font-size:26px;font-weight:900;margin-bottom:24px}.eyebrow{margin:0 0 5px;color:#7c8796;font-size:11px;font-weight:800;letter-spacing:1.5px}.auth-card h1,.topbar h1{margin:0;font-size:34px;letter-spacing:-1.3px}.muted{color:var(--muted);line-height:1.45}.micro{font-size:11px;color:#8c95a0;line-height:1.45}.center{text-align:center}label{display:block;font-size:12px;font-weight:750;color:#596474;margin-top:16px}input,textarea{width:100%;margin-top:7px;border:1px solid var(--line);background:#fafcfb;border-radius:14px;padding:14px;font:inherit;color:var(--ink);outline:none}button{font:inherit;color:inherit;border:0;cursor:pointer}.primary,.ghost,.danger-ghost{width:100%;border-radius:15px;padding:14px;font-weight:800;margin-top:14px}.primary{background:var(--ink);color:#fff}.ghost{background:#edf1ef}.danger-ghost{background:#fff0ef;color:#a33a34}.message{font-size:13px;line-height:1.4;min-height:20px}.app{max-width:680px;margin:0 auto;padding:18px 16px 24px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 2px 18px}.topbar h1{font-size:29px}.topbar .muted{margin:4px 0 0;font-size:13px}.sync-pill{white-space:nowrap;margin-top:4px;background:#e7eee9;color:#688071;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:750}.sync-pill.saving{background:#fff2cf;color:#8c6a18}.sync-pill.offline{background:#ffebe9;color:#a24a43}.screen{display:none}.screen.active{display:block}.hero-grid{display:grid;grid-template-columns:1fr 105px;gap:10px}.score-card,.mini-card,.card{background:var(--card);border:1px solid rgba(225,230,226,.9);box-shadow:var(--shadow)}.score-card{border-radius:23px;padding:14px;display:flex;align-items:center;gap:14px}.score-ring{--score:0;flex:0 0 76px;width:76px;height:76px;border-radius:50%;display:grid;place-content:center;text-align:center;background:radial-gradient(circle at center,#fff 57%,transparent 59%),conic-gradient(var(--mint) calc(var(--score)*10%),#e7ece9 0)}.score-ring span{font-size:26px;font-weight:900;line-height:1}.score-ring small{font-size:10px;color:var(--muted)}.score-card strong{font-size:17px}.score-card p{font-size:12px;margin:4px 0}.mini-card{border-radius:23px;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center}.mini-card span,.mini-card small{font-size:10px;color:var(--muted)}.mini-card strong{font-size:29px;line-height:1.1}.banner{margin-top:11px;background:#e4f8f1;border-radius:16px;padding:12px 14px;color:#326f60;font-size:13px;line-height:1.4}.card{border-radius:22px;margin-top:12px;padding:16px}.card-head,.screen-title{display:flex;align-items:center;justify-content:space-between}.card h2,.screen-title h2{margin:0;font-size:20px}.card-head span{font-size:10px;color:#84908b}.check-row{width:100%;display:grid;grid-template-columns:1fr auto 32px;align-items:center;gap:10px;text-align:left;background:transparent;border-top:1px solid var(--line);padding:14px 0}.check-row:first-of-type{margin-top:9px}.check-row span:first-child{display:flex;flex-direction:column;gap:3px}.check-row b,.nutrition-row b{font-size:14px}.check-row small,.nutrition-row small{font-size:11px;color:#8b949e}.points{font-size:11px;color:#9aa3aa}.toggle{width:30px;height:30px;border-radius:11px;background:#edf0ee;border:1px solid #dde3df;position:relative}.check-row.on .toggle{background:var(--mint);border-color:var(--mint)}.check-row.on .toggle:after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#143d34;font-weight:900}.nutrition-row{border-top:1px solid var(--line);padding:14px 0 4px}.nutrition-row>span{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}.segments{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.segments button,.mood button{background:#eef1ef;border-radius:11px;padding:9px 6px;font-size:11px;font-weight:750}.segments button.active[data-nutrition="0"]{background:#ffe3e0;color:#923c35}.segments button.active[data-nutrition="1"]{background:#fff0c8;color:#7f651f}.segments button.active[data-nutrition="2"]{background:#dff7ef;color:#2d6f60}.extras-card h2{font-size:17px}.optional{font-size:10px;color:#919aa3;font-weight:500}.two-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field-label{display:block;font-size:12px;font-weight:750;color:#596474;margin-top:16px}.mood{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:7px}.mood button{padding:14px 0}.mood button.active{background:var(--mint);color:#143d34}.finish-btn{width:100%;margin-top:14px;border-radius:18px;padding:17px;background:var(--ink);color:#fff;font-weight:850;font-size:15px;box-shadow:var(--shadow)}.minimum-note{text-align:center;color:#7c8792;font-size:11px;line-height:1.45;padding:0 12px}.screen-title{padding:7px 2px 10px}.screen-title h2{font-size:27px}.screen-title>strong{font-size:22px}.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:var(--card);border-radius:18px;padding:13px 10px;text-align:center;border:1px solid var(--line)}.stat span,.stat small{display:block;font-size:9px;color:var(--muted)}.stat b{font-size:25px}.calendar-card{padding:13px}.calendar-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}.cal-day{aspect-ratio:1;border-radius:7px;background:#e7ebe8;position:relative}.cal-day.good{background:#83ddc6}.cal-day.strong{background:#20312d}.cal-day.missed{background:#f1d1cf}.cal-day.today:after{content:'';position:absolute;inset:-2px;border:2px solid var(--amber);border-radius:9px}.history-list{margin-top:12px;display:grid;gap:7px}.history-item{background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}.history-item small{display:block;color:var(--muted);margin-top:2px}.history-score{font-weight:900}.install-card h3{margin:0 0 6px}.install-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(calc(100% - 24px),656px);display:grid;grid-template-columns:repeat(3,1fr);padding:6px;background:rgba(16,24,39,.94);backdrop-filter:blur(14px);border-radius:21px;z-index:20}.bottom-nav button{background:transparent;color:#93a09a;border-radius:16px;padding:8px 4px;font-size:10px;font-weight:700;display:flex;flex-direction:column;gap:2px;align-items:center}.bottom-nav button span{font-size:17px}.bottom-nav button.active{background:#fff;color:var(--ink)}.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(30px);bottom:110px;background:#101827;color:#fff;border-radius:14px;padding:11px 15px;font-size:12px;opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:calc(100% - 30px);text-align:center}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-    @media(max-width:380px){.app{padding-left:12px;padding-right:12px}.hero-grid{grid-template-columns:1fr 90px}.two-cols{grid-template-columns:1fr}.calendar-grid{gap:5px}}
-  </style>
 </head>
 <body>
 <div id="boot" class="boot">Fit74</div>
-<section id="authView" class="auth-view hidden"><div class="auth-card"><div class="logo-mark">74</div><p class="eyebrow">19.10 → 31.12</p><h1>Fit74</h1><p class="muted">Короткий ежедневный чек-ин. Данные хранятся в твоём личном облаке.</p><form id="authForm"><label>Email<input id="email" type="email" autocomplete="email" required></label><label>Пароль<input id="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Минимум 8 символов"></label><button class="primary" type="submit">Войти</button><button id="signupBtn" class="ghost" type="button">Создать аккаунт</button></form><p id="authMessage" class="message"></p><p class="micro">После входа сессия сохранится на iPhone.</p></div></section>
-<main id="appView" class="app hidden"><header class="topbar"><div><p class="eyebrow">FIT74</p><h1 id="heroTitle">День 1 из 74</h1><p id="heroDate" class="muted"></p></div><div id="syncPill" class="sync-pill">● облако</div></header>
-<section id="todayScreen" class="screen active"><div class="hero-grid"><div class="score-card"><div id="scoreRing" class="score-ring"><span id="scoreValue">0</span><small>/10</small></div><div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p></div></div><div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small>дня</small></div></div><div id="prestartBanner" class="banner hidden">Стартуем в понедельник, 19 октября. Можно заранее настроить привычки 👌</div>
-<section class="card checklist-card"><div class="card-head"><h2>Сегодня</h2><span id="autosaveText">автосохранение</span></div><button class="check-row" data-field="workout"><span><b>🏋️ Тренировка / восстановление</b><small>по плану</small></span><span class="points">+2</span><span class="toggle"></span></button><div class="nutrition-row"><span><b>🥗 Питание</b><small>как прошёл день?</small></span><div class="segments"><button data-nutrition="0">Мимо</button><button data-nutrition="1">Частично</button><button data-nutrition="2">В цель</button></div></div><button class="check-row" data-field="movement"><span><b>🚶 Движение</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="water"><span><b>💧 Вода</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="sleep"><span><b>🌙 Сон / режим</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="habit_1"><span><b id="habit1Label">Привычка 1</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="habit_2"><span><b id="habit2Label">Привычка 2</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><span class="points">+1</span><span class="toggle"></span></button></section>
-<section class="card extras-card"><h2>Пара цифр <span class="optional">необязательно</span></h2><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label></section><button id="finishDayBtn" class="finish-btn">Готово на сегодня</button><p class="minimum-note">5+ очков — день засчитан. После плохого дня ничего не отрабатываем, просто продолжаем.</p></section>
-<section id="historyScreen" class="screen"><div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>История</h2></div><strong id="completedStat">0/74</strong></div><div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div><div class="calendar-card card"><div id="calendarGrid" class="calendar-grid"></div></div><div id="historyList" class="history-list"></div></section>
-<section id="settingsScreen" class="screen"><div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Твои правила</h2></div></div><section class="card"><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label><button id="saveSettingsBtn" class="primary">Сохранить привычки</button></section><section class="card install-card"><h3>📱 Добавить как приложение</h3><p>Safari → Поделиться → На экран «Домой».</p></section><button id="logoutBtn" class="danger-ghost">Выйти</button><p id="accountEmail" class="micro center"></p></section>
-<nav class="bottom-nav"><button data-screen="today" class="active"><span>✓</span>Сегодня</button><button data-screen="history"><span>▦</span>История</button><button data-screen="settings"><span>⚙</span>Настройки</button></nav></main><div id="toast" class="toast"></div>
-<script>
-const API='https://dllanxwrezqqufgzucuc.supabase.co';
-const KEY='sb_publishable_RQHLHJfu2da4RllXAXyEIw_MBi-MoTU';
-const START='2026-10-19',END='2026-12-31',TOTAL=74;
-const defaults={habit_1_name:'10 минут без телефона утром',habit_2_name:'5 минут порядка / подготовка на завтра',habit_3_name:'Отметить трекер до сна'};
-const empty=()=>({workout:false,nutrition:0,movement:false,water:false,sleep:false,habit_1:false,habit_2:false,habit_3:false,weight_kg:null,mood:null,notes:''});
-let session=null,user=null,prefs={...defaults},entries=[],draft=empty(),selectedDate=START,saveTimer=null;
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const dateFromISO=iso=>{const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12)};
-const isoLocal=d=>String(d.getFullYear())+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-const todayISO=()=>isoLocal(new Date());const clamp=iso=>iso<START?START:iso>END?END:iso;
-const diff=(a,b)=>Math.round((dateFromISO(b)-dateFromISO(a))/86400000);
-const fmt=iso=>dateFromISO(iso).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
-const score=e=>(e.workout?2:0)+(Number(e.nutrition)||0)+(e.movement?1:0)+(e.water?1:0)+(e.sleep?1:0)+(e.habit_1?1:0)+(e.habit_2?1:0)+(e.habit_3?1:0);
-const show=(el,y=true)=>el.classList.toggle('hidden',!y);
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('show'),2200)}
-function sync(c,t){const p=$('#syncPill');p.className='sync-pill'+(c?' '+c:'');p.textContent=t}
-function saveSession(s){session=s;if(s)localStorage.setItem('fit74_session',JSON.stringify(s));else localStorage.removeItem('fit74_session')}
-function loadSession(){try{return JSON.parse(localStorage.getItem('fit74_session')||'null')}catch{return null}}
-async function authReq(path,body){const r=await fetch(API+'/auth/v1/'+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.msg||j.message||j.error_description||'Ошибка входа');return j}
-async function login(email,password){const j=await authReq('token?grant_type=password',{email,password});saveSession(j);return j}
-async function signup(email,password){const redirect=encodeURIComponent(location.origin+location.pathname);const r=await fetch(API+'/auth/v1/signup?redirect_to='+redirect,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.msg||j.message||'Ошибка регистрации');if(j.access_token)saveSession(j);return j}
-async function refresh(){if(!session?.refresh_token)return null;try{const j=await authReq('token?grant_type=refresh_token',{refresh_token:session.refresh_token});saveSession(j);return j}catch{saveSession(null);return null}}
-async function ensureSession(){session=loadSession();if(!session)return null;const exp=session.expires_at?session.expires_at*1000:0;if(exp&&Date.now()>exp-60000)await refresh();return session}
-async function db(path,opts={}){if(!session?.access_token)throw new Error('Нет сессии');let r=await fetch(API+'/rest/v1/'+path,{...opts,headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',...(opts.headers||{})}});if(r.status===401&&await refresh())r=await fetch(API+'/rest/v1/'+path,{...opts,headers:{apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',...(opts.headers||{})}});if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.message||'Ошибка облака')}if(r.status===204)return null;return r.json()}
-async function boot(){await ensureSession();$('#boot').remove();if(session?.user){user=session.user;await enter()}else showAuth()}
-function showAuth(){show($('#authView'));show($('#appView'),false)}
-async function enter(){show($('#authView'),false);show($('#appView'));$('#accountEmail').textContent=user.email||'';selectedDate=clamp(todayISO());await Promise.all([loadPrefs(),loadEntries()]);loadDraft();renderAll()}
-$('#authForm').addEventListener('submit',async e=>{e.preventDefault();const m=$('#authMessage');m.textContent='Входим…';try{const j=await login($('#email').value.trim(),$('#password').value);user=j.user;await enter();m.textContent=''}catch(err){m.textContent=err.message}});
-$('#signupBtn').addEventListener('click',async()=>{const email=$('#email').value.trim(),password=$('#password').value,m=$('#authMessage');if(!email||password.length<8){m.textContent='Нужен email и пароль минимум из 8 символов.';return}m.textContent='Создаём аккаунт…';try{const j=await signup(email,password);if(j.access_token){session=j;user=j.user;await enter()}else m.textContent='Аккаунт создан. Если придёт письмо — подтверди email, затем войди.'}catch(err){m.textContent=err.message}});
-async function loadPrefs(){const d=await db('fit74_preferences?select=*&user_id=eq.'+user.id);if(d?.[0])prefs=d[0];else{const arr=await db('fit74_preferences',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({user_id:user.id,...defaults,start_date:START,end_date:END})});prefs=arr?.[0]||prefs}}
-async function loadEntries(){entries=await db('fit74_daily_entries?select=*&entry_date=gte.'+START+'&entry_date=lte.'+END+'&order=entry_date.asc')||[]}
-function loadDraft(){const remote=entries.find(e=>e.entry_date===selectedDate);const local=JSON.parse(localStorage.getItem('fit74:'+user.id+':'+selectedDate)||'null');draft={...empty(),...(remote||{}),...(local?.dirty?local.data:{})}}
-function payload(){return{user_id:user.id,entry_date:selectedDate,workout:!!draft.workout,nutrition:Number(draft.nutrition)||0,movement:!!draft.movement,water:!!draft.water,sleep:!!draft.sleep,habit_1:!!draft.habit_1,habit_2:!!draft.habit_2,habit_3:!!draft.habit_3,weight_kg:draft.weight_kg?Number(draft.weight_kg):null,mood:draft.mood?Number(draft.mood):null,notes:(draft.notes||'').trim()||null}}
-function dirty(){localStorage.setItem('fit74:'+user.id+':'+selectedDate,JSON.stringify({dirty:true,data:payload()}));sync('saving','● сохраняю');$('#autosaveText').textContent='сохраняю…';clearTimeout(saveTimer);saveTimer=setTimeout(saveRemote,500)}
-async function saveRemote(){if(!navigator.onLine){sync('offline','● офлайн');return false}try{const arr=await db('fit74_daily_entries?on_conflict=user_id,entry_date',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(payload())});const d=arr?.[0];if(d){localStorage.removeItem('fit74:'+user.id+':'+selectedDate);const i=entries.findIndex(e=>e.entry_date===selectedDate);if(i>=0)entries[i]=d;else entries.push(d);draft={...draft,...d}}sync('','● облако');$('#autosaveText').textContent='сохранено';renderSummary();return true}catch(err){console.error(err);sync('offline','● локально');return false}}
-$$('.check-row').forEach(b=>b.onclick=()=>{draft[b.dataset.field]=!draft[b.dataset.field];renderToday();dirty()});
-$$('[data-nutrition]').forEach(b=>b.onclick=()=>{draft.nutrition=Number(b.dataset.nutrition);renderToday();dirty()});
-$$('[data-mood]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.mood);draft.mood=draft.mood===n?null:n;renderToday();dirty()});
-$('#weightInput').oninput=e=>{draft.weight_kg=e.target.value||null;dirty()};$('#notesInput').oninput=e=>{draft.notes=e.target.value;dirty()};
-$('#finishDayBtn').onclick=async()=>{const ok=await saveRemote(),s=score(draft);toast(!ok?'Сохранено локально — синхронизирую позже':s>=8?'🔥 '+s+'/10. Сильный день!':s>=5?'✅ '+s+'/10. День засчитан.':s+'/10. Завтра продолжаем.');renderAll()};
-$$('.bottom-nav button').forEach(b=>b.onclick=()=>switchScreen(b.dataset.screen));
-function switchScreen(n){$$('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.screen===n));$$('.screen').forEach(s=>s.classList.remove('active'));$('#'+n+'Screen').classList.add('active');if(n==='history')renderHistory();if(n==='settings')renderSettings();scrollTo({top:0,behavior:'smooth'})}
-$('#saveSettingsBtn').onclick=async()=>{const p={user_id:user.id,start_date:START,end_date:END,habit_1_name:$('#habit1Input').value.trim()||defaults.habit_1_name,habit_2_name:$('#habit2Input').value.trim()||defaults.habit_2_name,habit_3_name:$('#habit3Input').value.trim()||defaults.habit_3_name};try{const arr=await db('fit74_preferences?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(p)});prefs=arr?.[0]||p;renderLabels();toast('Привычки сохранены ✓')}catch{toast('Не удалось сохранить')}};
-$('#logoutBtn').onclick=()=>{saveSession(null);location.reload()};
-function renderAll(){renderHeader();renderLabels();renderToday();renderSummary();renderSettings()}
-function renderHeader(){const pre=todayISO()<START,d=selectedDate,day=diff(START,d)+1;$('#heroTitle').textContent=pre?'Старт в понедельник':'День '+day+' из '+TOTAL;$('#heroDate').textContent=fmt(d);$('#daysLeft').textContent=Math.max(1,diff(d,END)+1);show($('#prestartBanner'),pre)}
-function renderLabels(){$('#habit1Label').textContent=prefs.habit_1_name||defaults.habit_1_name;$('#habit2Label').textContent=prefs.habit_2_name||defaults.habit_2_name;$('#habit3Label').textContent=prefs.habit_3_name||defaults.habit_3_name}
-function renderToday(){$$('.check-row').forEach(b=>b.classList.toggle('on',!!draft[b.dataset.field]));$$('[data-nutrition]').forEach(b=>b.classList.toggle('active',Number(b.dataset.nutrition)===Number(draft.nutrition||0)));$$('[data-mood]').forEach(b=>b.classList.toggle('active',Number(b.dataset.mood)===Number(draft.mood)));if(document.activeElement!==$('#weightInput'))$('#weightInput').value=draft.weight_kg??'';if(document.activeElement!==$('#notesInput'))$('#notesInput').value=draft.notes??'';const s=score(draft);$('#scoreValue').textContent=s;$('#scoreRing').style.setProperty('--score',s);$('#scoreLabel').textContent=s>=8?'Сильный день 🔥':s>=5?'День засчитан ✅':s>0?'Уже не ноль':'Начинаем'}
-function streaks(){const map=new Map(entries.map(e=>[e.entry_date,Number(e.score??score(e))]));let best=0,run=0;for(let i=0;i<TOTAL;i++){const d=isoLocal(new Date(dateFromISO(START).getTime()+i*86400000));if((map.get(d)||0)>=5){run++;best=Math.max(best,run)}else run=0}let a=clamp(todayISO());if(!map.has(a)&&a>START)a=isoLocal(new Date(dateFromISO(a).getTime()-86400000));let cur=0;while(a>=START&&(map.get(a)||0)>=5){cur++;a=isoLocal(new Date(dateFromISO(a).getTime()-86400000))}return{cur,best}}
-function renderSummary(){const{cur,best}=streaks(),good=entries.filter(e=>Number(e.score)>=5).length,strong=entries.filter(e=>Number(e.score)>=8).length;$('#streakText').textContent='Серия: '+cur+' дней';$('#currentStreak').textContent=cur;$('#bestStreak').textContent=best;$('#strongDays').textContent=strong;$('#completedStat').textContent=good+'/'+TOTAL}
-function renderHistory(){renderSummary();const map=new Map(entries.map(e=>[e.entry_date,e])),g=$('#calendarGrid');g.innerHTML='';for(let i=0;i<TOTAL;i++){const iso=isoLocal(new Date(dateFromISO(START).getTime()+i*86400000)),e=map.get(iso),s=Number(e?.score||0),c=document.createElement('div');c.className='cal-day'+(s>=8?' strong':s>=5?' good':e?' missed':'')+(iso===todayISO()?' today':'');g.appendChild(c)}const l=$('#historyList');l.innerHTML='';[...entries].sort((a,b)=>b.entry_date.localeCompare(a.entry_date)).forEach(e=>{const s=Number(e.score||0),i=document.createElement('div');i.className='history-item';i.innerHTML='<div><b>'+fmt(e.entry_date)+'</b><small>'+(s>=8?'Сильный день 🔥':s>=5?'День засчитан ✅':'Ниже минимума')+'</small></div><div class="history-score">'+s+'/10</div>';l.appendChild(i)});if(!entries.length)l.innerHTML='<div class="history-item"><div><b>Пока пусто</b><small>Первая запись появится после старта.</small></div></div>'}
-function renderSettings(){$('#habit1Input').value=prefs.habit_1_name||defaults.habit_1_name;$('#habit2Input').value=prefs.habit_2_name||defaults.habit_2_name;$('#habit3Input').value=prefs.habit_3_name||defaults.habit_3_name}
-window.addEventListener('online',()=>{if(user)saveRemote()});window.addEventListener('offline',()=>sync('offline','● офлайн'));
-boot().catch(e=>{console.error(e);const b=$('#boot');if(b)b.textContent='Ошибка загрузки'});
-</script>
+
+<section id="authView" class="auth-view hidden">
+  <div class="auth-card">
+    <div class="logo-mark">74</div>
+    <p class="eyebrow">19.10 → 31.12</p>
+    <h1>Fit74</h1>
+    <p class="muted">Короткий ежедневный чек-ин. Без бухгалтерии, без чувства вины — просто держим курс.</p>
+    <form id="authForm">
+      <label>Email<input id="email" type="email" autocomplete="email" required></label>
+      <label>Пароль<input id="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Минимум 8 символов"></label>
+      <button class="primary" type="submit">Войти</button>
+      <button id="signupBtn" class="ghost" type="button">Создать аккаунт</button>
+    </form>
+    <p id="authMessage" class="message"></p>
+    <p class="micro">После входа сессия сохранится на этом устройстве.</p>
+  </div>
+</section>
+
+<main id="appView" class="app hidden">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">FIT74</p>
+      <h1 id="heroTitle">Старт в понедельник</h1>
+      <p id="heroDate" class="muted"></p>
+    </div>
+    <div id="syncPill" class="sync-pill">✓ облако</div>
+  </header>
+
+  <section id="todayScreen" class="screen active">
+    <div class="hero-grid">
+      <div class="score-card" id="scoreCard">
+        <div id="scoreRing" class="score-ring"><span id="scoreValue">0</span><small>/10</small></div>
+        <div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p></div>
+      </div>
+      <div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small>дня</small></div>
+    </div>
+
+    <div id="prestartBanner" class="banner hidden">Стартуем в понедельник, 19 октября. Можно заранее настроить привычки 👌</div>
+    <button id="backTodayBtn" class="back-today hidden">↩ Вернуться к сегодняшнему дню</button>
+
+    <button id="quickCheckinBtn" class="quick-launch"><span>⚡</span> Быстрый чек-ин</button>
+
+    <section class="card goals-card">
+      <div class="card-head"><h2>Эта неделя</h2><span id="weekStability" class="saved-mark">0% стабильности</span></div>
+      <div class="goal-row"><span class="goal-label">🏋️ Тренировки</span><span id="goalWorkoutCount" class="goal-count">0/2</span><div class="progress-track"><div id="goalWorkoutBar" class="progress-fill"></div></div></div>
+      <div class="goal-row"><span class="goal-label">🥗 Питание в цель</span><span id="goalNutritionCount" class="goal-count">0/5</span><div class="progress-track"><div id="goalNutritionBar" class="progress-fill"></div></div></div>
+      <div class="goal-row"><span class="goal-label">💧 Вода</span><span id="goalWaterCount" class="goal-count">0/6</span><div class="progress-track"><div id="goalWaterBar" class="progress-fill"></div></div></div>
+      <p id="weekNote" class="week-note">Неделя ещё впереди — без форсажа.</p>
+    </section>
+
+    <section class="card checklist-card">
+      <div class="card-head"><h2>Сегодня</h2><span id="autosaveText" class="saved-mark">✓ сохранено</span></div>
+      <button class="check-row" data-field="workout"><span><b>🏋️ Тренировка / восстановление</b><small>по плану</small></span><span class="points">+2</span><span class="toggle"></span></button>
+      <div class="nutrition-row"><span><b>🥗 Питание</b><small>как прошёл день?</small></span><div class="segments"><button data-nutrition="0">Мимо</button><button data-nutrition="1">Частично</button><button data-nutrition="2">В цель</button></div></div>
+      <button class="check-row" data-field="movement"><span><b>🚶 Движение</b><small>минимум дня</small></span><span class="points">+1</span><span class="toggle"></span></button>
+      <button class="check-row" data-field="water"><span><b>💧 Вода</b></span><span class="points">+1</span><span class="toggle"></span></button>
+      <button class="check-row" data-field="sleep"><span><b>🌙 Сон / режим</b></span><span class="points">+1</span><span class="toggle"></span></button>
+      <button class="check-row" data-field="habit_1"><span><b id="habit1Label">Привычка 1</b></span><span class="points">+1</span><span class="toggle"></span></button>
+      <button class="check-row" data-field="habit_2"><span><b id="habit2Label">Привычка 2</b></span><span class="points">+1</span><span class="toggle"></span></button>
+      <button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    </section>
+
+    <details class="card extras-card">
+      <summary><span>Пара цифр <span class="optional">необязательно</span></span><span>＋</span></summary>
+      <div class="extras-inner">
+        <div class="two-cols">
+          <label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="—"></label>
+          <div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div>
+        </div>
+        <label>Заметка<textarea id="notesInput" rows="2" placeholder="Одной фразы достаточно"></textarea></label>
+      </div>
+    </details>
+
+    <button id="finishDayBtn" class="finish-btn">Готово на сегодня</button>
+    <p class="minimum-note">5+ очков — день засчитан. После плохого дня ничего не отрабатываем, просто продолжаем.</p>
+  </section>
+
+  <section id="historyScreen" class="screen">
+    <div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>История</h2></div><strong id="completedStat">0/74</strong></div>
+    <div class="stats-grid">
+      <div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div>
+      <div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div>
+      <div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div>
+    </div>
+
+    <section class="card week-summary">
+      <div class="card-head"><h2>Итог недели</h2><span id="weekRange" class="micro"></span></div>
+      <div class="week-summary-grid">
+        <div class="week-kpi"><b id="weekGoodDays">0</b><span>дней 5+</span></div>
+        <div class="week-kpi"><b id="weekAvgScore">0.0</b><span>средний балл</span></div>
+        <div class="week-kpi"><b id="weekMood">—</b><span>самочувствие</span></div>
+      </div>
+      <p id="weekInsight" class="insight">После старта здесь появится короткий разбор недели.</p>
+    </section>
+
+    <section class="card calendar-card">
+      <div class="card-head"><h2>74 дня</h2><span class="saved-mark">тапни по дню</span></div>
+      <div class="weekday-row"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
+      <div id="calendarGrid" class="calendar-grid"></div>
+      <div class="calendar-legend"><span><i class="legend-dot" style="background:#9ae2cf"></i>5–7</span><span><i class="legend-dot" style="background:#1f332e"></i>8–10</span><span><i class="legend-dot" style="background:#f2e8e2"></i>пропуск</span></div>
+    </section>
+
+    <section class="card milestone-card">
+      <p class="eyebrow">СЛЕДУЮЩИЙ РУБЕЖ</p>
+      <div id="milestoneNumber" class="milestone-number">7 дней</div>
+      <p id="milestoneText" class="muted">Первый маленький рубеж уже близко.</p>
+      <div class="milestone-track"><div id="milestoneBar" class="milestone-fill" style="width:0%"></div></div>
+    </section>
+
+    <div id="historyList" class="history-list"></div>
+  </section>
+
+  <section id="settingsScreen" class="screen">
+    <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Твои правила</h2></div></div>
+    <section class="card settings-card">
+      <p class="muted">Названия привычек и недельные ориентиры можно менять. Это ориентиры, не штрафы.</p>
+      <label>Привычка 1<input id="habit1Input" maxlength="80"></label>
+      <label>Привычка 2<input id="habit2Input" maxlength="80"></label>
+      <label>Привычка 3<input id="habit3Input" maxlength="80"></label>
+      <div class="goal-inputs">
+        <label>Тренировок / нед.<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label>
+        <label>Питание / нед.<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label>
+        <label>Вода / нед.<input id="weeklyWaterGoal" type="number" min="0" max="7"></label>
+      </div>
+      <button id="saveSettingsBtn" class="primary">Сохранить настройки</button>
+    </section>
+    <section class="card install-card"><h3>📱 Как приложение</h3><p>Открой Fit74 в Safari → <b>Поделиться</b> → <b>На экран «Домой»</b>. Он будет открываться отдельной иконкой.</p></section>
+    <button id="logoutBtn" class="danger-ghost">Выйти из аккаунта</button>
+    <p id="accountEmail" class="micro center"></p>
+  </section>
+
+  <nav class="bottom-nav">
+    <button data-screen="today" class="active"><span>✓</span>Сегодня</button>
+    <button data-screen="history"><span>▦</span>История</button>
+    <button data-screen="settings"><span>⚙</span>Настройки</button>
+  </nav>
+</main>
+
+<div id="quickModal" class="modal-wrap" aria-hidden="true">
+  <div class="quick-sheet">
+    <div class="quick-top"><span id="quickCounter">1 из 8</span><button id="quickClose" class="close-btn" aria-label="Закрыть">×</button></div>
+    <div class="quick-progress"><div id="quickProgress"></div></div>
+    <div id="quickEmoji" class="quick-emoji">🏋️</div>
+    <h2 id="quickTitle">Тренировка?</h2>
+    <p id="quickSubtitle">По плану или восстановление — засчитываем оба варианта.</p>
+    <div id="quickOptions" class="quick-options two"></div>
+    <button id="quickBack" class="quick-back">← Назад</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"><span id="toastText"></span><button id="toastAction" class="hidden">Отменить</button></div>
+<script src="./v2.js?v=2" defer></script>
 </body>
 </html>
