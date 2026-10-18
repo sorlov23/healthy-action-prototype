@@ -70,7 +70,77 @@
   function closePlayer(confirmClose=false){if(confirmClose&&active&&!active.completed){if(!window.confirm('Выйти из тренировки? Прогресс подходов сохранится.'))return}stopRest();stopPhaseTimer();q('#workoutPlayer')?.classList.remove('open');q('#workoutPlayer')?.setAttribute('aria-hidden','true');document.body.classList.remove('workout-lock');active=null;renderWorkoutUI()}
   function stepsForActive(){if(!active)return[];const w=active.w,short=active.short,steps=[],warm=short?w.warmup.slice(0,Math.min(2,w.warmup.length)):w.warmup;warm.forEach((x,i)=>steps.push({type:'simple',section:'Разминка',id:'warm_'+i,name:x[0],target:x[1],tip:x[2]}));w.exercises.forEach(ex=>steps.push({type:'exercise',section:'Основная часть',exercise:{...ex,sets:short?Math.min(2,ex.sets):ex.sets}}));if(w.finisher){const sec=short?Math.min(600,w.finisher.seconds||600):w.finisher.seconds;steps.push({type:'timer',section:w.kind==='mixed'?'Интервалы':'Кардио',id:'finisher',name:w.finisher.name,target:short?'10 мин':w.finisher.target,seconds:sec,tip:w.finisher.tip})}const cool=short?w.cooldown.slice(0,Math.min(1,w.cooldown.length)):w.cooldown;cool.forEach((x,i)=>steps.push({type:'simple',section:'Заминка',id:'cool_'+i,name:x[0],target:x[1],tip:x[2]}));return steps}
   function renderPlayer(){if(!active)return;const steps=stepsForActive();if(!steps.length)return;active.progress.step=Math.max(0,Math.min(active.progress.step,steps.length-1));const idx=active.progress.step,step=steps[idx],pct=Math.round(idx/Math.max(1,steps.length)*100);q('#playerKicker').textContent=`${step.section} · ${idx+1}/${steps.length}`;q('#playerWorkoutTitle').textContent=active.w.title+(active.short?' · короткая':'');q('#playerProgress').style.width=pct+'%';q('#toggleShortMode').textContent=active.short?'полная':'15–20 мин';q('#toggleShortMode').classList.toggle('hidden',!['strength','mixed'].includes(active.w.kind));const body=q('#playerBody');if(step.type==='exercise')body.innerHTML=exerciseStepHTML(step.exercise);else if(step.type==='timer')body.innerHTML=timerStepHTML(step);else body.innerHTML=simpleStepHTML(step);q('#playerPrev').disabled=idx===0;q('#playerNext').textContent=idx===steps.length-1?'Завершить ✓':'Дальше →';bindStep(step);saveProgressDebounced()}
-  function exerciseStepHTML(ex){const done=active.progress.sets[ex.id]||[];return `<div class="player-section-label">${esc(active.w.emoji)} ${esc(active.w.subtitle)}</div><div class="exercise-hero"><div class="exercise-number">${done.length}/${ex.sets}</div><div><h3>${esc(ex.name)}</h3><p class="exercise-target">${ex.sets} подхода · ${esc(ex.reps)}</p></div></div><p class="exercise-tip">${esc(ex.tip)}</p><div class="set-buttons">${Array.from({length:ex.sets},(_,i)=>`<button data-set="${i+1}" class="${done.includes(i+1)?'done':''}"><span>${done.includes(i+1)?'✓':i+1}</span><small>подход</small></button>`).join('')}</div><details class="technique"><summary>Как делать · техника</summary><ol>${(ex.cues||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>${ex.rest?`<p class="rest-note">Отдых между подходами: ${ex.rest} сек</p>`:''}`}
+
+  // FIT74_INLINE_TECH_V1 — visual technique is rendered inside workout.js itself.
+  function inlineTechKind(ex){
+    const id=ex?.id||'';
+    if(/chair_squat|mix_squat/.test(id))return 'squat';
+    if(/pushup|mix_push/.test(id))return 'pushup';
+    if(/bent_row|mix_row|one_arm_row/.test(id))return 'row';
+    if(/oh_press/.test(id))return 'press';
+    if(/plank|mix_plank/.test(id))return 'plank';
+    if(/reverse_lunge/.test(id))return 'lunge';
+    if(/rdl|mix_rdl/.test(id))return 'rdl';
+    if(/crunch/.test(id))return 'crunch';
+    if(/side_plank/.test(id))return 'sideplank';
+    if(/glute_bridge/.test(id))return 'bridge';
+    if(/frog_pump/.test(id))return 'frog';
+    if(/donkey_kick/.test(id))return 'donkey';
+    if(/fire_hydrant/.test(id))return 'hydrant';
+    if(/side_abduction/.test(id))return 'abduction';
+    return '';
+  }
+
+  function inlineTechSVG(ex){
+    const k=inlineTechKind(ex);if(!k)return '';
+    const line=(a,b,c,d)=>`<path d="M${a} ${b} L${c} ${d}" stroke="#102033" stroke-width="5" stroke-linecap="round"/>`;
+    const head=(x,y)=>`<circle cx="${x}" cy="${y}" r="10" fill="#102033"/>`;
+    const arrow=(a,b,c,d)=>`<path d="M${a} ${b} Q${(a+c)/2} ${Math.min(b,d)-18} ${c} ${d}" fill="none" stroke="#59cdb4" stroke-width="4" stroke-linecap="round"/><path d="M${c-7} ${d-3} L${c} ${d} L${c-3} ${d-7}" fill="none" stroke="#59cdb4" stroke-width="4" stroke-linecap="round"/>`;
+    let A='',B='';
+
+    if(k==='squat'){
+      A=`${head(78,50)}${line(78,61,78,101)}${line(78,101,64,143)}${line(78,101,95,143)}<rect x="120" y="96" width="30" height="38" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>`;
+      B=`${head(246,60)}${line(242,71,230,100)}${line(230,100,214,117)}${line(214,117,214,145)}${line(230,100,260,117)}${line(260,117,278,145)}<rect x="304" y="107" width="30" height="29" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>${arrow(294,70,278,106)}`;
+    }else if(k==='lunge'){
+      A=`${head(80,50)}${line(80,61,80,102)}${line(80,102,67,145)}${line(80,102,96,145)}`;
+      B=`${head(252,56)}${line(249,67,243,102)}${line(243,102,221,120)}${line(221,120,218,145)}${line(243,102,289,120)}${line(289,120,315,145)}${arrow(309,62,298,104)}`;
+    }else if(k==='rdl'){
+      A=`${head(80,50)}${line(80,61,80,103)}${line(80,103,68,145)}${line(80,103,94,145)}${line(80,78,66,113)}${line(80,78,98,113)}`;
+      B=`${head(226,64)}${line(233,73,271,93)}${line(271,93,260,145)}${line(271,93,288,145)}${line(248,82,238,123)}${line(258,85,260,125)}${arrow(310,64,289,91)}`;
+    }else if(k==='pushup'){
+      A=`<rect x="26" y="104" width="38" height="37" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>${head(91,76)}${line(83,84,115,95)}${line(115,95,148,111)}${line(83,85,64,109)}${line(64,109,60,141)}${line(115,95,143,141)}`;
+      B=`<rect x="194" y="104" width="38" height="37" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>${head(268,94)}${line(260,99,295,102)}${line(295,102,329,114)}${line(260,100,229,116)}${line(229,116,226,141)}${line(295,102,325,141)}${arrow(276,63,268,88)}`;
+    }else if(k==='row'){
+      A=`${head(71,58)}${line(66,70,95,94)}${line(95,94,115,134)}${line(95,94,75,134)}${line(80,82,66,119)}${line(86,86,99,121)}`;
+      B=`${head(249,58)}${line(244,70,273,94)}${line(273,94,294,134)}${line(273,94,253,134)}${line(257,82,239,93)}${line(239,93,251,105)}${line(264,86,285,92)}${line(285,92,276,105)}${arrow(305,123,286,95)}`;
+    }else if(k==='press'){
+      A=`${head(82,51)}${line(82,62,82,105)}${line(82,76,63,83)}${line(63,83,63,62)}${line(82,76,103,83)}${line(103,83,103,62)}${line(82,105,71,145)}${line(82,105,96,145)}`;
+      B=`${head(260,58)}${line(260,69,260,108)}${line(260,80,240,54)}${line(240,54,240,34)}${line(260,80,280,54)}${line(280,54,280,34)}${line(260,108,248,145)}${line(260,108,273,145)}${arrow(315,98,303,48)}`;
+    }else if(k==='plank'||k==='sideplank'){
+      A=`${head(48,88)}${line(58,93,104,105)}${line(104,105,150,121)}${line(64,96,57,128)}${line(104,105,140,145)}`;
+      B=`${head(226,84)}${line(236,88,278,116)}${line(278,116,330,106)}${line(242,93,232,129)}${line(278,116,323,145)}${arrow(286,75,276,108)}`;
+    }else if(k==='bridge'||k==='frog'){
+      A=`${head(42,120)}${line(52,123,90,131)}${line(90,131,122,113)}${line(122,113,147,141)}`;
+      B=`${head(222,120)}${line(232,123,267,109)}${line(267,109,301,92)}${line(301,92,328,141)}${arrow(279,134,289,102)}`;
+    }else if(k==='donkey'){
+      A=`${head(48,77)}${line(58,83,96,94)}${line(96,94,129,105)}${line(66,86,61,128)}${line(107,98,107,129)}${line(107,129,92,142)}${line(129,105,130,134)}`;
+      B=`${head(227,77)}${line(237,83,274,94)}${line(274,94,299,105)}${line(245,86,240,128)}${line(285,98,284,128)}${line(284,128,270,142)}${line(299,105,318,89)}${line(318,89,326,70)}${arrow(316,126,325,83)}`;
+    }else if(k==='hydrant'){
+      A=`<rect x="50" y="70" width="60" height="46" rx="18" fill="#e8f6f2" stroke="#102033" stroke-width="3"/>${head(80,53)}${line(57,80,34,62)}${line(103,80,126,62)}${line(57,108,42,137)}${line(103,108,119,137)}`;
+      B=`<rect x="230" y="70" width="60" height="46" rx="18" fill="#e8f6f2" stroke="#102033" stroke-width="3"/>${head(260,53)}${line(237,80,214,62)}${line(283,80,306,62)}${line(237,108,222,137)}${line(283,108,319,108)}${line(319,108,334,133)}${arrow(288,142,329,112)}`;
+    }else if(k==='abduction'){
+      A=`${head(42,119)}${line(52,122,99,127)}${line(99,127,145,138)}${line(99,127,142,126)}`;
+      B=`${head(223,119)}${line(233,122,279,127)}${line(279,127,326,139)}${line(279,127,319,89)}${arrow(305,119,319,95)}`;
+    }else if(k==='crunch'){
+      A=`${head(49,120)}${line(59,123,104,130)}${line(104,130,128,111)}${line(128,111,147,141)}`;
+      B=`${head(235,94)}${line(245,100,280,122)}${line(280,122,308,111)}${line(308,111,330,141)}${arrow(231,128,240,103)}`;
+    }
+
+    const cue={squat:'Таз назад · колени по линии носков',lunge:'Длинный шаг назад · передняя стопа на полу',rdl:'Таз назад · спина нейтральная',pushup:'Корпус одной линией · грудь к опоре',row:'Локти назад · без рывка',press:'Жим вверх · без прогиба поясницы',plank:'Корпус одной линией',sideplank:'Таз не проваливать',bridge:'Подъём ягодицами, не поясницей',frog:'Стопы вместе · колени наружу',donkey:'Пятка вверх · таз ровный',hydrant:'Колено В СТОРОНУ · таз ровный',abduction:'Носок вперёд · таз не заваливать',crunch:'Лопатки вверх · шея расслаблена'}[k]||'';
+    return `<section data-inline-tech="${k}" style="margin:16px 0;padding:14px;background:#fff;border:1px solid #dfe8e5;border-radius:22px"><div style="font-size:12px;font-weight:900;letter-spacing:1.2px;color:#758681;margin-bottom:9px">ВИЗУАЛЬНАЯ ТЕХНИКА</div><svg viewBox="0 0 360 174" width="100%" role="img" aria-label="Схема техники ${esc(ex.name)}" style="display:block"><rect width="360" height="174" rx="22" fill="#f7faf9"/><rect x="8" y="10" width="166" height="154" rx="18" fill="#fff" stroke="#e0e9e6"/><rect x="186" y="10" width="166" height="154" rx="18" fill="#fff" stroke="#e0e9e6"/><text x="22" y="25" font-size="12" font-weight="800" fill="#7c8d8a">СТАРТ</text><text x="200" y="25" font-size="12" font-weight="800" fill="#7c8d8a">ДВИЖЕНИЕ</text><path d="M18 151 H342" stroke="#d9e4e1" stroke-width="3" stroke-linecap="round"/>${A}${B}</svg><div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:#eaf8f4;color:#315f55;font-weight:750;font-size:13px;line-height:1.35">${cue}</div></section>`;
+  }
+
+  function exerciseStepHTML(ex){const done=active.progress.sets[ex.id]||[];return `<div class="player-section-label">${esc(active.w.emoji)} ${esc(active.w.subtitle)}</div><div class="exercise-hero"><div class="exercise-number">${done.length}/${ex.sets}</div><div><h3>${esc(ex.name)}</h3><p class="exercise-target">${ex.sets} подхода · ${esc(ex.reps)}</p></div></div><p class="exercise-tip">${esc(ex.tip)}</p>${inlineTechSVG(ex)}<div class="set-buttons">${Array.from({length:ex.sets},(_,i)=>`<button data-set="${i+1}" class="${done.includes(i+1)?'done':''}"><span>${done.includes(i+1)?'✓':i+1}</span><small>подход</small></button>`).join('')}</div><details class="technique"><summary>Как делать · техника</summary><ol>${(ex.cues||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>${ex.rest?`<p class="rest-note">Отдых между подходами: ${ex.rest} сек</p>`:''}`}
   function simpleStepHTML(s){const done=!!active.progress.doneSimple[s.id];return `<div class="simple-step"><div class="simple-icon">${s.section==='Разминка'?'🔥':'🧘'}</div><p class="eyebrow">${esc(s.section)}</p><h3>${esc(s.name)}</h3><div class="simple-target">${esc(s.target)}</div><p class="exercise-tip">${esc(s.tip||'')}</p><button id="simpleDone" class="workout-primary ${done?'done':''}">${done?'✓ Готово':'Отметить выполненным'}</button></div>`}
   function timerStepHTML(s){const saved=Number(active.progress.timerRemaining?.[s.id]),remain=Number.isFinite(saved)&&saved>0?saved:s.seconds;return `<div class="simple-step timer-step"><div class="simple-icon">⏱</div><p class="eyebrow">${esc(s.section)}</p><h3>${esc(s.name)}</h3><div id="phaseTimerValue" class="phase-timer-value" data-seconds="${remain}">${clock(remain)}</div><p class="simple-target">${esc(s.target)}</p><p class="exercise-tip">${esc(s.tip||'')}</p><button id="phaseTimerBtn" class="workout-primary">Старт таймера</button><button id="phaseTimerDone" class="workout-secondary">Готово без таймера</button></div>`}
   function bindStep(step){if(step.type==='exercise')qa('[data-set]',q('#playerBody')).forEach(b=>b.onclick=()=>toggleSet(step.exercise,Number(b.dataset.set)));if(step.type==='simple')q('#simpleDone')?.addEventListener('click',()=>{active.progress.doneSimple[step.id]=!active.progress.doneSimple[step.id];saveProgressDebounced();renderPlayer()});if(step.type==='timer'){q('#phaseTimerBtn')?.addEventListener('click',()=>startPhaseTimer(step));q('#phaseTimerDone')?.addEventListener('click',()=>{active.progress.doneSimple[step.id]=true;saveProgressDebounced();nextStep()})}}
