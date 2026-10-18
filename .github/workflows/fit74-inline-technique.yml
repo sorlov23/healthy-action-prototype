@@ -1,0 +1,35 @@
+name: Fit74 inline technique patch
+
+on:
+  push:
+    branches:
+      - fit74-host
+    paths:
+      - 'scripts/patch_fit74_inline_technique.py'
+      - '.github/workflows/fit74-inline-technique.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fit74-host
+      - name: Patch workout.js
+        run: python3 scripts/patch_fit74_inline_technique.py
+      - name: Syntax check
+        run: node --check fit74/workout.js
+      - name: Commit and push
+        run: |
+          if git diff --quiet -- fit74/workout.js; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fit74/workout.js
+          git commit -m "Embed technique SVG in workout renderer"
+          git push origin HEAD:fit74-host
