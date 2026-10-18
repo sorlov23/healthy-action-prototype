@@ -1,88 +1,19 @@
-const CACHE='fit74-v15-local-technique-cards';
-const ASSETS=[
-  './',
-  './v3.css?v=3','./v3-hotfix.css?v=1','./v3.js?v=3',
-  './workout.css?v=4','./workout.js?v=4',
-  './shift-schedule.css?v=1','./shift-schedule.js?v=1',
-  './visuals-v4.css?v=1','./visuals-v4.js?v=1','./visual-assets-v5.js?v=2',
-  './assets/technique/warmup-chair-squat.webp',
-  './assets/technique/strength-b-incline-pushup-chair.webp',
-  './assets/technique/strength-a-one-arm-row-chair.webp',
-  './assets/technique/core-side-plank-knee.webp',
-  './assets/technique/glute-bridge.webp',
-  './assets/technique/core-bird-dog.webp',
-  './assets/technique/warmup-shoulder-circles.webp',
-  './assets/technique/warmup-hip-circles.webp',
-  './assets/technique/warmup-cat-cow.webp',
-  './manifest.webmanifest','./icon.svg'
-];
-
-const withFit74Html=async response=>{
-  if(!response||!response.ok)return response;
-  let text=await response.clone().text();
-  text=text
-    .replaceAll('./technique.css?v=2','./technique.css?v=3')
-    .replaceAll('./technique.js?v=2','./technique.js?v=3');
-  if(text.includes('visual-assets-v5.js?v=1')){
-    text=text.replaceAll('visual-assets-v5.js?v=1','visual-assets-v5.js?v=2');
-  }else if(!text.includes('visual-assets-v5.js')){
-    text=text.replace(
-      '<script src="./visuals-v4.js?v=1"></script>',
-      '<script src="./visuals-v4.js?v=1"></script>\n<script src="./visual-assets-v5.js?v=2"></script>'
-    );
-  }
-  const headers=new Headers(response.headers);
-  headers.set('content-type','text/html; charset=utf-8');
-  headers.set('cache-control','no-store');
-  return new Response(text,{status:response.status,statusText:response.statusText,headers});
-};
-
-self.addEventListener('install',e=>e.waitUntil(
-  caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
-));
-
-self.addEventListener('activate',e=>e.waitUntil(
-  caches.keys()
-    .then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
-    .then(()=>self.clients.claim())
-));
-
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
-  const url=new URL(e.request.url);
-
-  if(e.request.mode==='navigate'){
-    e.respondWith(
-      fetch(e.request,{cache:'no-store'})
-        .then(withFit74Html)
-        .then(r=>{if(r?.ok)caches.open(CACHE).then(c=>c.put('./',r.clone()));return r})
-        .catch(()=>caches.match('./'))
-    );
-    return;
-  }
-
-  if(url.pathname.endsWith('/technique.js')){
-    const fresh=new Request(new URL('./technique.js?v=3&build=direct11',self.location.href),{cache:'no-store'});
-    e.respondWith(fetch(fresh).then(r=>{if(r.ok)caches.open(CACHE).then(c=>c.put('./technique.js?v=3',r.clone()));return r}).catch(()=>caches.match('./technique.js?v=3')));
-    return;
-  }
-
-  if(url.pathname.endsWith('/technique.css')){
-    const fresh=new Request(new URL('./technique.css?v=3&build=direct11',self.location.href),{cache:'no-store'});
-    e.respondWith(fetch(fresh).then(r=>{if(r.ok)caches.open(CACHE).then(c=>c.put('./technique.css?v=3',r.clone()));return r}).catch(()=>caches.match('./technique.css?v=3')));
-    return;
-  }
-
-  e.respondWith(
-    fetch(e.request,{cache:'no-cache'}).then(r=>{
-      const copy=r.clone();
-      caches.open(CACHE).then(c=>c.put(e.request,copy));
-      return r;
-    }).catch(()=>caches.match(e.request).then(r=>r||caches.match('./')))
-  );
+// Fit74 emergency cache reset.
+// Temporary service worker: clear all Fit74 caches, go network-only, then unregister.
+self.addEventListener('install',event=>{
+  self.skipWaiting();
 });
 
-self.addEventListener('notificationclick',e=>{
-  e.notification.close();
-  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>cs[0]?cs[0].focus():self.clients.openWindow('./')))
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k.startsWith('fit74-')).map(k=>caches.delete(k)));
+    await self.clients.claim();
+    await self.registration.unregister();
+  })());
+});
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
+  event.respondWith(fetch(event.request,{cache:'no-store'}));
 });
