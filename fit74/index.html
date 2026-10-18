@@ -3,33 +3,117 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#111a2a">
+  <meta name="theme-color" content="#0d1726">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fit74">
-  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg">
-  <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="stylesheet" href="./v2.css?v=2">
   <title>Fit74</title>
+  <link rel="stylesheet" href="./v3.css?v=3">
 </head>
 <body>
 <div id="boot" class="boot">Fit74</div>
-<section id="authView" class="auth-view hidden"><div class="auth-card"><div class="logo-mark">74</div><p class="eyebrow">19.10 → 31.12</p><h1>Fit74</h1><p class="muted">Короткий ежедневный чек-ин. Без бухгалтерии, без чувства вины — просто держим курс.</p><form id="authForm"><label>Email<input id="email" type="email" autocomplete="email" required></label><label>Пароль<input id="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Минимум 8 символов"></label><button class="primary" type="submit">Войти</button><button id="signupBtn" class="ghost" type="button">Создать аккаунт</button></form><p id="authMessage" class="message"></p><p class="micro">После входа сессия сохранится на этом устройстве.</p></div></section>
+<section id="authView" class="auth-view hidden">
+  <div class="auth-card">
+    <div class="logo-mark">74</div><p class="eyebrow">19.10 → 31.12</p><h1>Fit74</h1>
+    <p class="muted">Личный 74-дневный трекер без наказаний и догонялок.</p>
+    <form id="authForm">
+      <label>Email<input id="email" type="email" autocomplete="email" required></label>
+      <label>Пароль<input id="password" type="password" autocomplete="current-password" minlength="8" required></label>
+      <button class="primary" type="submit">Войти</button>
+      <button id="signupBtn" class="ghost" type="button">Создать аккаунт</button>
+    </form>
+    <p id="authMessage" class="message"></p>
+  </div>
+</section>
+
 <main id="appView" class="app hidden">
-<header class="topbar"><div><p class="eyebrow">FIT74</p><h1 id="heroTitle">Старт в понедельник</h1><p id="heroDate" class="muted"></p></div><div id="syncPill" class="sync-pill">✓ облако</div></header>
+<header class="topbar">
+  <div><p class="eyebrow">FIT74</p><h1 id="heroTitle">День 1 из 74</h1><p id="heroDate" class="muted"></p></div>
+  <div id="syncPill" class="sync-pill">✓ облако</div>
+</header>
+
 <section id="todayScreen" class="screen active">
-<div class="hero-grid"><div class="score-card" id="scoreCard"><div id="scoreRing" class="score-ring"><span id="scoreValue">0</span><small>/10</small></div><div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p></div></div><div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small>дня</small></div></div>
-<div id="prestartBanner" class="banner hidden">Стартуем в понедельник, 19 октября. Можно заранее настроить привычки 👌</div><button id="backTodayBtn" class="back-today hidden">↩ Вернуться к сегодняшнему дню</button>
-<button id="quickCheckinBtn" class="quick-launch"><span>⚡</span> Быстрый чек-ин</button>
-<section class="card goals-card"><div class="card-head"><h2>Эта неделя</h2><span id="weekStability" class="saved-mark">0% стабильности</span></div><div class="goal-row"><span class="goal-label">🏋️ Тренировки</span><span id="goalWorkoutCount" class="goal-count">0/2</span><div class="progress-track"><div id="goalWorkoutBar" class="progress-fill"></div></div></div><div class="goal-row"><span class="goal-label">🥗 Питание в цель</span><span id="goalNutritionCount" class="goal-count">0/5</span><div class="progress-track"><div id="goalNutritionBar" class="progress-fill"></div></div></div><div class="goal-row"><span class="goal-label">💧 Вода</span><span id="goalWaterCount" class="goal-count">0/6</span><div class="progress-track"><div id="goalWaterBar" class="progress-fill"></div></div></div><p id="weekNote" class="week-note">Неделя ещё впереди — без форсажа.</p></section>
-<section class="card checklist-card"><div class="card-head"><h2>Сегодня</h2><span id="autosaveText" class="saved-mark">✓ сохранено</span></div><button class="check-row" data-field="workout"><span><b>🏋️ Тренировка / восстановление</b><small>по плану</small></span><span class="points">+2</span><span class="toggle"></span></button><div class="nutrition-row"><span><b>🥗 Питание</b><small>как прошёл день?</small></span><div class="segments"><button data-nutrition="0">Мимо</button><button data-nutrition="1">Частично</button><button data-nutrition="2">В цель</button></div></div><button class="check-row" data-field="movement"><span><b>🚶 Движение</b><small>минимум дня</small></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="water"><span><b>💧 Вода</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="sleep"><span><b>🌙 Сон / режим</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="habit_1"><span><b id="habit1Label">Привычка 1</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="habit_2"><span><b id="habit2Label">Привычка 2</b></span><span class="points">+1</span><span class="toggle"></span></button><button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><span class="points">+1</span><span class="toggle"></span></button></section>
-<details class="card extras-card"><summary><span>Пара цифр <span class="optional">необязательно</span></span><span>＋</span></summary><div class="extras-inner"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="—"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2" placeholder="Одной фразы достаточно"></textarea></label></div></details>
-<button id="finishDayBtn" class="finish-btn">Готово на сегодня</button><p class="minimum-note">5+ очков — день засчитан. После плохого дня ничего не отрабатываем, просто продолжаем.</p></section>
-<section id="historyScreen" class="screen"><div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>История</h2></div><strong id="completedStat">0/74</strong></div><div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div><section class="card week-summary"><div class="card-head"><h2>Итог недели</h2><span id="weekRange" class="micro"></span></div><div class="week-summary-grid"><div class="week-kpi"><b id="weekGoodDays">0</b><span>дней 5+</span></div><div class="week-kpi"><b id="weekAvgScore">0.0</b><span>средний балл</span></div><div class="week-kpi"><b id="weekMood">—</b><span>самочувствие</span></div></div><p id="weekInsight" class="insight">После старта здесь появится короткий разбор недели.</p></section><section class="card calendar-card"><div class="card-head"><h2>74 дня</h2><span class="saved-mark">тапни по дню</span></div><div class="weekday-row"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div><div id="calendarGrid" class="calendar-grid"></div><div class="calendar-legend"><span><i class="legend-dot" style="background:#9ae2cf"></i>5–7</span><span><i class="legend-dot" style="background:#1f332e"></i>8–10</span><span><i class="legend-dot" style="background:#f2e8e2"></i>пропуск</span></div></section><section class="card milestone-card"><p class="eyebrow">СЛЕДУЮЩИЙ РУБЕЖ</p><div id="milestoneNumber" class="milestone-number">7 дней</div><p id="milestoneText" class="muted">Первый маленький рубеж уже близко.</p><div class="milestone-track"><div id="milestoneBar" class="milestone-fill" style="width:0%"></div></div></section><div id="historyList" class="history-list"></div></section>
-<section id="settingsScreen" class="screen"><div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Твои правила</h2></div></div><section class="card settings-card"><p class="muted">Названия привычек и недельные ориентиры можно менять. Это ориентиры, не штрафы.</p><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label><div class="goal-inputs"><label>Тренировок / нед.<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label><label>Питание / нед.<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label><label>Вода / нед.<input id="weeklyWaterGoal" type="number" min="0" max="7"></label></div><button id="saveSettingsBtn" class="primary">Сохранить настройки</button></section><section class="card install-card"><h3>📱 Как приложение</h3><p>Открой Fit74 в Safari → <b>Поделиться</b> → <b>На экран «Домой»</b>. Он будет открываться отдельной иконкой.</p></section><button id="logoutBtn" class="danger-ghost">Выйти из аккаунта</button><p id="accountEmail" class="micro center"></p></section>
-<nav class="bottom-nav"><button data-screen="today" class="active"><span>✓</span>Сегодня</button><button data-screen="history"><span>▦</span>История</button><button data-screen="settings"><span>⚙</span>Настройки</button></nav></main>
-<div id="quickModal" class="modal-wrap" aria-hidden="true"><div class="quick-sheet"><div class="quick-top"><span id="quickCounter">1 из 8</span><button id="quickClose" class="close-btn" aria-label="Закрыть">×</button></div><div class="quick-progress"><div id="quickProgress"></div></div><div id="quickEmoji" class="quick-emoji">🏋️</div><h2 id="quickTitle">Тренировка?</h2><p id="quickSubtitle">По плану или восстановление — засчитываем оба варианта.</p><div id="quickOptions" class="quick-options two"></div><button id="quickBack" class="quick-back">← Назад</button></div></div>
+  <div id="smartNudge" class="smart-nudge hidden"><div><b>Ещё чуть-чуть до зачёта</b><span id="smartNudgeText"></span></div><button id="dismissNudge">×</button></div>
+  <div class="hero-grid">
+    <div class="score-card">
+      <div id="scoreRing" class="score-ring"><span id="scoreValue">0</span><small>/10</small></div>
+      <div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p></div>
+    </div>
+    <div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small>дня</small></div>
+  </div>
+
+  <div id="prestartBanner" class="banner hidden">Стартуем в понедельник, 19 октября. Можно заранее настроить привычки 👌</div>
+
+  <section id="minimumCard" class="minimum-card card">
+    <div class="card-head"><div><p class="eyebrow">РЕЖИМ</p><h2>Бережный день</h2></div><button id="minimumToggle" class="mode-toggle">Включить</button></div>
+    <p class="muted compact">Если день развалился — не обнуляемся. Закрой движение, воду и последнюю привычку. Серия стабильности сохранится, но день не станет «сильным».</p>
+    <div class="mini-goal-row"><span id="minMove" class="mini-goal">🚶 Движение</span><span id="minWater" class="mini-goal">💧 Вода</span><span id="minTrack" class="mini-goal">✓ Трекер</span></div>
+    <div class="mini-progress"><i id="minProgress"></i></div><div class="mini-progress-label"><span id="minStatus">0/3</span><span>без самообмана</span></div>
+  </section>
+
+  <section class="card weekly-goals-card">
+    <div class="card-head"><div><p class="eyebrow">ЭТА НЕДЕЛЯ</p><h2>Три ориентира</h2></div><span id="weekStability">0% стабильности</span></div>
+    <div class="goal"><div><b>🏋️ Тренировки</b><span id="goalWorkoutCount">0/2</span></div><div class="progress"><i id="goalWorkoutBar"></i></div></div>
+    <div class="goal"><div><b>🥗 Питание в цель</b><span id="goalNutritionCount">0/5</span></div><div class="progress"><i id="goalNutritionBar"></i></div></div>
+    <div class="goal"><div><b>💧 Вода</b><span id="goalWaterCount">0/6</span></div><div class="progress"><i id="goalWaterBar"></i></div></div>
+    <p id="weekNote" class="micro"></p>
+  </section>
+
+  <div class="quick-row"><button id="quickCheckinBtn" class="quick-btn">⚡ Быстрый чек-ин</button><span>8 вопросов · ~10 секунд</span></div>
+
+  <section class="card checklist-card">
+    <div class="card-head"><h2>Сегодня</h2><span id="autosaveText">✓ сохранено</span></div>
+    <button class="check-row" data-field="workout"><span><b>🏋️ Тренировка / восстановление</b><small>по плану</small></span><span class="points">+2</span><span class="toggle"></span></button>
+    <div class="nutrition-row"><span><b>🥗 Питание</b><small>как прошёл день?</small></span><div class="segments"><button data-nutrition="0">Мимо</button><button data-nutrition="1">Частично</button><button data-nutrition="2">В цель</button></div></div>
+    <button class="check-row" data-field="movement"><span><b>🚶 Движение</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="water"><span><b>💧 Вода</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="sleep"><span><b>🌙 Сон / режим</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="habit_1"><span><b id="habit1Label">Привычка 1</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="habit_2"><span><b id="habit2Label">Привычка 2</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><span class="points">+1</span><span class="toggle"></span></button>
+  </section>
+
+  <details class="card extras-card"><summary><span><b>Пара цифр</b><small>необязательно</small></span><span>⌄</span></summary><div class="extras-body"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label></div></details>
+  <button id="finishDayBtn" class="finish-btn">Готово на сегодня</button>
+  <p class="minimum-note">5+ очков — обычный зачёт. Бережный день сохраняет стабильность, если закрыты 3 базовых пункта.</p>
+</section>
+
+<section id="historyScreen" class="screen">
+  <div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>История</h2></div><strong id="completedStat">0/74</strong></div>
+  <div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div>
+  <section class="card"><div class="card-head"><div><p class="eyebrow">НЕДЕЛЯ</p><h2 id="weekRange">—</h2></div></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div><div><b id="weekAvgScore">0.0</b><span>ср. балл</span></div><div><b id="weekMood">—</b><span>самочувствие</span></div></div><p id="weekInsight" class="muted compact"></p></section>
+  <section class="card calendar-card"><div class="card-head"><h2>74 дня</h2><span>тапни по дню</span></div><div id="calendarGrid" class="calendar-grid"></div></section>
+  <section class="card milestone-card"><div class="card-head"><div><p class="eyebrow">СЛЕДУЮЩИЙ РУБЕЖ</p><h2 id="milestoneNumber">7 дней</h2></div></div><div class="progress big"><i id="milestoneBar"></i></div><p id="milestoneText" class="muted compact"></p></section>
+  <div id="historyList" class="history-list"></div>
+</section>
+
+<section id="trendsScreen" class="screen">
+  <div class="screen-title"><div><p class="eyebrow">АНАЛИТИКА</p><h2>Тренды</h2></div></div>
+  <div class="range-tabs"><button data-range="7">7 дней</button><button data-range="14" class="active">14 дней</button><button data-range="30">30 дней</button></div>
+  <section class="card trend-hero"><div><span>Средний балл</span><b id="trendAvgScore">—</b></div><div><span>Стабильность</span><b id="trendStability">—</b></div><div><span>Среднее самочувствие</span><b id="trendMood">—</b></div></section>
+  <section class="card chart-card"><div class="card-head"><div><p class="eyebrow">БАЛЛЫ</p><h2>Как идёт дистанция</h2></div></div><svg id="scoreChart" viewBox="0 0 320 140" preserveAspectRatio="none" aria-label="График баллов"></svg></section>
+  <section class="card chart-card"><div class="card-head"><div><p class="eyebrow">ВЕС</p><h2>Тренд веса</h2></div><span id="weightDelta">—</span></div><svg id="weightChart" viewBox="0 0 320 140" preserveAspectRatio="none" aria-label="График веса"></svg><p id="weightEmpty" class="micro"></p></section>
+  <section class="card insights-card"><div class="card-head"><div><p class="eyebrow">НАБЛЮДЕНИЯ</p><h2>Что у тебя работает</h2></div></div><div id="insightsList" class="insights-list"></div><p class="micro">Это наблюдения по твоим отметкам, а не медицинские выводы и не причинно-следственные связи.</p></section>
+</section>
+
+<section id="settingsScreen" class="screen">
+  <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Твои правила</h2></div></div>
+  <section class="card"><h2>Привычки</h2><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label></section>
+  <section class="card"><h2>Цели недели</h2><div class="three-inputs"><label>Тренировки<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label><label>Питание<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label><label>Вода<input id="weeklyWaterGoal" type="number" min="0" max="7"></label></div></section>
+  <section class="card reminder-card"><div class="card-head"><div><p class="eyebrow">БЕЗ СПАМА</p><h2>Умное напоминание</h2></div><label class="switch"><input id="reminderEnabled" type="checkbox"><span></span></label></div><p class="muted compact">Если к выбранному времени день ещё не зачтён, Fit74 мягко напомнит. Если всё уже закрыто — молчит.</p><label>После какого времени<input id="reminderTime" type="time" value="21:30"></label><p id="reminderHint" class="micro"></p></section>
+  <button id="saveSettingsBtn" class="primary">Сохранить настройки</button>
+  <section class="card install-card"><h3>📱 Добавить как приложение</h3><p>Safari → Поделиться → На экран «Домой».</p></section>
+  <button id="logoutBtn" class="danger-ghost">Выйти</button><p id="accountEmail" class="micro center"></p>
+</section>
+
+<nav class="bottom-nav"><button data-screen="today" class="active"><span>✓</span>Сегодня</button><button data-screen="history"><span>▦</span>История</button><button data-screen="trends"><span>⌁</span>Тренды</button><button data-screen="settings"><span>⚙</span>Настройки</button></nav>
+</main>
+
 <div id="toast" class="toast"><span id="toastText"></span><button id="toastAction" class="hidden">Отменить</button></div>
-<script src="./v2.js?v=2" defer></script><script src="./v2-fixes.js?v=1" defer></script>
-</body></html>
+<div id="quickModal" class="modal" aria-hidden="true"><div class="sheet"><div class="sheet-top"><button id="quickBack" class="icon-btn">←</button><div><span id="quickCounter">1 из 8</span><div class="quick-progress"><i id="quickProgress"></i></div></div><button id="quickClose" class="icon-btn">×</button></div><div class="quick-content"><div id="quickEmoji" class="quick-emoji">🏋️</div><h2 id="quickTitle">Тренировка?</h2><p id="quickSubtitle" class="muted"></p><div id="quickOptions" class="quick-options"></div></div></div></div>
+
+<script src="./v3.js?v=3"></script>
+</body>
+</html>
