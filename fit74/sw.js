@@ -1,7 +1,7 @@
-const CACHE='fit74-v19-rollback-v5-1';
+const CACHE='fit74-v20-rollback-visible';
 const ASSETS=[
   './',
-  './v3.css?v=3','./v3-hotfix.css?v=4','./v3.js?v=3',
+  './v3.css?v=3','./v3-hotfix.css?v=5','./v3.js?v=3',
   './workout.css?v=4','./workout.js?v=4',
   './shift-schedule.css?v=1','./shift-schedule.js?v=1',
   './visuals-v4.css?v=1','./visuals-v4.js?v=4','./visual-assets-v5.js?v=2',
@@ -22,7 +22,7 @@ const withFit74Html=async response=>{
   let text=await response.clone().text();
 
   // Hard rollback: force the stable startup/visual files and remove every v6 layer.
-  text=text.replace(/\.\/v3-hotfix\.css\?v=\d+/g,'./v3-hotfix.css?v=4');
+  text=text.replace(/\.\/v3-hotfix\.css\?v=\d+/g,'./v3-hotfix.css?v=5');
   text=text.replace(/\.\/visuals-v4\.js\?v=\d+/g,'./visuals-v4.js?v=4');
   text=text.replace(/\s*<link rel="stylesheet" href="\.\/workout-program-v6\.css\?v=\d+">/g,'');
   text=text.replace(/\s*<script src="\.\/v6-sprite\.js\?v=\d+"><\/script>/g,'');
