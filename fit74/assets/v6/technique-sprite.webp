@@ -1,0 +1,38 @@
+(()=>{
+'use strict';
+const VERSION='6.0';
+const START='2026-10-19',END='2026-12-31';
+const SPRITE='./assets/v6/technique-sprite.webp';
+const SPRITE_MAP={"bird-dog":{"col":0,"row":0,"cols":6,"rows":5},"breathing":{"col":1,"row":0,"cols":6,"rows":5},"calf-raise":{"col":2,"row":0,"cols":6,"rows":5},"cardio-bike":{"col":3,"row":0,"cols":6,"rows":5},"cat-cow":{"col":4,"row":0,"cols":6,"rows":5},"chair-goblet-squat":{"col":5,"row":0,"cols":6,"rows":5},"chair-squat-warmup":{"col":0,"row":1,"cols":6,"rows":5},"chest-wall-stretch":{"col":1,"row":1,"cols":6,"rows":5},"dead-bug":{"col":2,"row":1,"cols":6,"rows":5},"donkey-kick":{"col":3,"row":1,"cols":6,"rows":5},"easy-bike-walk":{"col":4,"row":1,"cols":6,"rows":5},"fire-hydrant":{"col":5,"row":1,"cols":6,"rows":5},"floor-dumbbell-press":{"col":0,"row":2,"cols":6,"rows":5},"frog-pump":{"col":1,"row":2,"cols":6,"rows":5},"glute-bridge":{"col":2,"row":2,"cols":6,"rows":5},"hip-circles":{"col":3,"row":2,"cols":6,"rows":5},"incline-pushup-chair":{"col":4,"row":2,"cols":6,"rows":5},"one-arm-row-chair":{"col":5,"row":2,"cols":6,"rows":5},"recovery-bike":{"col":0,"row":3,"cols":6,"rows":5},"recovery-walk":{"col":1,"row":3,"cols":6,"rows":5},"reverse-lunge-glute":{"col":2,"row":3,"cols":6,"rows":5},"shoulder-circles":{"col":3,"row":3,"cols":6,"rows":5},"side-abduction":{"col":4,"row":3,"cols":6,"rows":5},"side-plank-knee":{"col":5,"row":3,"cols":6,"rows":5},"split-squat-chair":{"col":0,"row":4,"cols":6,"rows":5},"stretch-glute":{"col":1,"row":4,"cols":6,"rows":5},"stretch-hip-flexor":{"col":2,"row":4,"cols":6,"rows":5},"stretch-thoracic":{"col":3,"row":4,"cols":6,"rows":5},"warmup-bike":{"col":4,"row":4,"cols":6,"rows":5}};
+const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmtShort=iso=>{try{return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit'}).format(new Date(iso+'T12:00:00'))}catch{return iso}};
+const clock=sec=>`${String(Math.floor(Math.max(0,sec)/60)).padStart(2,'0')}:${String(Math.max(0,sec)%60).padStart(2,'0')}`;
+
+const GENERAL_WARMUP=[
+  ['Лёгкое вело','3–4 мин','Спокойный темп, без спринтов.','warmup-bike'],
+  ['Круги плечами','10 раз','Большие мягкие круги назад, затем вперёд.','shoulder-circles'],
+  ['Круги тазом','10 раз','Небольшая контролируемая амплитуда.','hip-circles'],
+  ['Кошка-корова','6 повторов','Плавно прогни и округли спину, без резких движений.','cat-cow'],
+  ['Ягодичный мост без веса','10 повторов','Сожми ягодицы наверху, не прогибай поясницу.','glute-bridge'],
+  ['Присед к стулу без веса','10 повторов','Стул — ориентир глубины. Колени по линии носков.','chair-squat-warmup']
+];
+const GENERAL_COOLDOWN=[
+  ['Спокойное дыхание','1–2 мин','Дыши медленно, без задержек.','breathing'],
+  ['Лёгкая ходьба или вело','2–3 мин','Постепенно снизь пульс.','easy-bike-walk'],
+  ['Растяжка ягодиц','20–30 сек / сторона','Без боли и пружинящих движений.','stretch-glute'],
+  ['Растяжка сгибателей бедра','20–30 сек / сторона','Таз слегка подкручен, поясница спокойна.','stretch-hip-flexor'],
+  ['Мягкая растяжка груди у стены','20–30 сек / сторона','Ладонь на стене, разворот корпуса без боли. Резинка не нужна.','chest-wall-stretch']
+];
+
+const P={
+  A:{code:'A',title:'Тренировка A',subtitle:'Основная силовая · по утверждённой программе',duration:'40–50 мин',kind:'strength',emoji:'🏋️',warmup:GENERAL_WARMUP,exercises:[
+    {id:'a_squat',name:'Присед к стулу с гантелью у груди',sets:3,reps:'10–12',rest:75,asset:'chair-goblet-squat',tip:'Садись контролируемо; стул — ориентир глубины.',cues:['Стопы примерно на ширине плеч.','Гантель держи у груди.','Таз уходит назад к стулу.','Колени идут по линии носков.']},
+    {id:'a_floor_press',name:'Жим гантелей лёжа на полу',sets:3,reps:'10–12',rest:75,asset:'floor-dumbbell-press',tip:'Локти примерно под 45°, поясницу не выгибай.',cues:['Лопатки спокойно лежат на полу.','Локти не разводи строго в стороны.','Жми гантели вверх без рывка.','Опускай под контролем.']},
+    {id:'a_row',name:'Тяга гантели в наклоне с опорой на стул',sets:3,reps:'10–12 / сторона',rest:60,asset:'one-arm-row-chair',tip:'Тяни локоть назад, шею не зажимай.',cues:['Опора устойчивa.','Спина нейтральная.','Локоть движется к тазу.','Не разворачивай корпус.']},
+    {id:'a_bridge',name:'Ягодичный мост',sets:3,reps:'12–15',rest:60,asset:'glute-bridge',tip:'Поднимай таз ягодицами, не прогибом в пояснице.',cues:['Стопы полностью на полу.','Подкрути таз.','Сожми ягодицы наверху на 1 секунду.','Опускайся медленно.']},
+    {id:'a_bird_dog',name:'Птица-собака (bird-dog)',sets:3,reps:'8 / сторона',rest:45,asset:'bird-dog',tip:'В карточке — 2–3 подхода. Третий делай только с чистой техникой.',cues:['Ладони под плечами, колени под тазом.','Не разворачивай таз.','Тянись рукой и противоположной ногой.','Поясница остаётся нейтральной.']},
+    {id:'a_side_plank',name:'Боковая планка с колен',sets:2,reps:'20–30 сек / сторона',rest:45,asset:'side-plank-knee',tip:'Корпус одной линией, без провисания.',cues:['Локоть под плечом.','Нижнее колено на полу.','Подними таз и держи ровно.','Дыши спокойно.']}
+  ],cooldown:GENERAL_COOLDOWN},
+  B:{code:'B',title:'Тренировка B',subtitle:'Умеренная силовая · по утверждённой программе',duration:'35–45 мин',kind:'strength',emoji:'🏋️',warmup:GENERAL_WARMUP,exercises:[
+    {id:'b_split',name:'Сплит-присед с задней ногой на стуле',sets:3,reps:'8–10 / нога',rest:75,asset:'split-squat-chair',tip:'Держись за опору при необходимости.',cues:['Передняя стопа полностью на полу.','Опускайся вниз, а не вперёд.','Колено передней ноги по линии носка.','Работай без боли и потери баланса.'�����_���z���)�+-��\jY]��^�a
