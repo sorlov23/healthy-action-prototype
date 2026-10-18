@@ -24,8 +24,8 @@ function appendScript(src,onload){
 }
 
 if(document.readyState==='loading'){
-  document.write('<script src="./v7-sprite.js?v=9"><\/script><script src="./workout-program-v7.js?v=1"><\/script>');
+  document.write('<script src="./v9-visuals.js?v=1"><\/script><script src="./workout-program-v7.js?v=1"><\/script>');
 }else{
-  appendScript('./v7-sprite.js?v=9',()=>appendScript('./workout-program-v7.js?v=1'));
+  appendScript('./v9-visuals.js?v=1',()=>appendScript('./workout-program-v7.js?v=1'));
 }
 })();
