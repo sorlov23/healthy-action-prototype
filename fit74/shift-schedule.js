@@ -1,29 +1,31 @@
 (()=>{
   'use strict';
 
-  const DEFAULT_ANCHOR='2026-10-19'; // 2-й выходной после ночных, перед первой дневной сменой
+  const DEFAULT_ANCHOR='2026-10-19';
   const START='2026-10-19', END='2026-12-31';
-  const q=(s,r=document)=>r.querySelector(s);
+  const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
   let anchor=localStorage.getItem('fit74_shift_anchor')||DEFAULT_ANCHOR;
-  let sessions=[];
-  let prefsLoaded=false;
+  let sessions=[], overrides=new Map();
+  let prefsLoaded=false, overridesLoaded=false;
 
   const W={
     A:{title:'Тренировка A',meta:'🏋️ Всё тело · 35–45 мин'},
     B:{title:'Тренировка B',meta:'🏋️ Ноги · спина · корпус · 35–45 мин'},
     GLUTES:{title:'Ягодицы',meta:'🍑 Отдельная тренировка · 30–35 мин'},
     LIGHT:{title:'Восстановление',meta:'🌿 Мягкое движение · 20–30 мин'},
-    REST:{title:'Без обязательной тренировки',meta:'😌 Смена / восстановление'}
+    REST:{title:'Без обязательной тренировки',meta:'😌 Восстановление / свободный выбор'}
   };
 
   function utc(iso){const [y,m,d]=iso.split('-').map(Number);return Date.UTC(y,m-1,d)}
   function diffDays(a,b){return Math.round((utc(a)-utc(b))/86400000)}
-  function addDays(iso,n){const d=new Date(utc(iso)+n*86400000);return d.toISOString().slice(0,10)}
+  function addDays(iso,n){return new Date(utc(iso)+n*86400000).toISOString().slice(0,10)}
   function fmt(iso){return new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'}).format(new Date(utc(iso)))}
+  function fmtShort(iso){return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit'}).format(new Date(utc(iso)))}
   function currentDate(){try{if(typeof selectedDate!=='undefined'&&selectedDate)return selectedDate}catch{}return START}
   function cycleParity(n){return ((n%2)+2)%2}
+  function clampDate(iso){return iso<START?START:iso>END?END:iso}
 
-  function slotFor(iso){
+  function baseSlotFor(iso){
     const delta=diffDays(iso,anchor), idx=((delta%8)+8)%8, cycle=Math.floor(delta/8);
     const even=cycleParity(cycle)===0, main1=even?'A':'B', main2=even?'B':'A';
     const slots=[
@@ -39,27 +41,39 @@
     return {...slots[idx],idx,cycle};
   }
 
+  function slotFor(iso){
+    const base=baseSlotFor(iso), ov=overrides.get(iso);
+    if(!ov)return base;
+    if(ov.override_type==='vacation')return {...base,short:'Отп.',title:'Отпуск',detail:`без обязательств · по циклу: ${base.title.toLowerCase()}`,icon:'🏖️',code:'REST',kind:'vacation',status:'отпуск',overrideType:'vacation',base};
+    return {...base,short:'Day off',title:'Day off',detail:`дополнительный выходной · по циклу: ${base.title.toLowerCase()}`,icon:'☕️',code:base.code==='REST'?'REST':base.code,kind:'dayoff',status:'day off',overrideType:'day_off',base};
+  }
+
   function isDone(date,code){return sessions.some(s=>s.session_date===date&&s.workout_code===code&&s.completed_at)}
-  function cardClass(kind){return kind==='main'?'shift-main':kind==='work'?'shift-work':kind==='night'?'shift-night':kind==='optional'?'shift-optional':'shift-recovery'}
-  function dayClass(kind){return kind==='work'?'shift-workday':kind==='night'?'shift-nightday':kind==='optional'?'shift-optional':'shift-offday'}
+  function cardClass(kind){return kind==='main'?'shift-main':kind==='work'?'shift-work':kind==='night'?'shift-night':kind==='optional'?'shift-optional':kind==='vacation'?'shift-vacation':kind==='dayoff'?'shift-dayoff':'shift-recovery'}
+  function dayClass(kind){return kind==='work'?'shift-workday':kind==='night'?'shift-nightday':kind==='optional'?'shift-optional':kind==='vacation'?'shift-vacation':kind==='dayoff'?'shift-dayoff':'shift-offday'}
 
   function renderToday(){
     const card=q('#todayWorkoutCard'); if(!card)return;
-    const date=currentDate(), s=slotFor(date), info=W[s.code]||W.REST, done=isDone(date,s.code);
-    card.classList.remove('shift-main','shift-work','shift-night','shift-optional','shift-recovery');
+    const date=currentDate(), s=slotFor(date), info=W[s.code]||W.REST, done=s.code!=='REST'&&isDone(date,s.code);
+    card.classList.remove('shift-main','shift-work','shift-night','shift-optional','shift-recovery','shift-vacation','shift-dayoff');
     card.classList.add(cardClass(s.kind));
     const title=q('#todayWorkoutTitle'), meta=q('#todayWorkoutMeta'), st=q('#todayWorkoutStatus');
-    if(title)title.textContent=info.title;
+    if(title)title.textContent=s.overrideType==='vacation'?'Отпуск':s.overrideType==='day_off'&&s.code==='REST'?'Свободный день':info.title;
     if(meta)meta.textContent=`${s.icon} ${s.title} · ${s.detail}  →  ${info.meta}`;
     if(st){st.textContent=done?'✓ выполнено':s.status;st.classList.toggle('done',done)}
     let badge=q('#shiftTodayBadge',card);
     if(!badge){badge=document.createElement('div');badge.id='shiftTodayBadge';badge.className='shift-badge';meta?.insertAdjacentElement('afterend',badge)}
-    badge.textContent=`Цикл смен · день ${s.idx+1} из 8`;
+    badge.textContent=s.overrideType?(s.overrideType==='vacation'?'Исключение · отпуск':'Исключение · Day off'):`Цикл смен · день ${s.idx+1} из 8`;
     const start=q('#startTodayWorkout'), short=q('#shortTodayWorkout');
     if(!start||!short)return;
+    if(s.overrideType==='vacation'){
+      start.textContent='Открыть тренировки по желанию';short.classList.add('hidden');return;
+    }
+    if(s.overrideType==='day_off'&&s.code==='REST'){
+      start.textContent='Выбрать тренировку';short.classList.add('hidden');return;
+    }
     if(s.code==='REST'){
-      start.textContent=s.kind==='night'?'Ночная смена · бережём ресурс':'Открыть программу';
-      short.classList.add('hidden');
+      start.textContent=s.kind==='night'?'Ночная смена · бережём ресурс':'Открыть программу';short.classList.add('hidden');
     }else{
       start.textContent=done?'Посмотреть тренировку':s.code==='GLUTES'?'Начать ягодицы':s.code==='LIGHT'?'Мягко размяться':'Начать тренировку';
       const canShort=['A','B','GLUTES'].includes(s.code);short.classList.toggle('hidden',!canShort);if(canShort)short.textContent=s.code==='GLUTES'?'Короткие ягодицы':'15–20 мин';
@@ -68,32 +82,80 @@
 
   function renderHub(){
     const hub=q('#workoutHub'); if(!hub?.classList.contains('open'))return;
-    const date=currentDate(), s=slotFor(date), info=W[s.code]||W.REST, done=isDone(date,s.code), hero=q('#hubTodayCard');
-    if(hero){hero.innerHTML=`<div><p class="eyebrow">СЕГОДНЯ · ${s.icon} ${s.title.toUpperCase()}</p><h2>${info.title}</h2><p>${s.detail} · цикл ${s.idx+1}/8</p>${s.kind==='optional'?'<div class="shift-plan-note">Ягодичная — бонус, а не долг. Если не восстановился, спокойно пропускай.</div>':''}</div>${s.code==='REST'?'<span class="workout-big-emoji">'+s.icon+'</span>':`<button class="workout-primary" data-shift-hub-start="${s.code}">${done?'Открыть':'Начать'}</button>`}`}
+    const date=currentDate(), s=slotFor(date), info=W[s.code]||W.REST, done=s.code!=='REST'&&isDone(date,s.code), hero=q('#hubTodayCard');
+    const note=s.overrideType==='vacation'?'<div class="shift-plan-note">Отпуск — это не новый KPI. Тренировка только если самому хочется.</div>':s.overrideType==='day_off'?'<div class="shift-plan-note">Day off даёт свободный слот, но не создаёт обязанность тренироваться.</div>':s.kind==='optional'?'<div class="shift-plan-note">Ягодичная — бонус, а не долг. Если не восстановился, спокойно пропускай.</div>':'';
+    if(hero){hero.innerHTML=`<div><p class="eyebrow">СЕГОДНЯ · ${s.icon} ${s.title.toUpperCase()}</p><h2>${s.overrideType==='vacation'?'Отдых без обязательств':info.title}</h2><p>${s.detail} · цикл ${s.idx+1}/8</p>${note}</div>${s.code==='REST'?'<span class="workout-big-emoji">'+s.icon+'</span>':`<button class="workout-primary" data-shift-hub-start="${s.code}">${done?'Открыть':'Начать'}</button>`}`}
     const chip=q('#workoutWeekStat');if(chip)chip.textContent='8 дней';
     const strip=q('#weekPlanStrip'); if(!strip)return;
     const sec=strip.closest('.workout-section'), h=sec?.querySelector('.workout-section-title h3'), sub=sec?.querySelector('.workout-section-title span');
     if(h)h.textContent='Цикл смен'; if(sub)sub.textContent='2 дня → 2 выходных → 2 ночи → 2 выходных';
     strip.classList.add('shift-cycle-strip');
-    const cycleStart=addDays(date,-s.idx);
+    const base=baseSlotFor(date), cycleStart=addDays(date,-base.idx);
     strip.innerHTML=Array.from({length:8},(_,i)=>{
-      const d=addDays(cycleStart,i), x=slotFor(d), wi=W[x.code]||W.REST, ok=isDone(d,x.code), active=d===date;
-      const wlabel=x.code==='A'?'A':x.code==='B'?'B':x.code==='GLUTES'?'ягодицы':x.code==='LIGHT'?'восст.':'—';
-      return `<button class="week-plan-day ${dayClass(x.kind)} ${active?'active':''} ${ok?'done':''}" data-shift-date="${d}" data-shift-code="${x.code}" title="${x.title}: ${wi.title}"><span>${x.short}</span><b>${x.icon}</b><small>${wlabel}</small></button>`
+      const d=addDays(cycleStart,i), x=slotFor(d), wi=W[x.code]||W.REST, ok=x.code!=='REST'&&isDone(d,x.code), active=d===date;
+      const wlabel=x.overrideType==='vacation'?'отпуск':x.overrideType==='day_off'?'day off':x.code==='A'?'A':x.code==='B'?'B':x.code==='GLUTES'?'ягодицы':x.code==='LIGHT'?'восст.':'—';
+      return `<button class="week-plan-day ${dayClass(x.kind)} ${active?'active':''} ${ok?'done':''}" data-shift-date="${d}" data-shift-code="${x.code}" data-shift-override="${x.overrideType||''}" title="${x.title}: ${wi.title}"><span>${x.short}</span><b>${x.icon}</b><small>${wlabel}</small></button>`
     }).join('');
   }
 
   function ensureSettings(){
     if(q('#shiftSettingsCard'))return;
     const reminder=q('#settingsScreen .reminder-card'); if(!reminder)return;
-    reminder.insertAdjacentHTML('beforebegin',`<section id="shiftSettingsCard" class="card shift-settings-card"><p class="eyebrow">ГРАФИК РАБОТЫ</p><h2>8-дневный цикл</h2><p class="muted compact">Fit74 подстраивает тренировку под смену, а не под день недели.</p><div class="shift-sequence"><span>☀️ Д1</span><span>☀️ Д2</span><span>🏠 В1</span><span>🏠 В2</span><span>🌙 Н1</span><span>🌙 Н2</span><span>🏠 В1</span><span>🏠 В2</span></div><div class="shift-anchor"><b id="shiftAnchorTitle">—</b><small id="shiftAnchorText">—</small></div><div class="shift-adjust"><button data-shift-adjust="-1">← цикл на день</button><button data-shift-adjust="1">цикл на день →</button></div><p class="shift-note">Если обменяешься сменами или график съедет, сдвинь якорь на день. Тренировки пересчитаются автоматически.</p></section>`);
+    reminder.insertAdjacentHTML('beforebegin',`<section id="shiftSettingsCard" class="card shift-settings-card"><p class="eyebrow">ГРАФИК РАБОТЫ</p><h2>8-дневный цикл</h2><p class="muted compact">Fit74 подстраивает тренировку под смену, а не под день недели. Отпуск и Day off накладываются поверх цикла и сами его не сдвигают.</p><div class="shift-sequence"><span>☀️ Д1</span><span>☀️ Д2</span><span>🏠 В1</span><span>🏠 В2</span><span>🌙 Н1</span><span>🌙 Н2</span><span>🏠 В1</span><span>🏠 В2</span></div><div class="shift-anchor"><b id="shiftAnchorTitle">—</b><small id="shiftAnchorText">—</small></div><div class="shift-adjust"><button data-shift-adjust="-1">← цикл на день</button><button data-shift-adjust="1">цикл на день →</button></div><p class="shift-note">Сдвигай якорь только если изменился сам повторяющийся график. Для отдельных дат используй исключения ниже.</p><div class="shift-exceptions"><div class="shift-exception-head"><div><b>Исключения</b><small>отпуск и дополнительные выходные</small></div></div><div class="shift-exception-actions"><button data-exception-mode="day_off">＋ Day off</button><button data-exception-mode="vacation">＋ Отпуск</button></div><div id="shiftExceptionForm" class="shift-exception-form hidden"><div class="shift-exception-title" id="shiftExceptionTitle">Day off</div><div class="shift-date-grid"><label>Дата начала<input id="shiftExceptionStart" type="date" min="${START}" max="${END}"></label><label id="shiftExceptionEndLabel" class="range-only hidden">Дата окончания<input id="shiftExceptionEnd" type="date" min="${START}" max="${END}"></label></div><div class="shift-exception-form-actions"><button data-exception-save>Сохранить</button><button data-exception-cancel>Отмена</button></div></div><div id="shiftExceptionList" class="shift-exception-list"><div class="shift-exception-empty">Пока исключений нет.</div></div></div></section>`);
+  }
+
+  function overrideGroups(){
+    const rows=[...overrides.values()].sort((a,b)=>a.work_date.localeCompare(b.work_date)), out=[];
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      if(r.override_type!=='vacation'){out.push({type:r.override_type,start:r.work_date,end:r.work_date});continue}
+      let end=r.work_date;
+      while(i+1<rows.length&&rows[i+1].override_type==='vacation'&&diffDays(rows[i+1].work_date,end)===1){i++;end=rows[i].work_date}
+      out.push({type:'vacation',start:r.work_date,end});
+    }
+    return out;
+  }
+
+  function renderExceptionList(){
+    const box=q('#shiftExceptionList');if(!box)return;
+    const groups=overrideGroups();
+    if(!groups.length){box.innerHTML='<div class="shift-exception-empty">Пока исключений нет.</div>';return}
+    box.innerHTML=groups.map(g=>{const isVac=g.type==='vacation', label=isVac?'🏖️ Отпуск':'☕️ Day off', date=isVac&&g.start!==g.end?`${fmtShort(g.start)}–${fmtShort(g.end)}`:fmtShort(g.start);return `<div class="shift-exception-item"><div><b>${label}</b><small>${date}</small></div><button data-exception-delete data-type="${g.type}" data-start="${g.start}" data-end="${g.end}" aria-label="Удалить">×</button></div>`}).join('');
   }
 
   function renderSettings(){
     ensureSettings();
-    const a=q('#shiftAnchorTitle'),t=q('#shiftAnchorText'); if(!a||!t)return;
-    a.textContent=`${fmt(anchor)} — 2-й выходной`;
-    t.textContent='После ночных, перед первой дневной 09:00–21:00. От этой точки повторяется весь цикл.';
+    const a=q('#shiftAnchorTitle'),t=q('#shiftAnchorText'); if(a&&t){a.textContent=`${fmt(anchor)} — 2-й выходной`;t.textContent='После ночных, перед первой дневной 09:00–21:00. От этой точки повторяется весь цикл.'}
+    renderExceptionList();
+  }
+
+  function openExceptionForm(mode){
+    ensureSettings();const form=q('#shiftExceptionForm'), start=q('#shiftExceptionStart'), end=q('#shiftExceptionEnd'), endLabel=q('#shiftExceptionEndLabel'), title=q('#shiftExceptionTitle');if(!form||!start||!end)return;
+    form.dataset.mode=mode;form.classList.remove('hidden');const d=clampDate(currentDate());start.value=d;end.value=d;
+    const vac=mode==='vacation';endLabel?.classList.toggle('hidden',!vac);if(title)title.textContent=vac?'Отпуск':'Day off';
+    setTimeout(()=>start.focus(),50);
+  }
+  function closeExceptionForm(){q('#shiftExceptionForm')?.classList.add('hidden')}
+
+  async function saveException(){
+    const form=q('#shiftExceptionForm'), start=q('#shiftExceptionStart'), end=q('#shiftExceptionEnd');if(!form||!start?.value)return;
+    const mode=form.dataset.mode==='vacation'?'vacation':'day_off';let a=clampDate(start.value),b=mode==='vacation'?clampDate(end?.value||a):a;if(b<a)[a,b]=[b,a];
+    const dates=[];for(let d=a;d<=b;d=addDays(d,1))dates.push(d);
+    if(!dates.length)return;
+    try{
+      if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;
+      const rows=dates.map(work_date=>({user_id:user.id,work_date,override_type:mode,updated_at:new Date().toISOString()}));
+      await db('fit74_shift_overrides?on_conflict=user_id,work_date',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});
+      closeExceptionForm();overridesLoaded=false;await loadOverrides(true);
+    }catch(e){console.warn('save shift override',e)}
+  }
+
+  async function deleteException(type,start,end){
+    try{
+      if(typeof db!=='function')return;
+      let path=`fit74_shift_overrides?override_type=eq.${encodeURIComponent(type)}&work_date=gte.${start}&work_date=lte.${end}`;
+      await db(path,{method:'DELETE',headers:{Prefer:'return=minimal'}});overridesLoaded=false;await loadOverrides(true);
+    }catch(e){console.warn('delete shift override',e)}
   }
 
   function launch(code,short=false){
@@ -112,6 +174,11 @@
     try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await db('fit74_preferences?select=shift_cycle_enabled,shift_anchor_date&limit=1');if(rows?.[0]?.shift_anchor_date){anchor=rows[0].shift_anchor_date;localStorage.setItem('fit74_shift_anchor',anchor)}prefsLoaded=true;renderSettings();renderToday();renderHub()}catch(e){console.warn('shift prefs',e)}
   }
 
+  async function loadOverrides(force=false){
+    if(overridesLoaded&&!force)return;
+    try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await db(`fit74_shift_overrides?select=work_date,override_type,note&work_date=gte.${START}&work_date=lte.${END}&order=work_date.asc`)||[];overrides=new Map(rows.map(r=>[r.work_date,r]));overridesLoaded=true;renderSettings();renderToday();renderHub()}catch(e){console.warn('shift overrides',e)}
+  }
+
   async function saveAnchor(){
     localStorage.setItem('fit74_shift_anchor',anchor);
     try{if(typeof user!=='undefined'&&user?.id&&typeof db==='function')await db('fit74_preferences?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:user.id,shift_cycle_enabled:true,shift_anchor_date:anchor})})}catch(e){console.warn('save shift anchor',e)}
@@ -126,15 +193,19 @@
     const hs=e.target.closest?.('[data-shift-hub-start]');
     if(hs){e.preventDefault();e.stopImmediatePropagation();launch(hs.dataset.shiftHubStart,false);return}
     const day=e.target.closest?.('[data-shift-date]');
-    if(day){e.preventDefault();e.stopImmediatePropagation();const code=day.dataset.shiftCode;if(code&&code!=='REST')launch(code,false);return}
+    if(day){e.preventDefault();e.stopImmediatePropagation();const code=day.dataset.shiftCode, ov=day.dataset.shiftOverride;if(ov&&code==='REST'){launch('REST',false);return}if(code&&code!=='REST')launch(code,false);return}
     const adj=e.target.closest?.('[data-shift-adjust]');
     if(adj){e.preventDefault();anchor=addDays(anchor,Number(adj.dataset.shiftAdjust)||0);saveAnchor();return}
+    const mode=e.target.closest?.('[data-exception-mode]');if(mode){e.preventDefault();openExceptionForm(mode.dataset.exceptionMode);return}
+    if(e.target.closest?.('[data-exception-cancel]')){e.preventDefault();closeExceptionForm();return}
+    if(e.target.closest?.('[data-exception-save]')){e.preventDefault();saveException();return}
+    const del=e.target.closest?.('[data-exception-delete]');if(del){e.preventDefault();deleteException(del.dataset.type,del.dataset.start,del.dataset.end);return}
   },true);
 
-  function tick(){loadPrefs();ensureSettings();renderSettings();renderToday();renderHub()}
+  function tick(){loadPrefs();loadOverrides();ensureSettings();renderSettings();renderToday();renderHub()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tick);else tick();
   setInterval(tick,1200);
   setInterval(refreshSessions,10000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadPrefs();refreshSessions();tick()}});
-  setTimeout(refreshSessions,1200);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadPrefs();loadOverrides(true);refreshSessions();tick()}});
+  setTimeout(()=>{refreshSessions();loadOverrides(true)},1200);
 })();
