@@ -24,8 +24,8 @@ function appendScript(src,onload){
 }
 
 if(document.readyState==='loading'){
-  document.write('<script src="./technique-images.js?v=11.0"><\/script><script src="./workout-program-v7.js?v=11.0"><\/script>');
+  document.write('<script src="./technique-images.js?v=11.0"><\/script><script src="./workout-program-v7.js?v=12.0"><\/script>');
 }else{
-  appendScript('./technique-images.js?v=11.0',()=>appendScript('./workout-program-v7.js?v=11.0'));
+  appendScript('./technique-images.js?v=11.0',()=>appendScript('./workout-program-v7.js?v=12.0'));
 }
 })();

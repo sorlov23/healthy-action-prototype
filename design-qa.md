@@ -54,3 +54,7 @@ final result: passed
 - [x] Check narrow phone layout and primary interactions.
 - [x] Pass functional regression and syntax checks.
 - [x] final result: passed
+
+## 19 October: schedule correction
+
+The earlier 18 October captures document the visual design selection; their sample recommendation is superseded by the user's corrected schedule. See `docs/shift-cycle.md`. The active schedule now uses day 1 = first daytime shift, A on day 3, cardio on day 4, alternating B/Glutes on day 5, and recovery on days 6–8. The stored second-day-off anchor remains unchanged. Cloud Browser checks covered the recovery card, B and Glutes on their respective cycle dates, cardio and 320-pixel width. Fixed recovery-card flex shrinking so guidance is fully visible; added a regression assertion for clipped content. Functional regression and the eight-cycle date model pass.

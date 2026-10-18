@@ -24,11 +24,11 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = process.env.FIT74_TEST_URL || `http://127.0.0.1:${server.address().port}/`;
 const browser = await chromium.launch({headless:true, ...(process.env.FIT74_CHROMIUM_PATH ? {executablePath:process.env.FIT74_CHROMIUM_PATH} : {}), args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
-const context = await browser.newContext({viewport:{width:390,height:844},isMobile:true,deviceScaleFactor:1});
+const context = await browser.newContext({viewport:{width:390,height:844},isMobile:true,deviceScaleFactor:1,timezoneId:'Europe/Moscow'});
 const page = await context.newPage();
 const errors = [], failedAssets = [], writes = [];
 const fixtureUser = {id:'00000000-0000-4000-8000-000000000074',email:'fit74-test@example.invalid'};
-let savedSessions = [];
+let savedSessions = [],shiftOverrides=[];const shiftWrites=[];
 page.on('pageerror', e => errors.push(e.message));
 page.on('response', r => {if (r.url().includes('/assets/') && !r.ok()) failedAssets.push(`${r.status()} ${r.url()}`);});
 
@@ -47,6 +47,8 @@ await context.route('https://*.supabase.co/**', async route => {
       const code = new URL(url).searchParams.get('workout_code')?.replace('eq.','');
       savedSessions = savedSessions.filter(s=>s.workout_code!==code);
     } else result = savedSessions;
+  } else if (url.includes('fit74_shift_overrides')) {
+    if(method==='POST'){const rows=req.postDataJSON();for(const row of rows){shiftOverrides=shiftOverrides.filter(x=>x.work_date!==row.work_date);shiftOverrides.push(row);}shiftWrites.push(...rows);result=rows;}else if(method==='DELETE'){const p=new URL(url).searchParams;shiftOverrides=shiftOverrides.filter(row=>!(row.override_type===p.get('override_type')?.slice(3)&&row.work_date>=p.get('work_date')?.slice(4)));}else result=shiftOverrides;
   } else if (url.includes('fit74_preferences')) {
     result = [{user_id:fixtureUser.id,reminder_enabled:false}];
   } else if (method === 'POST' || method === 'PATCH') {
@@ -55,6 +57,8 @@ await context.route('https://*.supabase.co/**', async route => {
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
 });
 await context.addInitScript(user => {
+  const NativeDate=Date,fixed=NativeDate.parse('2026-10-19T00:50:00+03:00');
+  window.Date=class extends NativeDate{constructor(...a){super(...(a.length?a:[fixed]))}static now(){return fixed}};
   localStorage.setItem('fit74_session', JSON.stringify({user,access_token:'local-fixture-token',expires_at:4102444800}));
   localStorage.setItem('fit74_test_sentinel', 'keep-existing-data');
 }, fixtureUser);
@@ -81,14 +85,52 @@ try {
   assert.equal(await page.locator('.check-row').count(),7);
   await page.locator('.bottom-nav [data-screen="workouts"]').click();
   await page.locator('[data-v7-start="B"]').waitFor({state:'visible'});
-  assert.deepEqual(await page.locator('#weekPlanStrip [data-shift-code]').evaluateAll(els=>els.map(el=>el.dataset.shiftCode)),['A','REST','REST','B','GLUTES','REST','REST','LIGHT']);
-  assert.deepEqual(await page.locator('#workoutHub [data-v7-start]').evaluateAll(els=>els.map(el=>el.dataset.v7Start)),['B','GLUTES','CARDIO','LIGHT']);
+  assert.deepEqual(await page.locator('#weekPlanStrip [data-shift-code]').evaluateAll(els=>els.map(el=>el.dataset.shiftCode)),['REST','REST','REST','A','CARDIO','B','REST','REST']);
+  assert.deepEqual(await page.locator('#workoutHub [data-v7-start]').evaluateAll(els=>els.map(el=>el.dataset.v7Start)),['A','B','GLUTES','CARDIO','LIGHT']);
+  assert.equal(await page.locator('#hubTodayCard').evaluate(el=>el.scrollHeight>el.clientHeight+1),false,'the full recovery guidance stays inside its card');
+  assert.equal(await page.locator('#todayWorkoutCard').getAttribute('data-workout-code'),'REST');
+  assert.match(await page.locator('#shiftTodayBadge').textContent(),/День 8 из 8/);
+  assert.match(await page.locator('#challengeStatus').textContent(),/Марафон · день 1/);
+  assert.match(await page.locator('#todayWorkoutPlanNote').textContent(),/Тяжёлая тренировка не запланирована/);
+  // Rest dates preview recovery; they never fall through to the LIGHT player.
+  await page.locator('[data-shift-date="2026-10-26"]').click();
+  assert.match(await page.locator('#hubTodayCard').textContent(),/Сон и отдых/);
+  assert.match(await page.locator('#hubTodayCard').textContent(),/До 09:00 ещё ночная смена/);
+  assert.equal(await page.locator('#workoutPlayer.open').count(),0);
+  assert.equal(await page.locator('[data-shift-date="2026-11-01"]').getAttribute('data-shift-code'),'GLUTES');
+  await page.locator('[data-shift-date="2026-11-01"]').click();
+  await page.locator('#workoutPlayer.open').waitFor();
+  assert.match(await page.locator('#playerWorkoutTitle').textContent(),/Ягодицы/);
+  await page.locator('#v7SimpleDone').click();
+  page.once('dialog',d=>d.accept());
+  await page.locator('#closeWorkoutPlayer').click();
+  assert(writes.some(x=>x.workout_code==='GLUTES'&&x.session_date==='2026-11-01'),'future plan uses the tapped date');
+  await page.locator('.bottom-nav [data-screen="today"]').click();
+  await page.locator('#startTodayWorkout').click();
+  await page.locator('#workoutHub.open').waitFor();
+  assert.equal(await page.locator('#workoutPlayer.open').count(),0,'day 8 opens the catalog, not an automatic recovery workout');
   await page.locator('.bottom-nav [data-screen="history"]').click();
   assert(await page.locator('#historyScreen').isVisible());
   await page.locator('[data-goto="trends"]').first().click();
   assert(await page.locator('#trendsScreen').isVisible());
   await page.locator('.bottom-nav [data-screen="settings"]').click();
   assert(await page.locator('#shiftSettingsCard').isVisible());
+  // A vacation suspends the workout, without resetting the B/glutes rotation.
+  await page.locator('[data-exception-mode="vacation"]').click();
+  await page.locator('#shiftExceptionStart').fill('2026-10-24');
+  await page.locator('#shiftExceptionEnd').fill('2026-10-25');
+  await page.locator('[data-exception-save]').click();
+  await page.waitForFunction(()=>window.Fit74ShiftSchedule.slotFor('2026-10-24').overrideType==='vacation');
+  assert.equal(await page.evaluate(()=>window.Fit74ShiftSchedule.slotFor('2026-10-24').code),'REST');
+  assert.equal(await page.evaluate(()=>window.Fit74ShiftSchedule.slotFor('2026-11-01').code),'GLUTES');
+  await page.locator('[data-exception-mode="day_off"]').click();
+  await page.locator('#shiftExceptionStart').fill('2026-10-21');
+  await page.locator('[data-exception-save]').click();
+  await page.waitForFunction(()=>window.Fit74ShiftSchedule.slotFor('2026-10-21').overrideType==='day_off');
+  assert.equal(await page.evaluate(()=>window.Fit74ShiftSchedule.slotFor('2026-10-21').code),'REST','extra day off adds no strength workout');
+  assert.equal(await page.evaluate(()=>window.Fit74ShiftSchedule.slotFor('2026-10-22').code),'A');
+  assert.equal(await page.evaluate(()=>window.Fit74ShiftSchedule.slotFor('2026-10-23').code),'CARDIO');
+  assert.equal(shiftWrites.length,3);
   await page.locator('.bottom-nav [data-screen="today"]').click();
   await page.locator('[data-field="movement"]').click();
   assert.equal(await page.locator('[data-field="movement"]').getAttribute('aria-pressed'),'true');

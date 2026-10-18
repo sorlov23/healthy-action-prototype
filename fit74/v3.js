@@ -86,7 +86,7 @@ function renderHeader(){
  const name=user?.user_metadata?.first_name||user?.user_metadata?.display_name?.split(' ')[0]||user?.user_metadata?.full_name?.split(' ')[0];
  $('#greeting').textContent=name?'Привет, '+name+'!':'Привет!';
  $('#daysLeft').textContent=pre?TOTAL:Math.max(0,diff(clamp(now),END));show($('#prestartBanner'),pre);
- $('#challengeStatus').textContent=pre?(diff(now,START)===1?'Старт завтра · 19 октября':'Старт · 19 октября'):now>END?'Дистанция завершена':archive?'День '+day+' · архив':'День '+day+' · до 31 декабря';
+ $('#challengeStatus').textContent=pre?(diff(now,START)===1?'Старт завтра · 19 октября':'Старт · 19 октября'):now>END?'Дистанция завершена':archive?'Марафон · день '+day+' · архив':'Марафон · день '+day;
  $('#challengeCount').textContent=elapsed+' из '+TOTAL;
  $('#challengeTicks').innerHTML=Array.from({length:TOTAL},(_,i)=>'<i'+(i<elapsed?' class="past"':'')+'></i>').join('');
 }
