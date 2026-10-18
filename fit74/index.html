@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="./v3-hotfix.css?v=1">
   <link rel="stylesheet" href="./workout.css?v=1">
   <link rel="stylesheet" href="./shift-schedule.css?v=1">
+  <link rel="stylesheet" href="./technique.css?v=2">
+  <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
 </head>
 <body>
 <div id="boot" class="boot">Fit74</div>
@@ -120,5 +122,21 @@
 <script src="./v3.js?v=3"></script>
 <script src="./workout.js?v=1"></script>
 <script src="./shift-schedule.js?v=1"></script>
+<script src="./technique.js?v=2"></script>
+<script>
+(()=>{
+  const ready=()=>{
+    const app=document.querySelector('#appView'), auth=document.querySelector('#authView');
+    if(auth&&!auth.classList.contains('hidden')){document.documentElement.classList.add('fit74-ready');return true}
+    if(!app||app.classList.contains('hidden'))return false;
+    const meta=document.querySelector('#todayWorkoutMeta'),badge=document.querySelector('#shiftTodayBadge');
+    if(meta?.textContent.includes('→')&&badge){document.documentElement.classList.add('fit74-ready');return true}
+    return false;
+  };
+  if(ready())return;
+  const timer=setInterval(()=>{if(ready())clearInterval(timer)},50);
+  setTimeout(()=>{clearInterval(timer);document.documentElement.classList.add('fit74-ready')},3000);
+})();
+</script>
 </body>
 </html>
