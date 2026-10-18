@@ -1,0 +1,77 @@
+(()=>{
+'use strict';
+const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const C={skin:'#E9A074',hair:'#162638',shirt:'#2874C9',shorts:'#162C47',shoe:'#142234',mint:'#59CDB8',line:'#DCE9E5',chair:'#7D898A',floor:'#D5E5E1'};
+const defs=`<defs><filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity=".07"/></filter></defs>`;
+const L=(x1,y1,x2,y2,w=18,c=C.skin)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+const H=(x,y,r=18)=>`<g><circle cx="${x}" cy="${y}" r="${r}" fill="${C.skin}"/><path d="M${x-r+1} ${y-r+7} Q${x} ${y-r-9} ${x+r-1} ${y-r+7}" fill="${C.hair}"/><path d="M${x+7} ${y+2} q6 6 0 12" fill="none" stroke="${C.hair}" stroke-width="3" stroke-linecap="round"/></g>`;
+const T=(x,y,w=48,h=74,rot=0)=>`<rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="19" fill="${C.shirt}" transform="rotate(${rot} ${x} ${y})"/>`;
+const S=(x,y,rot=0)=>`<rect x="${x-16}" y="${y-5}" width="32" height="10" rx="5" fill="${C.shoe}" transform="rotate(${rot} ${x} ${y})"/>`;
+const A=(x1,y1,x2,y2,bend=0)=>`<path d="M${x1} ${y1} Q${(x1+x2)/2+bend} ${Math.min(y1,y2)-42} ${x2} ${y2}" fill="none" stroke="${C.mint}" stroke-width="9" stroke-linecap="round"/><path d="M${x2-14} ${y2-8} L${x2} ${y2} L${x2-5} ${y2-16}" fill="none" stroke="${C.mint}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>`;
+const chair=(x=235,y=350)=>`<g filter="url(#shadow)"><rect x="${x}" y="${y-80}" width="72" height="13" rx="5" fill="${C.chair}"/><rect x="${x+55}" y="${y-148}" width="13" height="72" rx="5" fill="${C.chair}"/><rect x="${x+8}" y="${y-69}" width="8" height="73" rx="4" fill="#4B565A"/><rect x="${x+55}" y="${y-69}" width="8" height="73" rx="4" fill="#4B565A"/></g>`;
+const db=(x,y)=>`<g fill="#27343B"><rect x="${x-18}" y="${y-5}" width="36" height="10" rx="4"/><rect x="${x-26}" y="${y-12}" width="10" height="24" rx="4"/><rect x="${x+16}" y="${y-12}" width="10" height="24" rx="4"/></g>`;
+const panel=(x,label,body)=>`<g transform="translate(${x} 0)"><rect x="12" y="16" width="326" height="408" rx="26" fill="#fff" stroke="${C.line}" stroke-width="2"/><text x="32" y="52" fill="#71827C" font-size="18" font-weight="800" font-family="-apple-system,BlinkMacSystemFont,Arial">${label}</text>${body}</g>`;
+const wrap=(a,b,caption='',labels=['СТАРТ','ДВИЖЕНИЕ'])=>`<svg viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(caption)}">${defs}${panel(10,labels[0],a)}${panel(370,labels[1],b)}${caption?`<text x="360" y="462" text-anchor="middle" fill="#407467" font-size="16" font-weight="800" font-family="-apple-system,BlinkMacSystemFont,Arial">${esc(caption)}</text>`:''}</svg>`;
+function stand(x=170,y=350){return `${H(x,y-205)}${T(x,y-125)}${L(x-16,y-100,x-32,y-35,15)}${L(x+16,y-100,x+32,y-35,15)}${L(x-12,y-88,x-22,y-10,22,C.shorts)}${L(x+12,y-88,x+22,y-10,22,C.shorts)}${S(x-27,y)}${S(x+27,y)}`}
+function bike(move=false){return `<circle cx="105" cy="330" r="55" fill="none" stroke="${C.shoe}" stroke-width="9"/><circle cx="242" cy="330" r="55" fill="none" stroke="${C.shoe}" stroke-width="9"/><path d="M105 330 L158 248 L208 330 Z M158 248 L242 330 M158 248 L205 232" fill="none" stroke="${C.shoe}" stroke-width="9" stroke-linecap="round"/>${H(175,145)}${T(176,215,46,70,24)}${L(159,238,208,250,14)}${L(190,238,216,244,14)}${L(164,248,move?205:145,move?298:300,19,C.shorts)}${L(186,248,move?145:205,move?300:298,19,C.shorts)}${move?A(255,175,292,225):''}`}
+function shoulder(move=false){let b=stand(170,350); if(move)b+=`<path d="M105 190 C85 130 120 95 160 115" fill="none" stroke="${C.mint}" stroke-width="9" stroke-linecap="round"/><path d="M235 190 C255 130 220 95 180 115" fill="none" stroke="${C.mint}" stroke-width="9" stroke-linecap="round"/>`;return b}
+function hips(move=false){let b=stand(170,350);b+=`${L(155,240,132,260,13)}${L(185,240,208,260,13)}`;if(move)b+=`<ellipse cx="170" cy="265" rx="74" ry="31" fill="none" stroke="${C.mint}" stroke-width="9" stroke-dasharray="125 45"/><path d="M232 247 l16 8 -12 12" fill="none" stroke="${C.mint}" stroke-width="8" stroke-linecap="round"/>`;return b}
+function catCow(round=false){const y=270;return `${H(92,205)}${T(155,y-18,112,42,round?-10:3)}${L(122,y-4,100,350,16)}${L(190,y-5,184,350,16)}${L(138,y+12,125,342,19,C.shorts)}${L(190,y+10,230,340,19,C.shorts)}${S(98,353)}${S(184,353)}${round?`<path d="M116 255 Q160 200 211 255" fill="none" stroke="${C.mint}" stroke-width="9"/>${A(250,235,245,175)}`:`<path d="M118 247 Q160 285 210 246" fill="none" stroke="${C.mint}" stroke-width="9"/>`}`}
+function bridge(up=false){const y=330;return `${H(62,y-5)}${L(88,y,210,y,30,C.shirt)}${L(155,y+4,130,y+55,22,C.shorts)}${L(190,y+4,226,y+55,22,C.shorts)}${L(130,y+55,120,y+80,17)}${L(226,y+55,240,y+80,17)}${S(116,y+84)}${S(246,y+84)}${up?`<path d="M92 ${y} Q150 ${y-96} 212 ${y-20}" fill="none" stroke="${C.shirt}" stroke-width="30" stroke-linecap="round"/>${A(230,y-20,230,y-105)}`:''}`}
+function chairSquat(down=false,goblet=false){const x=155;let b=chair(235,350);if(!down){b+=stand(x,350);if(goblet)b+=`${db(x,205)}${L(135,228,148,205,13)}${L(175,228,162,205,13)}`;return b}b+=`${H(x,142)}${T(x,220,50,74,8)}${L(140,250,108,302,22,C.shorts)}${L(172,250,218,302,22,C.shorts)}${L(108,302,102,350,17)}${L(218,302,236,350,17)}${S(98,353)}${S(242,353)}`;if(goblet)b+=`${db(x,190)}${L(136,208,149,190,13)}${L(174,208,161,190,13)}`;else b+=`${L(138,215,104,205,13)}${L(172,215,206,205,13)}`;return b}
+function floorPress(up=false){const y=330;return `${H(65,y-10)}${L(90,y,228,y,31,C.shirt)}${L(135,y+4,120,y+55,22,C.shorts)}${L(205,y+4,220,y+55,22,C.shorts)}${S(115,y+61)}${S(225,y+61)}${up?`${L(112,y-3,112,y-118,15)}${L(208,y-3,208,y-118,15)}${db(112,y-130)}${db(208,y-130)}`:`${L(112,y-3,92,y-62,15)}${L(208,y-3,228,y-62,15)}${db(88,y-67)}${db(232,y-67)}`}`}
+function row(up=false){const x=150;return `${chair(235,350)}${H(92,176)}${T(145,225,105,43,20)}${L(115,240,103,326,15)}${L(188,240,240,270,15)}${L(142,258,125,338,21,C.shorts)}${L(190,258,218,337,21,C.shorts)}${S(120,346)}${S(222,346)}${up?`${L(110,245,150,215,15)}${db(154,211)}${A(78,275,145,210)}`:`${L(110,245,110,320,15)}${db(110,330)}`}`}
+function birdDog(move=false){return `${H(95,205)}${T(155,255,112,42,4)}${L(120,270,95,350,15)}${L(190,270,185,350,15)}${move?`${L(190,270,275,230,17)}${L(145,280,55,232,20,C.shorts)}${S(48,228,-10)}${A(235,180,290,185)}`:`${L(145,280,128,342,20,C.shorts)}${L(190,280,232,342,20,C.shorts)}${S(123,350)}${S(238,350)}`}`}
+function sidePlank(up=false){const y=315;return `${H(82,288)}${L(105,y,220,y,30,C.shirt)}${L(135,y+5,110,y+46,20,C.shorts)}${L(195,y+5,245,y+42,20,C.shorts)}${L(110,y+46,90,y+70,15)}${L(245,y+42,270,y+62,15)}${S(84,y+73)}${S(277,y+65)}${up?`<g transform="rotate(-18 170 315)"><path d="M105 315 L220 315" stroke="${C.shirt}" stroke-width="30" stroke-linecap="round"/></g>${A(245,292,258,220)}`:''}`}
+function splitSquat(down=false){const x=145;return `${chair(235,350)}${H(x,123)}${T(x,200,46,70,down?7:0)}${L(x-12,230,down?103:128,down?296:285,22,C.shorts)}${L(x+12,230,245,280,22,C.shorts)}${L(down?103:128,down?296:285,down?98:124,350,17)}${L(245,280,262,290,17)}${S(down?94:120,353)}${S(269,293)}${down?A(195,155,195,253):''}`}
+function inclinePush(down=false){const y=290;return `${chair(225,350)}${H(78,down?260:225)}${T(132,down?275:245,92,40,down?8:-12)}${L(165,down?278:253,235,270,15)}${L(126,down?290:265,68,350,21,C.shorts)}${L(155,down?292:265,100,350,21,C.shorts)}${S(62,353)}${S(94,353)}${down?A(192,210,192,285):''}`}
+function deadBug(move=false){const y=330;return `${H(65,y-7)}${L(90,y,230,y,31,C.shirt)}${move?`${L(135,y-2,95,y-88,15)}${L(205,y-2,245,y-86,15)}${L(145,y+2,102,y+70,21,C.shorts)}${L(205,y+2,270,y+55,21,C.shorts)}`:`${L(135,y-2,135,y-104,15)}${L(205,y-2,205,y-104,15)}${L(145,y+2,140,y-60,21,C.shorts)}${L(205,y+2,210,y-60,21,C.shorts)}`}`}
+function calf(up=false){let b=`${stand(155,350)}${chair(235,350)}`;if(up)b+=`${A(92,300,92,215)}<g transform="translate(0,-22)">${S(128,350)}${S(182,350)}</g>`;return b}
+function frog(up=false){const y=325;return `${H(60,y-4)}${L(88,y,210,y,31,C.shirt)}${L(152,y+3,130,y+45,22,C.shorts)}${L(188,y+3,218,y+45,22,C.shorts)}${L(130,y+45,165,y+70,16)}${L(218,y+45,183,y+70,16)}${S(174,y+74)}${up?`<path d="M92 ${y} Q150 ${y-90} 212 ${y-18}" fill="none" stroke="${C.shirt}" stroke-width="31" stroke-linecap="round"/>${A(228,y-10,228,y-100)}`:''}`}
+function reverseLunge(down=false){if(!down)return stand(165,350);return `${H(165,120)}${T(165,198,45,70,10)}${L(152,230,105,295,22,C.shorts)}${L(178,230,232,295,22,C.shorts)}${L(105,295,104,350,17)}${L(232,295,280,337,17)}${S(99,353)}${S(287,341)}${A(235,155,235,260)}`}
+function quad(kind='donkey',move=false){let leg='';if(kind==='donkey')leg=move?`${L(195,278,245,230,20,C.shorts)}${L(245,230,250,175,16)}${S(252,169,90)}${A(277,230,285,155)}`:`${L(195,278,240,315,20,C.shorts)}${L(240,315,245,350,16)}${S(247,353)}`;else leg=move?`${L(195,278,265,273,20,C.shorts)}${L(265,273,287,315,16)}${S(292,319,70)}${A(245,250,292,205)}`:`${L(195,278,240,315,20,C.shorts)}${L(240,315,245,350,16)}${S(247,353)}`;return `${H(93,198)}${T(148,242,103,42,6)}${L(118,258,98,335,15)}${L(180,258,175,335,15)}${L(140,278,127,340,20,C.shorts)}${S(121,347)}${leg}`}
+function sideAbd(move=false){const y=320;return `${H(65,296)}${L(90,y,215,y,30,C.shirt)}${L(145,y+4,115,y+42,20,C.shorts)}${move?`${L(200,y+4,265,y-55,20,C.shorts)}${S(272,y-60,-35)}${A(245,y-10,285,y-95)}`:`${L(200,y+4,270,y+28,20,C.shorts)}${S(278,y+32)}`}`}
+function seatedGlute(){return `${H(145,145)}${T(145,225,48,72)}${L(132,260,92,323,20,C.shorts)}${L(158,260,225,302,20,C.shorts)}${L(225,302,165,330,16)}${L(92,323,165,330,16)}${S(170,334)}`}
+function hipFlex(){return `${H(165,115)}${T(165,195,45,70)}${L(152,228,104,294,22,C.shorts)}${L(180,228,225,298,22,C.shorts)}${L(104,294,104,350,17)}${L(225,298,265,350,17)}${S(99,353)}${S(272,353)}${A(225,175,225,252)}`}
+function wallChest(move=false){return `${stand(145,350)}<rect x="275" y="75" width="8" height="292" fill="${C.floor}"/>${L(155,236,275,185,15)}${move?A(115,182,68,220):''}`}
+function thoracic(move=false){return `${H(70,300)}${L(95,315,215,315,30,C.shirt)}${L(145,318,125,350,18,C.shorts)}${L(200,318,235,350,18,C.shorts)}${move?`${L(190,302,270,225,15)}${A(235,265,290,190)}`:`${L(190,302,235,330,15)}`}`}
+function breathing(expand=false){return `${seatedGlute()}<path d="M112 105 Q145 ${expand?62:82} 178 105" fill="none" stroke="${C.mint}" stroke-width="8" stroke-linecap="round"/>${expand?`<path d="M96 118 l-17 -12 M194 118 l17 -12" stroke="${C.mint}" stroke-width="7" stroke-linecap="round"/>`:''}`}
+function renderSlug(slug){switch(slug){
+case'warmup-bike':case'cardio-bike':return wrap(bike(false),bike(true),'Ровный разговорный темп');
+case'shoulder-circles':return wrap(shoulder(false),shoulder(true),'Большие мягкие круги плечами');
+case'hip-circles':return wrap(hips(false),hips(true),'Круги тазом в комфортной амплитуде');
+case'cat-cow':return wrap(catCow(false),catCow(true),'Плавно прогни и округли спину');
+case'glute-bridge':return wrap(bridge(false),bridge(true),'Сожми ягодицы наверху');
+case'chair-squat-warmup':return wrap(chairSquat(false,false),chairSquat(true,false),'Таз назад · стул только ориентир');
+case'breathing':return wrap(breathing(false),breathing(true),'Спокойный вдох и длинный выдох',['ВДОХ','ВЫДОХ']);
+case'easy-bike-walk':return wrap(bike(false),stand(170,350),'Выбери вело или спокойную ходьбу',['ВЕЛО','ХОДЬБА']);
+case'stretch-glute':return wrap(seatedGlute(),seatedGlute(),'Мягкое натяжение без боли',['ПОЗИЦИЯ','УДЕРЖИВАЙ']);
+case'stretch-hip-flexor':return wrap(hipFlex(),hipFlex(),'Таз слегка подкручен',['ПОЗИЦИЯ','УДЕРЖИВАЙ']);
+case'chest-wall-stretch':return wrap(wallChest(false),wallChest(true),'Ладонь на стене · корпус разворачивается');
+case'chair-goblet-squat':return wrap(chairSquat(false,true),chairSquat(true,true),'Гантель у груди · колени по линии носков');
+case'floor-dumbbell-press':return wrap(floorPress(false),floorPress(true),'Локти около 45° · движение плавное');
+case'one-arm-row-chair':return wrap(row(false),row(true),'Спина ровная · локоть к тазу');
+case'bird-dog':return wrap(birdDog(false),birdDog(true),'Противоположные рука и нога');
+case'side-plank-knee':return wrap(sidePlank(false),sidePlank(true),'Корпус одной линией');
+case'split-squat-chair':return wrap(splitSquat(false),splitSquat(true),'Передняя стопа полностью на полу');
+case'incline-pushup-chair':return wrap(inclinePush(false),inclinePush(true),'Корпус одной линией · грудь к опоре');
+case'dead-bug':return wrap(deadBug(false),deadBug(true),'Поясница прижата к полу');
+case'calf-raise':return wrap(calf(false),calf(true),'Поднимись на носки и плавно опустись');
+case'stretch-thoracic':return wrap(thoracic(false),thoracic(true),'Открывай грудной отдел мягко');
+case'frog-pump':return wrap(frog(false),frog(true),'Подошвы вместе · колени наружу · таз вверх');
+case'reverse-lunge-glute':return wrap(reverseLunge(false),reverseLunge(true),'Длинный шаг назад · толчок передней ногой');
+case'donkey-kick':return wrap(quad('donkey',false),quad('donkey',true),'Пятка вверх · таз остаётся ровным');
+case'fire-hydrant':return wrap(quad('hydrant',false),quad('hydrant',true),'Колено в сторону · корпус стабилен');
+case'side-abduction':return wrap(sideAbd(false),sideAbd(true),'Носок вперёд · таз не заваливай');
+default:return wrap(stand(170,350),stand(170,350),'Следуй подсказкам техники',['СТАРТ','ПОЗИЦИЯ']);}}
+function styles(){if(document.getElementById('fit74V9VisualStyle'))return;const s=document.createElement('style');s.id='fit74V9VisualStyle';s.textContent=`
+.v7-visual{margin:16px 0;padding:14px;background:#fff;border:1px solid #dfe8e5;border-radius:22px;box-shadow:0 8px 24px rgba(13,23,38,.035)}
+.v7-visual-label{font-size:12px;font-weight:900;letter-spacing:1.35px;color:#758681;margin:0 0 10px 2px}
+.v9-tech-frame{width:100%;aspect-ratio:3/2;border:1px solid #e1ebe8;border-radius:18px;background:#f7fbfa;overflow:hidden;display:grid;place-items:center}
+.v9-tech-frame svg{display:block;width:100%;height:100%}
+#v7ResetWorkout.v9-reset-action{grid-column:2/4;justify-self:end;align-self:center;border:1px solid #d8e5e1!important;background:#eef5f3!important;color:#60766e!important;padding:8px 12px!important;border-radius:14px!important;font-size:11px!important;font-weight:850!important;box-shadow:none!important;min-width:0!important;width:auto!important;height:auto!important;letter-spacing:0!important}
+#v7ResetWorkout.v9-reset-action:active{transform:scale(.97);opacity:.72}`;document.head.appendChild(s)}
+function html(slug,title='Техника упражнения'){if(!slug)return'';return `<section class="v7-visual"><div class="v7-visual-label">ВИЗУАЛЬНАЯ ТЕХНИКА</div><div class="v9-tech-frame">${renderSlug(slug)}</div></section>`}
+function render(){const b=document.getElementById('v7ResetWorkout');if(b){b.textContent='↺ Сбросить прогресс';b.classList.remove('v8-reset-action');b.classList.add('v9-reset-action');b.title='Сбросить прогресс текущей тренировки'}}
+styles();window.Fit74V7Sprite={version:'9.0',html,render,cells:{}};
+})();
