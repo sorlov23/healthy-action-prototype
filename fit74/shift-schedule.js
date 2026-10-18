@@ -202,7 +202,44 @@
     const del=e.target.closest?.('[data-exception-delete]');if(del){e.preventDefault();deleteException(del.dataset.type,del.dataset.start,del.dataset.end);return}
   },true);
 
-  function tick(){loadPrefs();loadOverrides();ensureSettings();renderSettings();renderToday();renderHub()}
+  let planSnapshot=null, planObserver=null, planRestoring=false;
+  function capturePlanSnapshot(){
+    const card=q('#todayWorkoutCard'), title=q('#todayWorkoutTitle'), meta=q('#todayWorkoutMeta'), status=q('#todayWorkoutStatus'), badge=q('#shiftTodayBadge'), start=q('#startTodayWorkout'), short=q('#shortTodayWorkout');
+    if(!card||!title||!meta||!status||!badge||!meta.textContent.includes('→'))return false;
+    planSnapshot={cardClass:card.className,title:title.textContent,meta:meta.textContent,status:status.textContent,statusClass:status.className,badge:badge.textContent,start:start?.textContent||'',startClass:start?.className||'',short:short?.textContent||'',shortClass:short?.className||''};
+    return true;
+  }
+  function restorePlanSnapshot(){
+    if(!planSnapshot)return;
+    const card=q('#todayWorkoutCard'), title=q('#todayWorkoutTitle'), meta=q('#todayWorkoutMeta'), status=q('#todayWorkoutStatus'), badge=q('#shiftTodayBadge'), start=q('#startTodayWorkout'), short=q('#shortTodayWorkout');
+    if(!card||!title||!meta||!status||!badge)return;
+    planRestoring=true;
+    if(card.className!==planSnapshot.cardClass)card.className=planSnapshot.cardClass;
+    if(title.textContent!==planSnapshot.title)title.textContent=planSnapshot.title;
+    if(meta.textContent!==planSnapshot.meta)meta.textContent=planSnapshot.meta;
+    if(status.textContent!==planSnapshot.status)status.textContent=planSnapshot.status;
+    if(status.className!==planSnapshot.statusClass)status.className=planSnapshot.statusClass;
+    if(badge.textContent!==planSnapshot.badge)badge.textContent=planSnapshot.badge;
+    if(start){if(start.textContent!==planSnapshot.start)start.textContent=planSnapshot.start;if(start.className!==planSnapshot.startClass)start.className=planSnapshot.startClass}
+    if(short){if(short.textContent!==planSnapshot.short)short.textContent=planSnapshot.short;if(short.className!==planSnapshot.shortClass)short.className=planSnapshot.shortClass}
+    planRestoring=false;
+  }
+  function installPlanStabilizer(){
+    const card=q('#todayWorkoutCard');if(!card||planObserver)return;
+    capturePlanSnapshot();
+    planObserver=new MutationObserver(()=>{
+      if(planRestoring)return;
+      queueMicrotask(()=>{
+        if(planRestoring)return;
+        const meta=q('#todayWorkoutMeta'), badge=q('#shiftTodayBadge');
+        if(meta?.textContent.includes('→')&&badge){capturePlanSnapshot();return}
+        restorePlanSnapshot();
+      });
+    });
+    planObserver.observe(card,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+  }
+
+  function tick(){loadPrefs();loadOverrides();ensureSettings();renderSettings();renderToday();renderHub();installPlanStabilizer()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tick);else tick();
   setInterval(tick,1200);
   setInterval(refreshSessions,10000);
