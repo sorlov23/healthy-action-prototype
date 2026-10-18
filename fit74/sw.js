@@ -1,10 +1,10 @@
-const CACHE='fit74-v14-local-technique-cards';
+const CACHE='fit74-v15-local-technique-cards';
 const ASSETS=[
   './',
   './v3.css?v=3','./v3-hotfix.css?v=1','./v3.js?v=3',
   './workout.css?v=4','./workout.js?v=4',
   './shift-schedule.css?v=1','./shift-schedule.js?v=1',
-  './visuals-v4.css?v=1','./visuals-v4.js?v=1','./visual-assets-v5.js?v=1',
+  './visuals-v4.css?v=1','./visuals-v4.js?v=1','./visual-assets-v5.js?v=2',
   './assets/technique/warmup-chair-squat.webp',
   './assets/technique/strength-b-incline-pushup-chair.webp',
   './assets/technique/strength-a-one-arm-row-chair.webp',
@@ -12,6 +12,8 @@ const ASSETS=[
   './assets/technique/glute-bridge.webp',
   './assets/technique/core-bird-dog.webp',
   './assets/technique/warmup-shoulder-circles.webp',
+  './assets/technique/warmup-hip-circles.webp',
+  './assets/technique/warmup-cat-cow.webp',
   './manifest.webmanifest','./icon.svg'
 ];
 
@@ -21,10 +23,12 @@ const withFit74Html=async response=>{
   text=text
     .replaceAll('./technique.css?v=2','./technique.css?v=3')
     .replaceAll('./technique.js?v=2','./technique.js?v=3');
-  if(!text.includes('visual-assets-v5.js')){
+  if(text.includes('visual-assets-v5.js?v=1')){
+    text=text.replaceAll('visual-assets-v5.js?v=1','visual-assets-v5.js?v=2');
+  }else if(!text.includes('visual-assets-v5.js')){
     text=text.replace(
       '<script src="./visuals-v4.js?v=1"></script>',
-      '<script src="./visuals-v4.js?v=1"></script>\n<script src="./visual-assets-v5.js?v=1"></script>'
+      '<script src="./visuals-v4.js?v=1"></script>\n<script src="./visual-assets-v5.js?v=2"></script>'
     );
   }
   const headers=new Headers(response.headers);

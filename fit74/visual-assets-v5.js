@@ -13,6 +13,8 @@ const EXERCISE={
 };
 const SIMPLE={
   'Круги плечами':'warmup-shoulder-circles.webp',
+  'Круги тазом':'warmup-hip-circles.webp',
+  'Кошка-корова':'warmup-cat-cow.webp',
   'Bird-dog':'core-bird-dog.webp',
   'Ягодичный мост без веса':'glute-bridge.webp',
   'Приседания без веса':'warmup-chair-squat.webp'
@@ -30,6 +32,6 @@ function simple(step){
   const file=SIMPLE[name];
   return file?card(file,name):fallback.simple?.(step)||'';
 }
-window.Fit74TechniqueAssets={version:'5.0',base:BASE,exerciseMap:EXERCISE,simpleMap:SIMPLE};
-window.Fit74Visuals={...fallback,exercise,simple,version:'5.0-local'};
+window.Fit74TechniqueAssets={version:'5.1',base:BASE,exerciseMap:EXERCISE,simpleMap:SIMPLE};
+window.Fit74Visuals={...fallback,exercise,simple,version:'5.1-local'};
 })();

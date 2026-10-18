@@ -1,6 +1,6 @@
 {
   "package": "fit74-technique-local",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "basePath": "./assets/technique/",
   "exerciseMap": {
     "chair_squat": "warmup-chair-squat.webp",
@@ -13,6 +13,8 @@
   },
   "simpleMap": {
     "Круги плечами": "warmup-shoulder-circles.webp",
+    "Круги тазом": "warmup-hip-circles.webp",
+    "Кошка-корова": "warmup-cat-cow.webp",
     "Bird-dog": "core-bird-dog.webp",
     "Ягодичный мост без веса": "glute-bridge.webp",
     "Приседания без веса": "warmup-chair-squat.webp"
