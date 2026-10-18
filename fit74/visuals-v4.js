@@ -11,7 +11,7 @@ function addCss(){
   if(hasCss('workout-program-v6.css'))return;
   const l=document.createElement('link');
   l.rel='stylesheet';
-  l.href='./workout-program-v6.css?v=2';
+  l.href='./workout-program-v6.css?v=3';
   document.head.appendChild(l);
 }
 
@@ -20,45 +20,50 @@ function loadScript(src,globalName){
   if(hasScript(src))return Promise.resolve();
   return new Promise((resolve,reject)=>{
     const s=document.createElement('script');
-    s.src='./'+src+'?v=2';
+    s.src='./'+src+'?v=3';
     s.onload=resolve;
     s.onerror=reject;
     document.head.appendChild(s);
   });
 }
 
-async function loadProgramWithoutObserverLoop(){
+async function loadProgramSafely(){
   if(window.Fit74ProgramV6||hasScript('workout-program-v6.js'))return;
   const NativeMutationObserver=window.MutationObserver;
-  // workout-program-v6 currently contains a broad body observer whose own DOM
-  // writes can retrigger it forever on iOS Safari. The program also has a safe
-  // interval refresh, so its observer is not required for functionality.
+  const NativeSetInterval=window.setInterval;
+
+  // The current v6 installer creates both a broad body MutationObserver and a
+  // 900 ms background DOM polling interval. Both are unnecessary for normal
+  // workout operation and together can starve iOS Safari's main thread.
   class Fit74NoopObserver{
     constructor(){ }
     observe(){ }
     disconnect(){ }
     takeRecords(){ return []; }
   }
+  const noopInterval=()=>0;
+
   try{
     window.MutationObserver=Fit74NoopObserver;
+    window.setInterval=noopInterval;
     await loadScript('workout-program-v6.js','Fit74ProgramV6');
   }finally{
     window.MutationObserver=NativeMutationObserver;
+    window.setInterval=NativeSetInterval;
   }
 }
 
 async function bootV6(){
   try{
     addCss();
-    // The sprite keeps the native MutationObserver so technique visuals can
-    // appear as workout steps are rendered.
+    // Sprite replacement is finite: matching image -> one background frame.
     await loadScript('v6-sprite.js','Fit74V6Sprite');
-    await loadProgramWithoutObserverLoop();
+    await loadProgramSafely();
   }catch(e){
     console.warn('Fit74 v6 bootstrap',e);
   }
 }
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bootV6,0));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bootV6,0),{once:true});
 else setTimeout(bootV6,0);
 })();
