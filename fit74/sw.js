@@ -1,4 +1,4 @@
-const CACHE='fit74-v9-stable-ui';
+const CACHE='fit74-v10-direct-technique';
 const ASSETS=['./','./v3.css?v=3','./v3-hotfix.css?v=1','./v3.js?v=3','./workout.css?v=1','./workout.js?v=1','./shift-schedule.css?v=1','./shift-schedule.js?v=1','./technique.css?v=2','./technique.js?v=2','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
