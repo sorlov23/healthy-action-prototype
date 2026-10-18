@@ -1,0 +1,30 @@
+name: Fit74 visual v4
+on:
+  push:
+    branches: [fit74-visual-v4]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[fit74-v4-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fit74-visual-v4
+      - name: Integrate visuals
+        run: python3 tools/fit74_visual_v4_patch.py
+      - name: Syntax checks
+        run: |
+          node --check fit74/visuals-v4.js
+          node --check fit74/workout.js
+          grep -q 'visuals-v4.js?v=1' fit74/index.html
+          grep -q 'visuals-v4.css?v=1' fit74/index.html
+      - name: Commit
+        run: |
+          if git diff --quiet -- fit74; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fit74
+          git commit -m "Integrate visual technique across Fit74 [fit74-v4-done]"
+          git push origin HEAD:fit74-visual-v4
