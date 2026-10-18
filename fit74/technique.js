@@ -1,106 +1,131 @@
 (()=>{
 'use strict';
-const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
-let beginner=localStorage.getItem('fit74_beginner_mode')!=='0';
-let prefLoaded=false,lastKey=null,autoTimer=null;
-const seen=new Set(JSON.parse(localStorage.getItem('fit74_seen_techniques')||'[]'));
+window.__fit74TechniqueDirect='v1';
 
-const T={
- squat:{title:'Приседания к стулу',scene:'squat',steps:['Поставь стопы примерно на ширине плеч, носки слегка наружу.','Начни движение тазом назад, будто садишься на стул.','Колени идут по направлению носков и не заваливаются внутрь.','Легко коснись стула ягодицами и встань, давя всей стопой в пол.'],errors:['Падать на стул всем весом.','Сильно округлять поясницу.','Сводить колени внутрь.','Отрывать пятки от пола.'],easy:'Поставь стул чуть выше или сократи глубину. Можно держаться одной рукой за устойчивую опору.'},
- pushup:{title:'Отжимания от стула / пола',scene:'pushup',steps:['Для начала выбери устойчивый стул, стол или другую высокую опору.','Поставь ладони чуть шире плеч и выстрой тело одной линией.','Согни локти назад и немного в стороны, опуская грудь к опоре.','Оттолкнись ладонями, не прогибаясь в пояснице.'],errors:['Локти строго в стороны под 90°.','Провисать тазом или задирать ягодицы.','Тянуть к опоре только голову.'],easy:'Чем выше опора, тем легче. Начни со стены или высокого стола и постепенно снижай опору.'},
- row:{title:'Тяга гантелей в наклоне',scene:'row',steps:['Слегка согни колени и отведи таз назад. Спина остаётся нейтральной.','Пусть руки с гантелями свободно висят под плечами.','Потяни локти назад к нижним рёбрам.','Опусти гантели медленно, сохраняя положение корпуса.'],errors:['Округлять поясницу.','Поднимать плечи к ушам.','Раскачивать корпусом и дёргать вес.'],easy:'Возьми меньший вес или выполняй тягу одной рукой с опорой на стул.'},
- press:{title:'Жим гантелей вверх',scene:'press',steps:['Стой устойчиво, живот слегка напряжён. Гантели у плеч.','Не выпячивай рёбра и не прогибай поясницу.','Выжми гантели вверх плавно, почти выпрямляя руки.','Верни гантели к плечам под контролем.'],errors:['Сильно прогибаться назад.','Разгонять гантели ногами.','Сводить плечи к ушам.'],easy:'Выполняй сидя на устойчивом стуле с лёгкими гантелями.'},
- plank:{title:'Планка',scene:'plank',steps:['Поставь локти точно под плечами.','Выпрями ноги и собери тело в одну линию от головы до пяток.','Подтяни живот и слегка сожми ягодицы.','Дыши спокойно и закончи подход раньше, чем начнёт проваливаться поясница.'],errors:['Проваливать поясницу.','Высоко поднимать таз.','Задерживать дыхание.'],easy:'Поставь колени на пол или делай планку руками на высокой опоре.'},
- lunge:{title:'Выпады назад',scene:'lunge',steps:['Стой ровно, стопы примерно на ширине таза.','Сделай достаточно длинный шаг одной ногой назад.','Опустись вниз, сохраняя переднюю стопу полностью на полу.','Вернись вверх, отталкиваясь передней ногой.'],errors:['Ставить заднюю ногу слишком близко.','Заваливать переднее колено внутрь.','Терять равновесие ради большой глубины.'],easy:'Держись рукой за опору. Если движение пока некомфортно — замени его приседаниями к стулу.'},
- rdl:{title:'Румынская тяга с гантелями',scene:'rdl',steps:['Стой ровно, колени мягкие, гантели перед бёдрами.','Отводи таз назад, а гантели веди близко вдоль ног.','Остановись, когда появится уверенное натяжение задней поверхности бедра.','Верни таз вперёд и встань за счёт ягодиц.'],errors:['Превращать движение в приседание.','Тянуться гантелями к полу ценой круглой спины.','Уводить вес далеко от ног.'],easy:'Сделай движение без веса перед зеркалом: ладони скользят по бёдрам, таз уходит назад.'},
- oneRow:{title:'Тяга гантели одной рукой',scene:'oneRow',steps:['Одной рукой упрись в устойчивый стул, корпус наклони вперёд.','Спина ровная, плечи смотрят в пол.','Свободной рукой потяни гантель к тазу, ведя локоть назад.','Опусти руку полностью и повтори без разворота корпуса.'],errors:['Скручиваться всем корпусом.','Дёргать плечом вверх.','Округлять спину.'],easy:'Используй очень лёгкую гантель и дополнительную опору коленом, если она есть.'},
- crunch:{title:'Скручивания',scene:'crunch',steps:['Ляг на спину, согни колени, стопы поставь на пол.','Слегка прижми поясницу и расслабь шею.','На выдохе приподними лопатки, сокращая живот.','Медленно верни плечи на пол.'],errors:['Тянуть голову руками.','Рывком садиться полностью.','Задерживать дыхание.'],easy:'Поднимай только лопатки на небольшую высоту — этого достаточно.'},
- sidePlank:{title:'Боковая планка',scene:'sidePlank',steps:['Локоть поставь точно под плечом.','Выстрой плечо, таз и стопы в одну линию.','Подними таз и удерживай корпус ровным.','Дыши спокойно, не разворачивай грудь к полу.'],errors:['Проваливать таз.','Ставить локоть далеко от плеча.','Заваливаться вперёд или назад.'],easy:'Согни нижнюю ногу и оставь колено на полу.'},
- bridge:{title:'Ягодичный мост',scene:'bridge',steps:['Ляг на спину, согни колени, стопы поставь примерно под коленями.','Слегка подкрути таз, убирая лишний прогиб поясницы.','Подними таз и сожми ягодицы в верхней точке.','Опускай таз медленно, не расслабляясь резко.'],errors:['Подниматься за счёт прогиба поясницы.','Слишком далеко ставить стопы.','Разводить или сводить колени во время движения.'],easy:'Работай без веса и поднимай таз только до комфортной высоты.'},
- frog:{title:'Фрог-памп',scene:'frog',steps:['Ляг на спину и соедини подошвы стоп друг с другом.','Подтяни пятки ближе к тазу, а колени свободно раскрой в стороны.','Слегка подкрути таз и подними его за счёт ягодиц.','Сожми ягодицы наверху и плавно опустись.'],errors:['Пытаться поднять таз очень высоко за счёт поясницы.','С силой давить коленями в пол.','Ставить стопы слишком далеко от таза.'],easy:'Сделай маленькую амплитуду и сначала научись чувствовать ягодицы в обычном мосте.'},
- gluteLunge:{title:'Выпады назад с акцентом на ягодицы',scene:'gluteLunge',steps:['Сделай длинный шаг назад и оставь переднюю стопу полностью на полу.','Слегка наклони ровный корпус вперёд.','Опускайся вниз под контролем, таз не разворачивай.','Вставай, толкая пол пяткой передней ноги.'],errors:['Округлять спину при наклоне.','Делать слишком короткий шаг.','Переносить весь вес на заднюю ногу.'],easy:'Держись за опору и уменьши глубину. Можно заменить на ягодичный мост.'},
- donkey:{title:'Разгибание бедра на четвереньках',scene:'donkey',steps:['Встань на четвереньки: ладони под плечами, колени под тазом.','Сохраняй рабочее колено согнутым примерно под прямым углом.','Подними бедро назад-вверх, будто толкаешь потолок пяткой.','Остановись до того, как начнёт прогибаться поясница, и верни ногу вниз.'],errors:['Разгибать поясницу вместо бедра.','Разворачивать таз в сторону.','Сильно размахивать ногой.'],easy:'Уменьши высоту подъёма. Даже небольшое движение при стабильном тазе работает лучше большого маха.'},
- hydrant:{title:'Пожарный гидрант',scene:'hydrant',steps:['Встань на четвереньки, ладони под плечами, колени под тазом.','Оставляя колено согнутым, отведи бедро В СТОРОНУ.','Спина и таз продолжают смотреть в пол.','Остановись до заваливания таза и медленно верни колено вниз.'],errors:['Уводить ногу назад вместо стороны.','Разворачивать таз вместе с ногой.','Переносить весь вес на одну руку.'],easy:'Поднимай колено совсем невысоко. Здесь важнее неподвижный таз, чем амплитуда.'},
- abduction:{title:'Отведение ноги лёжа на боку',scene:'abduction',steps:['Ляг ровно на бок, нижнюю ногу можно слегка согнуть.','Верхнюю ногу выпрями и чуть отведи назад.','Подними её примерно на 30–40°, носок смотрит вперёд.','Медленно опусти ногу, не перекатывая таз назад.'],errors:['Разворачивать носок в потолок.','Заваливаться корпусом назад.','Поднимать ногу слишком высоко.'],easy:'Уменьши амплитуду и положи верхнюю руку перед собой для устойчивости.'},
- birdDog:{title:'Bird-dog',scene:'birdDog',steps:['Встань на четвереньки и слегка напряги живот.','Одновременно вытяни противоположные руку и ногу.','Не разворачивай таз и не прогибай поясницу.','Вернись в центр и поменяй сторону.'],errors:['Поднимать ногу слишком высоко.','Разворачивать таз.','Терять нейтральное положение шеи.'],easy:'Сначала поднимай только руку или только ногу.'},
- hinge:{title:'Наклон: таз назад',scene:'rdl',steps:['Стой ровно, колени мягкие.','Представь, что закрываешь тазом дверь позади себя.','Корпус наклоняется как единый блок, спина остаётся нейтральной.','Верни таз вперёд и выпрямись.'],errors:['Сгибаться только в пояснице.','Сильно приседать.'],easy:'Потренируйся у стены: встань в 15–20 см и старайся коснуться её ягодицами.'}
+const SCENES=[
+  [/Приседания к стулу|Приседания без веса/,'squat'],
+  [/Отжимания от пола или стула/,'pushup'],
+  [/Тяга гантелей в наклоне/,'row'],
+  [/Жим гантелей вверх/,'press'],
+  [/^Планка$/,'plank'],
+  [/Выпады назад с акцентом/,'gluteLunge'],
+  [/Выпады назад/,'lunge'],
+  [/Румынская тяга|Наклоны-таз назад/,'rdl'],
+  [/Тяга гантели одной рукой/,'oneRow'],
+  [/Скручивания|подъёмы корпуса/,'crunch'],
+  [/Боковая планка/,'sidePlank'],
+  [/Ягодичный мост/,'bridge'],
+  [/Фрог-памп/,'frog'],
+  [/Разгибание бедра на четвереньках/,'donkey'],
+  [/Пожарный гидрант/,'hydrant'],
+  [/Отведение ноги лёжа на боку/,'abduction'],
+  [/Bird-dog/,'birdDog']
+];
+
+const HINTS={
+  squat:'Таз назад к стулу · колени по линии носков · пятки на полу',
+  pushup:'Корпус одной линией · грудь к опоре · локти назад',
+  row:'Спина нейтральна · локти назад к рёбрам · без рывка',
+  press:'Рёбра не выпячивать · жим вверх плавно · без прогиба',
+  plank:'Голова–таз–пятки одной линией · живот подтянут',
+  lunge:'Длинный шаг назад · передняя стопа полностью на полу',
+  gluteLunge:'Длинный шаг · лёгкий наклон корпуса · толчок пяткой',
+  rdl:'Таз назад · гантели вдоль ног · спина нейтральна',
+  oneRow:'Опора на стул · плечи ровно · локоть к тазу',
+  crunch:'Поднять лопатки · шея расслаблена · выдох наверху',
+  sidePlank:'Локоть под плечом · таз не проваливать',
+  bridge:'Подкрутить таз · подняться ягодицами · не поясницей',
+  frog:'Стопы вместе · колени наружу · таз вверх ягодицами',
+  donkey:'Колено согнуто · пятка вверх · таз не разворачивать',
+  hydrant:'Колено идёт В СТОРОНУ · таз остаётся ровным',
+  abduction:'Нога чуть назад · носок вперёд · таз не заваливать',
+  birdDog:'Противоположные рука и нога · таз неподвижен'
 };
 
-const matchName=name=>{
- const n=(name||'').trim();
- if(/Приседания к стулу/.test(n))return 'squat';
- if(/Отжимания от пола или стула/.test(n))return 'pushup';
- if(/Тяга гантелей в наклоне/.test(n))return 'row';
- if(/Жим гантелей вверх/.test(n))return 'press';
- if(/^Планка$/.test(n))return 'plank';
- if(/Выпады назад с акцентом/.test(n))return 'gluteLunge';
- if(/Выпады назад/.test(n))return 'lunge';
- if(/Румынская тяга/.test(n))return 'rdl';
- if(/Тяга гантели одной рукой/.test(n))return 'oneRow';
- if(/Скручивания|подъёмы корпуса/.test(n))return 'crunch';
- if(/Боковая планка/.test(n))return 'sidePlank';
- if(/Ягодичный мост/.test(n))return 'bridge';
- if(/Фрог-памп/.test(n))return 'frog';
- if(/Разгибание бедра на четвереньках/.test(n))return 'donkey';
- if(/Пожарный гидрант/.test(n))return 'hydrant';
- if(/Отведение ноги лёжа на боку/.test(n))return 'abduction';
- if(/Bird-dog/.test(n))return 'birdDog';
- if(/Наклоны-таз назад/.test(n))return 'hinge';
- return null;
-};
+function sceneFor(name){for(const [re,key] of SCENES)if(re.test(name||''))return key;return null}
+const line=(x1,y1,x2,y2)=>`<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#102033" stroke-width="5" stroke-linecap="round"/>`;
+const head=(x,y)=>`<circle cx="${x}" cy="${y}" r="10" fill="#102033"/>`;
+const arrow=(x1,y1,x2,y2)=>`<defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#59cdb4"/></marker></defs><path d="M${x1} ${y1} Q${(x1+x2)/2} ${Math.min(y1,y2)-18} ${x2} ${y2}" fill="none" stroke="#59cdb4" stroke-width="4" stroke-linecap="round" marker-end="url(#a)"/>`;
+const ground=y=>`<path d="M18 ${y} H342" stroke="#d9e4e1" stroke-width="3" stroke-linecap="round"/>`;
+const label=(x,t)=>`<text x="${x}" y="25" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="800" fill="#7c8d8a" letter-spacing="1.2">${t}</text>`;
 
-const defs=`<defs><linearGradient id="mint" x1="0" x2="1"><stop offset="0" stop-color="#b9eee1"/><stop offset="1" stop-color="#6fd7be"/></linearGradient></defs>`;
-const frame=(x,label)=>`<rect class="tech-figure-card" x="${x+4}" y="22" rx="18" width="168" height="146"/><text class="tech-label" x="${x+18}" y="44">${label}</text>`;
-const head=(x,y)=>`<circle class="tech-head-dot" cx="${x}" cy="${y}" r="10"/>`;
-const ln=(x1,y1,x2,y2)=>`<path class="tech-line" d="M${x1} ${y1} L${x2} ${y2}"/>`;
-const dot=(x,y)=>`<circle class="tech-joint" cx="${x}" cy="${y}" r="3.5"/>`;
-const arr=(x1,y1,x2,y2)=>{const a=Math.atan2(y2-y1,x2-x1),s=9,ax=x2-Math.cos(a)*s,ay=y2-Math.sin(a)*s;return `<path class="tech-arrow" d="M${x1} ${y1} L${x2} ${y2}"/><path class="tech-arrow" d="M${x2} ${y2} L${ax+Math.cos(a+1.1)*s*.8} ${ay+Math.sin(a+1.1)*s*.8} M${x2} ${y2} L${ax+Math.cos(a-1.1)*s*.8} ${ay+Math.sin(a-1.1)*s*.8}"/>`};
-const ground=(x1,x2,y=151)=>`<path d="M${x1} ${y} H${x2}" stroke="#d8e2df" stroke-width="3" stroke-linecap="round"/>`;
-function svg(scene,mini=false){
- const A=frame(0,scene==='plank'||scene==='sidePlank'?'ПРАВИЛЬНО':'СТАРТ'),B=frame(180,scene==='plank'||scene==='sidePlank'?'ОШИБКА':'ДВИЖЕНИЕ');let b='';
- switch(scene){
-  case 'squat': b=`${A}${ground(18,158)}<rect class="tech-prop" x="122" y="96" width="28" height="38" rx="4"/>${head(66,60)}${ln(66,71,66,100)}${ln(66,81,48,92)}${ln(66,81,84,92)}${ln(66,100,52,128)}${ln(66,100,82,128)}${ln(52,128,48,148)}${ln(82,128,88,148)}${B}${ground(198,338)}<rect class="tech-prop" x="303" y="107" width="28" height="28" rx="4"/>${head(246,65)}${ln(244,76,235,101)}${ln(235,101,216,114)}${ln(216,114,214,145)}${ln(235,101,260,116)}${ln(260,116,273,145)}${ln(241,84,266,94)}${arr(282,72,270,105)}`;break;
-  case 'pushup': b=`${A}${ground(18,158,143)}<rect class="tech-prop" x="36" y="103" width="34" height="37" rx="4"/>${head(90,74)}${ln(82,82,112,94)}${ln(112,94,145,109)}${ln(82,83,65,107)}${ln(65,107,61,139)}${ln(112,94,142,139)}${B}${ground(198,338,143)}<rect class="tech-prop" x="216" y="103" width="34" height="37" rx="4"/>${head(269,92)}${ln(260,96,294,101)}${ln(294,101,326,112)}${ln(260,97,245,112)}${ln(245,112,241,139)}${ln(294,101,322,139)}${arr(278,63,270,84)}`;break;
-  case 'row': b=`${A}${ground(18,158)}${head(62,61)}${ln(58,72,84,95)}${ln(84,95,103,129)}${ln(84,95,66,129)}${ln(72,83,61,119)}${ln(77,86,90,120)}<circle class="tech-prop" cx="60" cy="124" r="7"/><circle class="tech-prop" cx="91" cy="124" r="7"/>${B}${ground(198,338)}${head(242,61)}${ln(238,72,264,95)}${ln(264,95,284,129)}${ln(264,95,246,129)}${ln(250,81,232,91)}${ln(232,91,244,103)}${ln(256,86,277,91)}${ln(277,91,269,103)}<circle class="tech-prop" cx="244" cy="105" r="7"/><circle class="tech-prop" cx="269" cy="105" r="7"/>${arr(287,112,277,93)}`;break;
-  case 'press': b=`${A}${ground(18,158)}${head(87,52)}${ln(87,63,87,104)}${ln(87,75,66,83)}${ln(66,83,66,63)}${ln(87,75,108,83)}${ln(108,83,108,63)}<circle class="tech-prop" cx="66" cy="60" r="7"/><circle class="tech-prop" cx="108" cy="60" r="7"/>${ln(87,104,74,145)}${ln(87,104,100,145)}${B}${ground(198,338)}${head(267,61)}${ln(267,72,267,107)}${ln(267,80,246,55)}${ln(246,55,246,36)}${ln(267,80,288,55)}${ln(288,55,288,36)}<circle class="tech-prop" cx="246" cy="32" r="7"/><circle class="tech-prop" cx="288" cy="32" r="7"/>${ln(267,107,254,145)}${ln(267,107,280,145)}${arr(317,96,306,50)}`;break;
-  case 'plank': b=`${A}${ground(18,158,143)}${head(47,93)}${ln(57,96,100,105)}${ln(100,105,145,120)}${ln(62,97,55,126)}${ln(100,105,135,143)}${B}${ground(198,338,143)}${head(226,86)}${ln(236,90,275,115)}${ln(275,115,326,105)}${ln(241,94,231,127)}${ln(275,115,319,143)}<path class="tech-arrow" d="M270 79 Q287 96 274 111"/>` ;break;
-  case 'lunge':case 'gluteLunge': b=`${A}${ground(18,158)}${head(83,52)}${ln(83,63,83,103)}${ln(83,103,70,145)}${ln(83,103,96,145)}${B}${ground(198,338)}${head(257,57)}${ln(254,68,${scene==='gluteLunge'?244:254},102)}${ln(${scene==='gluteLunge'?244:254},102,226,119)}${ln(226,119,222,145)}${ln(${scene==='gluteLunge'?244:254},102,288,119)}${ln(288,119,311,145)}${arr(306,64,295,105)}`;break;
-  case 'rdl': b=`${A}${ground(18,158)}${head(86,52)}${ln(86,63,86,104)}${ln(86,104,73,145)}${ln(86,104,99,145)}${ln(86,77,70,112)}${ln(86,77,102,112)}<circle class="tech-prop" cx="69" cy="117" r="7"/><circle class="tech-prop" cx="103" cy="117" r="7"/>${B}${ground(198,338)}${head(230,67)}${ln(237,75,270,93)}${ln(270,93,258,145)}${ln(270,93,286,145)}${ln(250,83,239,122)}${ln(258,86,260,124)}<circle class="tech-prop" cx="239" cy="127" r="7"/><circle class="tech-prop" cx="260" cy="129" r="7"/>${arr(307,66,286,91)}`;break;
-  case 'oneRow': b=`${A}${ground(18,158)}<rect class="tech-prop" x="117" y="96" width="28" height="39" rx="4"/>${head(61,61)}${ln(66,71,92,94)}${ln(92,94,111,128)}${ln(92,94,74,128)}${ln(77,81,119,104)}${ln(72,79,58,116)}<circle class="tech-prop" cx="57" cy="122" r="7"/>${B}${ground(198,338)}<rect class="tech-prop" x="297" y="96" width="28" height="39" rx="4"/>${head(241,61)}${ln(246,71,272,94)}${ln(272,94,291,128)}${ln(272,94,254,128)}${ln(257,81,299,104)}${ln(252,79,231,91)}${ln(231,91,243,105)}<circle class="tech-prop" cx="244" cy="108" r="7"/>${arr(221,119,235,93)}`;break;
-  case 'crunch': b=`${A}${ground(18,158,141)}${head(52,119)}${ln(62,122,103,128)}${ln(103,128,126,111)}${ln(126,111,145,140)}${B}${ground(198,338,141)}${head(239,93)}${ln(248,99,279,121)}${ln(279,121,306,111)}${ln(306,111,327,140)}${arr(234,127,243,101)}`;break;
-  case 'sidePlank': b=`${A}${ground(18,158,143)}${head(47,84)}${ln(57,89,104,104)}${ln(104,104,146,122)}${ln(69,93,61,126)}${ln(61,126,51,142)}${B}${ground(198,338,143)}${head(227,92)}${ln(237,96,278,119)}${ln(278,119,326,127)}${ln(246,101,239,130)}${ln(239,130,229,142)}${arr(286,83,279,111)}`;break;
-  case 'bridge': b=`${A}${ground(18,158,143)}${head(42,120)}${ln(52,122,90,130)}${ln(90,130,121,112)}${ln(121,112,145,141)}${B}${ground(198,338,143)}${head(222,120)}${ln(232,122,266,108)}${ln(266,108,300,91)}${ln(300,91,325,141)}${arr(278,132,288,101)}`;break;
-  case 'frog': b=`${A}${ground(18,158,143)}${head(43,120)}${ln(53,122,88,129)}${ln(88,129,111,116)}${ln(111,116,134,137)}${ln(111,116,145,119)}${B}${ground(198,338,143)}${head(223,120)}${ln(233,122,267,108)}${ln(267,108,290,95)}${ln(290,95,314,130)}${ln(290,95,329,111)}${arr(278,132,288,101)}<text class="tech-hint" x="276" y="158">стопы вместе · колени наружу</text>`;break;
-  case 'donkey': b=`${A}${ground(18,158,143)}${head(49,78)}${ln(59,84,95,94)}${ln(95,94,127,104)}${ln(66,86,61,126)}${ln(105,97,105,127)}${ln(105,127,91,142)}${ln(127,104,128,133)}${ln(128,133,144,142)}${B}${ground(198,338,143)}${head(229,78)}${ln(239,84,275,94)}${ln(275,94,300,105)}${ln(246,86,241,126)}${ln(285,98,284,127)}${ln(284,127,270,142)}${ln(300,105,318,89)}${ln(318,89,326,70)}${arr(318,125,325,84)}`;break;
-  case 'hydrant': b=`${A}<g transform="translate(18 2)"><rect class="tech-prop" x="52" y="70" width="58" height="46" rx="18"/><circle class="tech-head-dot" cx="81" cy="54" r="10"/>${ln(58,79,35,61)}${ln(103,79,126,61)}${ln(58,108,43,137)}${ln(103,108,118,137)}</g>${B}<g transform="translate(198 2)"><rect class="tech-prop" x="52" y="70" width="58" height="46" rx="18"/><circle class="tech-head-dot" cx="81" cy="54" r="10"/>${ln(58,79,35,61)}${ln(103,79,126,61)}${ln(58,108,43,137)}${ln(103,108,137,108)}${ln(137,108,151,133)}</g>${arr(288,142,330,111)}<text class="tech-hint" x="250" y="158">колено идёт В СТОРОНУ</text>`;break;
-  case 'abduction': b=`${A}${ground(18,158,143)}${head(43,119)}${ln(53,121,98,126)}${ln(98,126,144,137)}${ln(98,126,141,125)}${B}${ground(198,338,143)}${head(223,119)}${ln(233,121,278,126)}${ln(278,126,324,138)}${ln(278,126,318,88)}${arr(304,119,318,94)}`;break;
-  case 'birdDog': b=`${A}${ground(18,158,143)}${head(48,80)}${ln(58,85,94,94)}${ln(94,94,124,105)}${ln(67,87,61,127)}${ln(105,98,105,128)}${ln(105,128,91,142)}${ln(124,105,125,135)}${B}${ground(198,338,143)}${head(228,80)}${ln(238,85,274,94)}${ln(274,94,304,105)}${ln(247,87,218,73)}${ln(285,98,285,128)}${ln(285,128,271,142)}${ln(304,105,335,96)}${arr(211,88,220,75)}${arr(317,116,332,98)}`;break;
-  default: b=`${A}${B}<text x="180" y="96" text-anchor="middle" fill="#6c7b80" font-size="13">Смотри пошаговые подсказки ниже</text>`;
- }
- return `<svg viewBox="0 0 356 178" role="img" aria-label="Схема техники упражнения">${defs}<rect class="tech-figure-bg" width="356" height="178" rx="20"/>${b}</svg>`;
+function svg(scene){
+  let a='',b='';
+  switch(scene){
+    case 'squat':
+      a=`${head(82,53)}${line(82,64,82,101)}${line(82,78,61,91)}${line(82,78,103,91)}${line(82,101,68,137)}${line(82,101,99,137)}<rect x="122" y="96" width="30" height="38" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>`;
+      b=`${head(248,61)}${line(244,72,232,100)}${line(232,100,216,116)}${line(216,116,215,145)}${line(232,100,262,116)}${line(262,116,279,145)}<rect x="304" y="107" width="30" height="29" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>${arrow(294,69,278,106)}`;break;
+    case 'pushup':
+      a=`<rect x="28" y="105" width="38" height="37" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>${head(92,76)}${line(84,84,115,95)}${line(115,95,148,111)}${line(84,85,65,109)}${line(65,109,61,141)}${line(115,95,144,141)}`;
+      b=`<rect x="194" y="105" width="38" height="37" rx="5" fill="#edf3f1" stroke="#c8d7d3" stroke-width="2"/>${head(268,94)}${line(260,99,295,102)}${line(295,102,329,114)}${line(260,100,229,116)}${line(229,116,226,141)}${line(295,102,325,141)}${arrow(276,63,268,88)}`;break;
+    case 'row':case 'oneRow':
+      a=`${head(72,58)}${line(67,70,96,94)}${line(96,94,116,134)}${line(96,94,76,134)}${line(80,82,66,119)}${line(86,86,99,121)}<circle cx="65" cy="124" r="7" fill="#596675"/><circle cx="100" cy="126" r="7" fill="#596675"/>`;
+      b=`${head(250,58)}${line(245,70,274,94)}${line(274,94,295,134)}${line(274,94,254,134)}${line(257,82,239,93)}${line(239,93,251,105)}${line(264,86,285,92)}${line(285,92,276,105)}<circle cx="251" cy="109" r="7" fill="#596675"/><circle cx="276" cy="109" r="7" fill="#596675"/>${arrow(305,123,286,95)}`;break;
+    case 'press':
+      a=`${head(84,51)}${line(84,62,84,105)}${line(84,76,64,83)}${line(64,83,64,62)}${line(84,76,104,83)}${line(104,83,104,62)}${line(84,105,72,145)}${line(84,105,97,145)}<circle cx="64" cy="57" r="7" fill="#596675"/><circle cx="104" cy="57" r="7" fill="#596675"/>`;
+      b=`${head(260,58)}${line(260,69,260,108)}${line(260,80,240,54)}${line(240,54,240,34)}${line(260,80,280,54)}${line(280,54,280,34)}${line(260,108,248,145)}${line(260,108,273,145)}<circle cx="240" cy="30" r="7" fill="#596675"/><circle cx="280" cy="30" r="7" fill="#596675"/>${arrow(315,98,303,48)}`;break;
+    case 'plank':
+      a=`${head(49,90)}${line(59,94,104,105)}${line(104,105,150,121)}${line(64,96,57,128)}${line(104,105,140,145)}`;
+      b=`${head(226,84)}${line(236,88,278,116)}${line(278,116,330,106)}${line(242,93,232,129)}${line(278,116,323,145)}${arrow(286,75,276,108)}`;break;
+    case 'lunge':case 'gluteLunge':
+      a=`${head(83,51)}${line(83,62,83,103)}${line(83,103,70,145)}${line(83,103,97,145)}`;
+      b=`${head(254,56)}${line(251,68,${scene==='gluteLunge'?241:251},102)}${line(${scene==='gluteLunge'?241:251},102,222,120)}${line(222,120,218,145)}${line(${scene==='gluteLunge'?241:251},102,289,120)}${line(289,120,314,145)}${arrow(309,62,298,104)}`;break;
+    case 'rdl':
+      a=`${head(83,51)}${line(83,62,83,104)}${line(83,104,71,145)}${line(83,104,96,145)}${line(83,78,68,113)}${line(83,78,99,113)}<circle cx="67" cy="119" r="7" fill="#596675"/><circle cx="100" cy="119" r="7" fill="#596675"/>`;
+      b=`${head(229,64)}${line(236,73,272,93)}${line(272,93,260,145)}${line(272,93,288,145)}${line(250,82,239,122)}${line(258,85,260,124)}<circle cx="239" cy="128" r="7" fill="#596675"/><circle cx="260" cy="130" r="7" fill="#596675"/>${arrow(310,64,288,91)}`;break;
+    case 'crunch':
+      a=`${head(50,120)}${line(60,123,104,130)}${line(104,130,128,111)}${line(128,111,147,141)}`;
+      b=`${head(235,94)}${line(245,100,280,122)}${line(280,122,308,111)}${line(308,111,330,141)}${arrow(231,128,240,103)}`;break;
+    case 'sidePlank':
+      a=`${head(48,83)}${line(58,88,104,104)}${line(104,104,150,123)}${line(70,92,61,128)}${line(61,128,51,142)}`;
+      b=`${head(226,90)}${line(236,95,278,120)}${line(278,120,329,128)}${line(246,100,239,132)}${line(239,132,229,142)}${arrow(288,82,280,112)}`;break;
+    case 'bridge':case 'frog':
+      a=`${head(43,120)}${line(53,123,90,131)}${line(90,131,122,113)}${line(122,113,147,141)}`;
+      b=`${head(222,120)}${line(232,123,267,109)}${line(267,109,301,92)}${line(301,92,328,141)}${arrow(279,134,289,102)}`;break;
+    case 'donkey':
+      a=`${head(49,77)}${line(59,83,96,94)}${line(96,94,129,105)}${line(66,86,61,128)}${line(107,98,107,129)}${line(107,129,92,142)}${line(129,105,130,134)}${line(130,134,146,142)}`;
+      b=`${head(227,77)}${line(237,83,274,94)}${line(274,94,299,105)}${line(245,86,240,128)}${line(285,98,284,128)}${line(284,128,270,142)}${line(299,105,318,89)}${line(318,89,326,70)}${arrow(316,126,325,83)}`;break;
+    case 'hydrant':
+      a=`<rect x="50" y="70" width="60" height="46" rx="18" fill="#e8f6f2" stroke="#102033" stroke-width="3"/>${head(80,53)}${line(57,80,34,62)}${line(103,80,126,62)}${line(57,108,42,137)}${line(103,108,119,137)}`;
+      b=`<rect x="230" y="70" width="60" height="46" rx="18" fill="#e8f6f2" stroke="#102033" stroke-width="3"/>${head(260,53)}${line(237,80,214,62)}${line(283,80,306,62)}${line(237,108,222,137)}${line(283,108,319,108)}${line(319,108,334,133)}${arrow(288,142,329,112)}`;break;
+    case 'abduction':
+      a=`${head(43,119)}${line(53,122,99,127)}${line(99,127,145,138)}${line(99,127,142,126)}`;
+      b=`${head(223,119)}${line(233,122,279,127)}${line(279,127,326,139)}${line(279,127,319,89)}${arrow(305,119,319,95)}`;break;
+    case 'birdDog':
+      a=`${head(48,79)}${line(58,84,95,94)}${line(95,94,125,105)}${line(67,87,61,128)}${line(106,98,106,129)}${line(106,129,91,142)}${line(125,105,126,135)}`;
+      b=`${head(228,79)}${line(238,84,275,94)}${line(275,94,305,105)}${line(247,87,218,73)}${line(286,98,286,129)}${line(286,129,271,142)}${line(305,105,337,96)}${arrow(211,88,220,75)}${arrow(318,116,334,98)}`;break;
+    default:a=`${head(85,60)}${line(85,72,85,108)}${line(85,108,72,145)}${line(85,108,98,145)}`;b=a.replaceAll('85','265').replaceAll('72','252').replaceAll('98','278');
+  }
+  return `<svg viewBox="0 0 360 174" width="100%" role="img" aria-label="Схема техники упражнения" style="display:block"><rect width="360" height="174" rx="22" fill="#f7faf9"/><rect x="8" y="10" width="166" height="154" rx="18" fill="#fff" stroke="#e0e9e6"/><rect x="186" y="10" width="166" height="154" rx="18" fill="#fff" stroke="#e0e9e6"/>${label(22,'СТАРТ')}${label(200,'ДВИЖЕНИЕ')}${ground(151)}${a}${b}</svg>`;
 }
 
-function injectModal(){if(q('#techniqueOverlay'))return;document.body.insertAdjacentHTML('beforeend',`<div id="techniqueOverlay" class="technique-overlay" aria-hidden="true"><div class="technique-sheet"><header class="technique-head"><button id="techniqueClose" aria-label="Закрыть">×</button><div><p>ТЕХНИКА · СХЕМА</p><h2 id="techniqueTitle">—</h2></div><span></span></header><div id="techniqueScroll" class="technique-scroll"></div></div></div>`);q('#techniqueClose').onclick=closeTechnique;q('#techniqueOverlay').addEventListener('click',e=>{if(e.target.id==='techniqueOverlay')closeTechnique()})}
-function openTechnique(key,auto=false){const t=T[key];if(!t)return;injectModal();seen.add(key);localStorage.setItem('fit74_seen_techniques',JSON.stringify([...seen]));q('#techniqueTitle').textContent=t.title;q('#techniqueScroll').innerHTML=`<div class="technique-art">${svg(t.scene)}<p class="technique-caption">Схема упрощённая: используй её вместе с подсказками по положению корпуса и суставов.</p></div><div class="technique-grid"><section class="technique-panel"><h3>Как делать</h3><ol>${t.steps.map(x=>`<li>${x}</li>`).join('')}</ol></section><section class="technique-panel errors"><h3>Частые ошибки</h3><ul>${t.errors.map(x=>`<li>${x}</li>`).join('')}</ul></section><section class="technique-panel easy"><h3>🌱 Вариант попроще</h3><p>${t.easy}</p></section></div><div class="technique-safety">Если движение вызывает острую боль, головокружение или необычный дискомфорт — остановись. Для первых тренировок лучше меньшая амплитуда и вес, но чистая техника.</div>`;q('#techniqueOverlay').classList.add('open');q('#techniqueOverlay').setAttribute('aria-hidden','false');document.body.classList.add('technique-body-lock');if(auto)q('#techniqueScroll').scrollTop=0}
-function closeTechnique(){q('#techniqueOverlay')?.classList.remove('open');q('#techniqueOverlay')?.setAttribute('aria-hidden','true');document.body.classList.remove('technique-body-lock')}
-
-function injectPreview(){
- const body=q('#playerBody');if(!body)return;
- const h=body.querySelector('.exercise-hero h3')||body.querySelector('.simple-step h3');
- if(!h)return;const key=matchName(h.textContent);if(!key)return;
- if(body.querySelector('[data-technique-preview]')?.dataset.techniqueKey===key)return;
- body.querySelector('[data-technique-preview]')?.remove();
- const target=body.querySelector('.exercise-tip')||body.querySelector('.simple-target')||h.parentElement;
- const box=document.createElement('div');box.className='technique-preview';box.dataset.techniquePreview='1';box.dataset.techniqueKey=key;box.innerHTML=`<div class="technique-mini">${svg(T[key].scene,true)}</div><button class="technique-open" data-open-technique="${key}">🎯 Техника</button>`;target.insertAdjacentElement('afterend',box);
- if(beginner&&body.querySelector('.exercise-hero')&&!seen.has(key)&&lastKey!==key){lastKey=key;clearTimeout(autoTimer);autoTimer=setTimeout(()=>{if(q('#workoutPlayer')?.classList.contains('open'))openTechnique(key,true)},350)}
+function style(el,css){Object.assign(el.style,css)}
+let modal=null;
+function openModal(scene,title){
+  if(!modal){
+    modal=document.createElement('div');modal.id='fit74TechniqueDirectModal';
+    style(modal,{position:'fixed',inset:'0',zIndex:'99999',background:'rgba(10,20,33,.48)',display:'none',alignItems:'flex-end',justifyContent:'center'});
+    modal.innerHTML='<div data-sheet style="width:100%;max-width:620px;background:#fff;border-radius:26px 26px 0 0;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -16px 50px rgba(13,23,38,.18)"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px"><div><div style="font-size:12px;font-weight:900;letter-spacing:1.4px;color:#7c8d8a">ТЕХНИКА · СХЕМА</div><h2 data-title style="margin:4px 0 0;font-size:24px;color:#0d1726"></h2></div><button data-close style="width:44px;height:44px;border:0;border-radius:14px;background:#eef3f1;font-size:28px;line-height:1">×</button></div><div data-art></div><p data-hint style="margin:14px 2px 4px;color:#52666a;font-size:16px;line-height:1.45"></p><p style="margin:10px 2px 0;color:#8a999c;font-size:13px;line-height:1.4">Схема упрощённая. Ориентируйся также на пошаговые подсказки в карточке упражнения. Если движение вызывает острую боль — остановись.</p></div>';
+    document.body.appendChild(modal);modal.querySelector('[data-close]').onclick=()=>{modal.style.display='none'};modal.onclick=e=>{if(e.target===modal)modal.style.display='none'};
+  }
+  modal.querySelector('[data-title]').textContent=title;modal.querySelector('[data-art]').innerHTML=svg(scene);modal.querySelector('[data-hint]').textContent=HINTS[scene]||'';modal.style.display='flex';
 }
 
-function ensureSettings(){if(q('#techniqueSettingsCard'))return;const reminder=q('#settingsScreen .reminder-card');if(!reminder)return;reminder.insertAdjacentHTML('beforebegin',`<section id="techniqueSettingsCard" class="card technique-settings-card"><div class="tech-setting-row"><div class="tech-setting-copy"><p class="eyebrow">ТЕХНИКА</p><h2>Я новичок</h2><p class="muted compact">Fit74 сам покажет подробную схему перед новым упражнением. После первого просмотра больше не мешает.</p><span class="technique-new-badge">схемы работают офлайн</span></div><label class="technique-toggle"><input id="beginnerModeToggle" type="checkbox"><span></span></label></div><p class="tech-note">Кнопка «Техника» остаётся в каждом упражнении независимо от этого режима.</p></section>`);const el=q('#beginnerModeToggle');el.checked=beginner;el.onchange=()=>{beginner=el.checked;localStorage.setItem('fit74_beginner_mode',beginner?'1':'0');savePref()}}
-async function loadPref(){if(prefLoaded)return;try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await db('fit74_preferences?select=beginner_mode&limit=1');if(rows?.[0]&&typeof rows[0].beginner_mode==='boolean'){beginner=rows[0].beginner_mode;localStorage.setItem('fit74_beginner_mode',beginner?'1':'0')}prefLoaded=true;ensureSettings();const el=q('#beginnerModeToggle');if(el)el.checked=beginner}catch(e){console.warn('beginner pref',e)}}
-async function savePref(){try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;await db('fit74_preferences?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:user.id,beginner_mode:beginner})})}catch(e){console.warn('save beginner pref',e)}}
+function render(){
+  const body=document.querySelector('#playerBody');if(!body)return;
+  const titleEl=body.querySelector('.exercise-hero h3')||body.querySelector('.simple-step h3');if(!titleEl)return;
+  const title=titleEl.textContent.trim(),scene=sceneFor(title);if(!scene)return;
+  const old=body.querySelector('[data-fit74-direct-technique]');
+  if(old?.dataset.scene===scene)return;
+  old?.remove();
+  const tip=body.querySelector('.exercise-tip')||body.querySelector('.simple-target')||titleEl.parentElement;
+  const box=document.createElement('section');box.dataset.fit74DirectTechnique='1';box.dataset.scene=scene;
+  style(box,{margin:'18px 0',padding:'14px',background:'#fff',border:'1px solid #dfe8e5',borderRadius:'22px',boxShadow:'0 8px 24px rgba(13,23,38,.04)'});
+  box.innerHTML=`<div style="margin-bottom:10px;font-size:13px;font-weight:900;letter-spacing:1.2px;color:#768783">ВИЗУАЛЬНАЯ ТЕХНИКА</div>${svg(scene)}<button data-open style="width:100%;margin-top:12px;border:0;border-radius:14px;padding:13px 16px;background:#e5f8f3;color:#12302a;font-size:16px;font-weight:900">🎯 Показать крупно</button>`;
+  box.querySelector('[data-open]').onclick=()=>openModal(scene,title);
+  tip.insertAdjacentElement('afterend',box);
+}
 
-document.addEventListener('click',e=>{const b=e.target.closest?.('[data-open-technique]');if(b){e.preventDefault();e.stopPropagation();openTechnique(b.dataset.openTechnique,false)}});
-const obs=new MutationObserver(()=>injectPreview());
-function boot(){injectModal();ensureSettings();loadPref();const body=q('#playerBody');if(body)obs.observe(body,{childList:true,subtree:true});setInterval(()=>{ensureSettings();loadPref();injectPreview()},900)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+function boot(){render();setInterval(render,220)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
