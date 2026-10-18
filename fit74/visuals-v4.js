@@ -17,15 +17,15 @@ function primeHeader(){
   if(days)days.textContent=pre?TOTAL:Math.max(0,Math.round((parse(END)-parse(focus))/86400000));
 }
 
-primeHeader();
+// v3.js renders the selected design header after account data loads.
 
 function appendScript(src,onload){
   const s=document.createElement('script');s.src=src;s.onload=onload||null;document.head.appendChild(s);
 }
 
 if(document.readyState==='loading'){
-  document.write('<script src="./technique-images.js?v=10.0"><\/script><script src="./workout-program-v7.js?v=10.0"><\/script>');
+  document.write('<script src="./technique-images.js?v=11.0"><\/script><script src="./workout-program-v7.js?v=11.0"><\/script>');
 }else{
-  appendScript('./technique-images.js?v=10.0',()=>appendScript('./workout-program-v7.js?v=10.0'));
+  appendScript('./technique-images.js?v=11.0',()=>appendScript('./workout-program-v7.js?v=11.0'));
 }
 })();

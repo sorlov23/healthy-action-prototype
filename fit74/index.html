@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0d1726">
+  <meta name="theme-color" content="#f8f8f6">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Fit74">
@@ -16,6 +16,8 @@
 <link rel="stylesheet" href="./visuals-v4.css?v=1">
   <link rel="stylesheet" href="./shift-schedule.css?v=1">
   <link rel="stylesheet" href="./technique-images.css?v=10.0">
+  <link rel="preload" href="./assets/impulse/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="./impulse.css?v=11.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
 </head>
 <body>
@@ -36,11 +38,13 @@
 
 <main id="appView" class="app hidden">
 <header class="topbar">
-  <div><p class="eyebrow">FIT74</p><h1 id="heroTitle">День 1 из 74</h1><p id="heroDate" class="muted"></p></div>
-  <div id="syncPill" class="sync-pill">✓ облако</div>
+  <div class="brand" aria-label="Fit74">Fit<span>74</span></div>
+  <div class="topbar-tools"><div id="syncPill" class="sync-pill" aria-live="polite">✓ облако</div><button class="settings-shortcut" data-goto="settings" aria-label="Открыть профиль и настройки"><img class="ui-icon" src="./assets/impulse/icons/gear.svg" alt=""></button></div>
 </header>
 
 <section id="todayScreen" class="screen active">
+  <div class="today-hero"><p id="greeting" class="greeting">Привет!</p><h1 id="heroTitle">Твой план<br>на завтра</h1><p id="heroDate">19 октября</p><img class="workout-art" src="./assets/impulse/hero-v2.webp" width="300" height="300" alt="" aria-hidden="true"></div>
+  <section class="challenge-progress" aria-label="Прогресс дистанции"><div class="challenge-progress-head"><span id="challengeStatus">Старт завтра · 19 октября</span><strong id="challengeCount">0 из 74</strong></div><div id="challengeTicks" class="challenge-ticks" aria-hidden="true"></div></section>
   <div id="smartNudge" class="smart-nudge hidden"><div><b>Ещё чуть-чуть до зачёта</b><span id="smartNudgeText"></span></div><button id="dismissNudge">×</button></div>
   <div class="hero-grid">
     <div class="score-card">
@@ -55,30 +59,30 @@
   <section id="minimumCard" class="minimum-card card">
     <div class="card-head"><div><p class="eyebrow">РЕЖИМ</p><h2>Бережный день</h2></div><button id="minimumToggle" class="mode-toggle">Включить</button></div>
     <p class="muted compact">Если день развалился — не обнуляемся. Закрой движение, воду и последнюю привычку. Серия стабильности сохранится, но день не станет «сильным».</p>
-    <div class="mini-goal-row"><span id="minMove" class="mini-goal">🚶 Движение</span><span id="minWater" class="mini-goal">💧 Вода</span><span id="minTrack" class="mini-goal">✓ Трекер</span></div>
+    <div class="mini-goal-row"><span id="minMove" class="mini-goal">🚶 Движение</span><span id="minWater" class="mini-goal"><img class="ui-icon" src="./assets/impulse/icons/drop.svg" alt="">Вода</span><span id="minTrack" class="mini-goal">✓ Трекер</span></div>
     <div class="mini-progress"><i id="minProgress"></i></div><div class="mini-progress-label"><span id="minStatus">0/3</span><span>без самообмана</span></div>
   </section>
 
   <section class="card weekly-goals-card">
     <div class="card-head"><div><p class="eyebrow">ЭТА НЕДЕЛЯ</p><h2>Три ориентира</h2></div><span id="weekStability">0% стабильности</span></div>
-    <div class="goal"><div><b>🏋️ Тренировки</b><span id="goalWorkoutCount">0/2</span></div><div class="progress"><i id="goalWorkoutBar"></i></div></div>
-    <div class="goal"><div><b>🥗 Питание в цель</b><span id="goalNutritionCount">0/5</span></div><div class="progress"><i id="goalNutritionBar"></i></div></div>
-    <div class="goal"><div><b>💧 Вода</b><span id="goalWaterCount">0/6</span></div><div class="progress"><i id="goalWaterBar"></i></div></div>
+    <div class="goal"><div><b><img class="ui-icon" src="./assets/impulse/icons/barbell.svg" alt="">Тренировки</b><span id="goalWorkoutCount">0/2</span></div><div class="progress"><i id="goalWorkoutBar"></i></div></div>
+    <div class="goal"><div><b><img class="ui-icon" src="./assets/impulse/icons/bowl-food.svg" alt="">Питание в цель</b><span id="goalNutritionCount">0/5</span></div><div class="progress"><i id="goalNutritionBar"></i></div></div>
+    <div class="goal"><div><b><img class="ui-icon" src="./assets/impulse/icons/drop.svg" alt="">Вода</b><span id="goalWaterCount">0/6</span></div><div class="progress"><i id="goalWaterBar"></i></div></div>
     <p id="weekNote" class="micro"></p>
   </section>
 
   <div class="quick-row"><button id="quickCheckinBtn" class="quick-btn">⚡ Быстрый чек-ин</button><span>8 вопросов · ~10 секунд</span></div>
 
   <section class="card checklist-card">
-    <div class="card-head"><h2>Сегодня</h2><span id="autosaveText">✓ сохранено</span></div>
-    <button class="check-row" data-field="workout"><span><b>🏋️ Тренировка / восстановление</b><small>по плану</small></span><span class="points">+2</span><span class="toggle"></span></button>
-    <div class="nutrition-row"><span><b>🥗 Питание</b><small>как прошёл день?</small></span><div class="segments"><button data-nutrition="0">Мимо</button><button data-nutrition="1">Частично</button><button data-nutrition="2">В цель</button></div></div>
-    <button class="check-row" data-field="movement"><span><b>🚶 Движение</b></span><span class="points">+1</span><span class="toggle"></span></button>
-    <button class="check-row" data-field="water"><span><b>💧 Вода</b></span><span class="points">+1</span><span class="toggle"></span></button>
-    <button class="check-row" data-field="sleep"><span><b>🌙 Сон / режим</b></span><span class="points">+1</span><span class="toggle"></span></button>
-    <button class="check-row" data-field="habit_1"><span><b id="habit1Label">Привычка 1</b></span><span class="points">+1</span><span class="toggle"></span></button>
-    <button class="check-row" data-field="habit_2"><span><b id="habit2Label">Привычка 2</b></span><span class="points">+1</span><span class="toggle"></span></button>
-    <button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><span class="points">+1</span><span class="toggle"></span></button>
+    <div class="card-head"><h2>Ежедневные привычки</h2><div><span id="autosaveText">✓ сохранено</span><strong id="dailyScore">0/10</strong></div></div>
+    <button class="check-row" data-field="movement"><span><b>Движение</b><small>Любая активность сегодня</small></span><img class="ui-icon" src="./assets/impulse/icons/person-simple-run.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="water"><span><b>Вода</b><small>В течение дня</small></span><img class="ui-icon" src="./assets/impulse/icons/drop.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="sleep"><span><b>Сон / режим</b><small>С учётом твоей смены</small></span><img class="ui-icon" src="./assets/impulse/icons/moon.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="workout"><span><b>Тренировка / восстановление</b><small>По твоему плану</small></span><img class="ui-icon" src="./assets/impulse/icons/barbell.svg" alt=""><span class="points">+2</span><span class="toggle"></span></button>
+    <div class="nutrition-row"><span><b><img class="ui-icon" src="./assets/impulse/icons/bowl-food.svg" alt="">Питание</b><small>как прошёл день?</small></span><div class="segments"><button data-nutrition="0">Мимо</button><button data-nutrition="1">Частично</button><button data-nutrition="2">В цель</button></div></div>
+    <button class="check-row" data-field="habit_1"><span><b id="habit1Label">Привычка 1</b></span><img class="ui-icon" src="./assets/impulse/icons/list-checks.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="habit_2"><span><b id="habit2Label">Привычка 2</b></span><img class="ui-icon" src="./assets/impulse/icons/list-checks.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
+    <button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><img class="ui-icon" src="./assets/impulse/icons/list-checks.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
   </section>
 
   <details class="card extras-card"><summary><span><b>Пара цифр</b><small>необязательно</small></span><span>⌄</span></summary><div class="extras-body"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label></div></details>
@@ -87,7 +91,8 @@
 </section>
 
 <section id="historyScreen" class="screen">
-  <div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>История</h2></div><strong id="completedStat">0/74</strong></div>
+  <div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>Прогресс</h2></div><strong id="completedStat">0/74</strong></div>
+  <div class="screen-subnav"><button data-goto="history" class="active">История</button><button data-goto="trends">Тренды</button></div>
   <div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div>
   <section class="card"><div class="card-head"><div><p class="eyebrow">НЕДЕЛЯ</p><h2 id="weekRange">—</h2></div></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div><div><b id="weekAvgScore">0.0</b><span>ср. балл</span></div><div><b id="weekMood">—</b><span>самочувствие</span></div></div><p id="weekInsight" class="muted compact"></p></section>
   <section class="card calendar-card"><div class="card-head"><h2>74 дня</h2><span>тапни по дню</span></div><div id="calendarGrid" class="calendar-grid"></div></section>
@@ -96,7 +101,8 @@
 </section>
 
 <section id="trendsScreen" class="screen">
-  <div class="screen-title"><div><p class="eyebrow">АНАЛИТИКА</p><h2>Тренды</h2></div></div>
+  <div class="screen-title"><div><p class="eyebrow">АНАЛИТИКА</p><h2>Прогресс</h2></div></div>
+  <div class="screen-subnav"><button data-goto="history">История</button><button data-goto="trends" class="active">Тренды</button></div>
   <div class="range-tabs"><button data-range="7">7 дней</button><button data-range="14" class="active">14 дней</button><button data-range="30">30 дней</button></div>
   <section class="card trend-hero"><div><span>Средний балл</span><b id="trendAvgScore">—</b></div><div><span>Стабильность</span><b id="trendStability">—</b></div><div><span>Среднее самочувствие</span><b id="trendMood">—</b></div></section>
   <section class="card chart-card"><div class="card-head"><div><p class="eyebrow">БАЛЛЫ</p><h2>Как идёт дистанция</h2></div></div><svg id="scoreChart" viewBox="0 0 320 140" preserveAspectRatio="none" aria-label="График баллов"></svg></section>
@@ -105,7 +111,7 @@
 </section>
 
 <section id="settingsScreen" class="screen">
-  <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Твои правила</h2></div></div>
+  <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Профиль</h2></div></div>
   <section class="card"><h2>Привычки</h2><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label></section>
   <section class="card"><h2>Цели недели</h2><div class="three-inputs"><label>Тренировки<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label><label>Питание<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label><label>Вода<input id="weeklyWaterGoal" type="number" min="0" max="7"></label></div></section>
   <section class="card reminder-card"><div class="card-head"><div><p class="eyebrow">БЕЗ СПАМА</p><h2>Умное напоминание</h2></div><label class="switch"><input id="reminderEnabled" type="checkbox"><span></span></label></div><p class="muted compact">Если к выбранному времени день ещё не зачтён, Fit74 мягко напомнит. Если всё уже закрыто — молчит.</p><label>После какого времени<input id="reminderTime" type="time" value="21:30"></label><p id="reminderHint" class="micro"></p></section>
@@ -114,16 +120,17 @@
   <button id="logoutBtn" class="danger-ghost">Выйти</button><p id="accountEmail" class="micro center"></p>
 </section>
 
-<nav class="bottom-nav"><button data-screen="today" class="active"><span>✓</span>Сегодня</button><button data-screen="history"><span>▦</span>История</button><button data-screen="trends"><span>⌁</span>Тренды</button><button data-screen="settings"><span>⚙</span>Настройки</button></nav>
+<nav class="bottom-nav" aria-label="Основная навигация"><button data-screen="today" class="active"><img class="ui-icon" src="./assets/impulse/icons/house-fill.svg" alt="">Сегодня</button><button data-screen="workouts"><img class="ui-icon" src="./assets/impulse/icons/barbell-fill.svg" alt="">Тренировки</button><button data-screen="history"><img class="ui-icon" src="./assets/impulse/icons/chart-bar-fill.svg" alt="">Прогресс</button><button data-screen="settings"><img class="ui-icon" src="./assets/impulse/icons/user-fill.svg" alt="">Профиль</button></nav>
 </main>
 
 <div id="toast" class="toast"><span id="toastText"></span><button id="toastAction" class="hidden">Отменить</button></div>
 <div id="quickModal" class="modal" aria-hidden="true"><div class="sheet"><div class="sheet-top"><button id="quickBack" class="icon-btn">←</button><div><span id="quickCounter">1 из 8</span><div class="quick-progress"><i id="quickProgress"></i></div></div><button id="quickClose" class="icon-btn">×</button></div><div class="quick-content"><div id="quickEmoji" class="quick-emoji">🏋️</div><h2 id="quickTitle">Тренировка?</h2><p id="quickSubtitle" class="muted"></p><div id="quickOptions" class="quick-options"></div></div></div></div>
 
-<script src="./v3.js?v=3"></script>
-<script src="./visuals-v4.js?v=10.0"></script>
-<script src="./workout.js?v=4"></script>
-<script src="./shift-schedule.js?v=10.0"></script>
+<script src="./impulse-ui.js?v=11.0"></script>
+<script src="./v3.js?v=11.0"></script>
+<script src="./visuals-v4.js?v=11.0"></script>
+<script src="./workout.js?v=11.0"></script>
+<script src="./shift-schedule.js?v=11.0"></script>
 <script>
 (()=>{
   const ready=()=>{

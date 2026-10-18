@@ -77,6 +77,24 @@ async function currentScene(slug) {
 try {
   await page.goto(base,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>window.Fit74ProgramV7&&window.Fit74TechniqueImages);
+  // The redesign retains all daily controls and exposes only the card-based programs.
+  assert.equal(await page.locator('.check-row').count(),7);
+  await page.locator('.bottom-nav [data-screen="workouts"]').click();
+  await page.locator('[data-v7-start="B"]').waitFor({state:'visible'});
+  assert.deepEqual(await page.locator('#weekPlanStrip [data-shift-code]').evaluateAll(els=>els.map(el=>el.dataset.shiftCode)),['A','REST','REST','B','GLUTES','REST','REST','LIGHT']);
+  assert.deepEqual(await page.locator('#workoutHub [data-v7-start]').evaluateAll(els=>els.map(el=>el.dataset.v7Start)),['B','GLUTES','CARDIO','LIGHT']);
+  await page.locator('.bottom-nav [data-screen="history"]').click();
+  assert(await page.locator('#historyScreen').isVisible());
+  await page.locator('[data-goto="trends"]').first().click();
+  assert(await page.locator('#trendsScreen').isVisible());
+  await page.locator('.bottom-nav [data-screen="settings"]').click();
+  assert(await page.locator('#shiftSettingsCard').isVisible());
+  await page.locator('.bottom-nav [data-screen="today"]').click();
+  await page.locator('[data-field="movement"]').click();
+  assert.equal(await page.locator('[data-field="movement"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#dailyScore').textContent(),'1/10');
+  await page.locator('[data-field="movement"]').click();
+  assert.equal(await page.locator('#dailyScore').textContent(),'0/10');
   const programs = await page.evaluate(()=>window.Fit74ProgramV7.programs);
   assert.deepEqual(programs.GLUTES.exercises.map(x=>x.asset),['weighted-glute-bridge','romanian-deadlift','reverse-lunge-glute','frog-pump','fire-hydrant','side-abduction']);
   assert.deepEqual(programs.GLUTES.exercises.map(x=>x.reps),['12–15','10–12','8–10 / нога','18–25','12 / сторона','15 / сторона']);
@@ -102,6 +120,13 @@ try {
   assert(await page.locator('[data-v7-set="1"]').evaluate(el=>el.classList.contains('done')));
   await page.locator('[data-v7-set="1"]').click();
   assert(!(await page.locator('[data-v7-set="1"]').evaluate(el=>el.classList.contains('done'))),'approach can be undone');
+  // Leaving immediately flushes the pending approach save.
+  await page.locator('[data-v7-set="1"]').click();
+  page.once('dialog', d=>d.accept());
+  await page.locator('#closeWorkoutPlayer').click();
+  await start('A');
+  assert.equal(await page.locator('[data-v7-set="1"]').getAttribute('aria-pressed'),'true','quick exit keeps the latest approach');
+  await page.locator('[data-v7-set="1"]').click();
   await page.locator('[data-technique-zoom]').click();
   assert(await page.locator('dialog[open]').isVisible());
   assert.equal(await page.locator('dialog[open] .technique-pose').count(),2);
@@ -119,7 +144,7 @@ try {
   await start('GLUTES');
   await currentScene('frog-pump');
   assert(await page.locator('[data-v7-set="1"]').evaluate(el=>el.classList.contains('done')),'existing frog-pump set kept');
-  await page.waitForFunction(()=>document.querySelector('#playerKicker').textContent.includes('8/'));
+  await page.waitForFunction(()=>document.querySelector('#playerKicker').textContent.includes('8 из'));
   await screen('phone-frog-pump');
   await page.locator('[data-technique-zoom]').click();
   await screen('phone-frog-pump-enlarged');
@@ -129,7 +154,7 @@ try {
   await currentScene('romanian-deadlift');
   assert.equal(await page.locator('[data-v7-set].done').count(),0,'old donkey kicks are not credited as deadlifts');
   assert.equal(await page.evaluate(()=>localStorage.getItem('fit74_test_sentinel')),'keep-existing-data');
-  await page.waitForFunction(()=>document.querySelector('#playerKicker').textContent.includes('6/'));
+  await page.waitForFunction(()=>document.querySelector('#playerKicker').textContent.includes('6 из'));
   await new Promise(resolve=>setTimeout(resolve,500));
   const migration = writes.findLast(x=>x.workout_code==='GLUTES');
   assert(migration.progress.sets.g_frog.includes(1),'saved prior set preserved');

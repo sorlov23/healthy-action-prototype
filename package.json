@@ -1,0 +1,5 @@
+{
+  "name": "fit74-preview",
+  "private": true,
+  "scripts": {"dev": "node scripts/preview-fit74.mjs"}
+}

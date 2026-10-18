@@ -182,12 +182,15 @@
       frames: [frame([608, 2770, 284, 160], 'Открытие грудного отдела', 'Мужчина с опорой на руку и согнутые колени раскрывает грудную клетку, поднимая другую руку.')]
     }
   };
+  scenes['chair-goblet-squat'].frames[0].src='./assets/impulse/goblet-start-v2.webp';
+  scenes['chair-goblet-squat'].frames[1].src='./assets/impulse/goblet-squat-v2.webp';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   let dialog;
   let originButton;
   let artIndex = 0;
 
   function art(item) {
+    if(item.src)return `<figure class="technique-pose"><div class="technique-art"><img class="technique-cutout" src="${esc(item.src)}" alt="${esc(item.alt)}" loading="eager"></div><figcaption>${esc(item.label)}</figcaption></figure>`;
     const [x, y, width, height] = item.rect;
     const clipId = `fit74-pose-${++artIndex}`;
     const covers = item.covers.map(r => `<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="#fff"/>`).join('');
@@ -201,7 +204,7 @@
   function html(slug, title = 'Техника упражнения') {
     const scene = scenes[slug];
     if (!scene) return '';
-    return `<section class="technique-images" data-technique-scene="${slug}" aria-label="Техника: ${esc(title)}"><div class="technique-images-head"><span>Техника выполнения</span><button type="button" data-technique-zoom="${slug}" data-technique-title="${esc(title)}" aria-label="Увеличить технику: ${esc(title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Крупнее</span></button></div>${frames(scene)}<p class="technique-image-hint">${esc(scene.hint)}</p></section>`;
+    return `<section class="technique-images" data-technique-scene="${slug}" aria-label="Техника: ${esc(title)}"><div class="technique-images-head"><span>Техника выполнения</span><button type="button" data-technique-zoom="${slug}" data-technique-title="${esc(title)}" aria-label="Увеличить технику: ${esc(title)}"><img class="ui-icon" src="./assets/impulse/icons/arrows-out-simple.svg" alt="" aria-hidden="true"><span>Крупнее</span></button></div>${frames(scene)}<p class="technique-image-hint">${esc(scene.hint)}</p></section>`;
   }
 
   function ensureDialog() {
