@@ -12,7 +12,7 @@
   const W={
     A:{title:'Тренировка A',meta:'🏋️ Всё тело · 35–45 мин'},
     B:{title:'Тренировка B',meta:'🏋️ Ноги · спина · корпус · 35–45 мин'},
-    GLUTES:{title:'Ягодицы',meta:'🍑 Отдельная тренировка · 30–35 мин'},
+    GLUTES:{title:'Ягодицы',meta:'🍑 Отдельная тренировка · 35–45 мин'},
     LIGHT:{title:'Восстановление',meta:'🌿 Мягкое движение · 20–30 мин'},
     REST:{title:'Без обязательной тренировки',meta:'😌 Восстановление / свободный выбор'}
   };
@@ -27,6 +27,7 @@
   function clampDate(iso){return iso<START?START:iso>END?END:iso}
 
   function ensureTechniqueAssets(){
+    if(window.Fit74TechniqueImages)return;
     if(!q('link[data-fit74-technique]')){
       const l=document.createElement('link');l.rel='stylesheet';l.href='./technique.css?v=2';l.dataset.fit74Technique='1';document.head.appendChild(l);
     }
