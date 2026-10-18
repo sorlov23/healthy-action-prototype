@@ -1,0 +1,20 @@
+{
+  "package": "fit74-technique-local",
+  "version": "5.0.0",
+  "basePath": "./assets/technique/",
+  "exerciseMap": {
+    "chair_squat": "warmup-chair-squat.webp",
+    "mix_squat": "warmup-chair-squat.webp",
+    "pushup": "strength-b-incline-pushup-chair.webp",
+    "mix_push": "strength-b-incline-pushup-chair.webp",
+    "one_arm_row": "strength-a-one-arm-row-chair.webp",
+    "side_plank": "core-side-plank-knee.webp",
+    "glute_bridge": "glute-bridge.webp"
+  },
+  "simpleMap": {
+    "Круги плечами": "warmup-shoulder-circles.webp",
+    "Bird-dog": "core-bird-dog.webp",
+    "Ягодичный мост без веса": "glute-bridge.webp",
+    "Приседания без веса": "warmup-chair-squat.webp"
+  }
+}
