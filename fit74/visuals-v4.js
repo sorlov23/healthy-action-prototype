@@ -1,8 +1,8 @@
 (()=>{
 'use strict';
 
-// Fit74 v8 bootstrap. No observers, no polling, no PWA logic.
-window.Fit74Visuals={exercise:()=>'',simple:()=>'',version:'8-bootstrap'};
+// Fit74 v9 bootstrap. No observers, no polling, no PWA logic.
+window.Fit74Visuals={exercise:()=>'',simple:()=>'',version:'9-bootstrap'};
 
 function primeHeader(){
   const START='2026-10-19',END='2026-12-31',TOTAL=74;
@@ -24,8 +24,8 @@ function appendScript(src,onload){
 }
 
 if(document.readyState==='loading'){
-  document.write('<script src="./v7-sprite.js?v=2"><\/script><script src="./workout-program-v7.js?v=1"><\/script>');
+  document.write('<script src="./v7-sprite.js?v=9"><\/script><script src="./workout-program-v7.js?v=1"><\/script>');
 }else{
-  appendScript('./v7-sprite.js?v=2',()=>appendScript('./workout-program-v7.js?v=1'));
+  appendScript('./v7-sprite.js?v=9',()=>appendScript('./workout-program-v7.js?v=1'));
 }
 })();
