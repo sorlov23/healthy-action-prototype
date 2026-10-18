@@ -1,5 +1,5 @@
-const CACHE='fit74-v11-technique-cache-bust';
-const ASSETS=['./','./v3.css?v=3','./v3-hotfix.css?v=1','./v3.js?v=3','./workout.css?v=1','./workout.js?v=1','./shift-schedule.css?v=1','./shift-schedule.js?v=1','./technique.css?v=3','./technique.js?v=3','./manifest.webmanifest','./icon.svg'];
+const CACHE='fit74-v13-visuals-v4';
+const ASSETS=['./','./v3.css?v=3','./v3-hotfix.css?v=1','./v3.js?v=3','./workout.css?v=4','./workout.js?v=4','./shift-schedule.css?v=1','./shift-schedule.js?v=1','./visuals-v4.css?v=1','./visuals-v4.js?v=1','./manifest.webmanifest','./icon.svg'];
 
 const withHtmlTechniqueV3=async response=>{
   if(!response||!response.ok)return response;
