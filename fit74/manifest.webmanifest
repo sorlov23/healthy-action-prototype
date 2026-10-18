@@ -1,0 +1,10 @@
+{
+  "name":"Fit74",
+  "short_name":"Fit74",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f4f7f5",
+  "theme_color":"#0d1726",
+  "lang":"ru",
+  "description":"74-дневный личный трекер привычек, тренировок и прогресса"
+}
