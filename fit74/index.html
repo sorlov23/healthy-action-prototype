@@ -11,6 +11,7 @@
   <link rel="icon" href="./icon.svg">
   <title>Fit74</title>
   <link rel="stylesheet" href="./v3.css?v=3">
+  <link rel="stylesheet" href="./v3-hotfix.css?v=1">
 </head>
 <body>
 <div id="boot" class="boot">Fit74</div>
@@ -83,37 +84,8 @@
 <section id="historyScreen" class="screen">
   <div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>История</h2></div><strong id="completedStat">0/74</strong></div>
   <div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div>
-  <section class="card"><div class="card-head"><div><p class="eyebrow">НЕДЕЛЯ</p><h2 id="weekRange">—</h2></div></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div><div><b id="weekAvgScore">0.0</b><span>ср. балл</span></div><div><b id="weekMood">—</b><span>самочувствие</span></div></div><p id="weekInsight" class="muted compact"></p></section>
-  <section class="card calendar-card"><div class="card-head"><h2>74 дня</h2><span>тапни по дню</span></div><div id="calendarGrid" class="calendar-grid"></div></section>
-  <section class="card milestone-card"><div class="card-head"><div><p class="eyebrow">СЛЕДУЮЩИЙ РУБЕЖ</p><h2 id="milestoneNumber">7 дней</h2></div></div><div class="progress big"><i id="milestoneBar"></i></div><p id="milestoneText" class="muted compact"></p></section>
-  <div id="historyList" class="history-list"></div>
+  <section class="card"><div class="card-head"><div><p class="eyebrow">НЕДЕЛЯ</p><h2 id="weekRange">—</h2></div></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div></div></section>
 </section>
-
-<section id="trendsScreen" class="screen">
-  <div class="screen-title"><div><p class="eyebrow">АНАЛИТИКА</p><h2>Тренды</h2></div></div>
-  <div class="range-tabs"><button data-range="7">7 дней</button><button data-range="14" class="active">14 дней</button><button data-range="30">30 дней</button></div>
-  <section class="card trend-hero"><div><span>Средний балл</span><b id="trendAvgScore">—</b></div><div><span>Стабильность</span><b id="trendStability">—</b></div><div><span>Среднее самочувствие</span><b id="trendMood">—</b></div></section>
-  <section class="card chart-card"><div class="card-head"><div><p class="eyebrow">БАЛЛЫ</p><h2>Как идёт дистанция</h2></div></div><svg id="scoreChart" viewBox="0 0 320 140" preserveAspectRatio="none" aria-label="График баллов"></svg></section>
-  <section class="card chart-card"><div class="card-head"><div><p class="eyebrow">ВЕС</p><h2>Тренд веса</h2></div><span id="weightDelta">—</span></div><svg id="weightChart" viewBox="0 0 320 140" preserveAspectRatio="none" aria-label="График веса"></svg><p id="weightEmpty" class="micro"></p></section>
-  <section class="card insights-card"><div class="card-head"><div><p class="eyebrow">НАБЛЮДЕНИЯ</p><h2>Что у тебя работает</h2></div></div><div id="insightsList" class="insights-list"></div><p class="micro">Это наблюдения по твоим отметкам, а не медицинские выводы и не причинно-следственные связи.</p></section>
-</section>
-
-<section id="settingsScreen" class="screen">
-  <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Твои правила</h2></div></div>
-  <section class="card"><h2>Привычки</h2><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label></section>
-  <section class="card"><h2>Цели недели</h2><div class="three-inputs"><label>Тренировки<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label><label>Питание<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label><label>Вода<input id="weeklyWaterGoal" type="number" min="0" max="7"></label></div></section>
-  <section class="card reminder-card"><div class="card-head"><div><p class="eyebrow">БЕЗ СПАМА</p><h2>Умное напоминание</h2></div><label class="switch"><input id="reminderEnabled" type="checkbox"><span></span></label></div><p class="muted compact">Если к выбранному времени день ещё не зачтён, Fit74 мягко напомнит. Если всё уже закрыто — молчит.</p><label>После какого времени<input id="reminderTime" type="time" value="21:30"></label><p id="reminderHint" class="micro"></p></section>
-  <button id="saveSettingsBtn" class="primary">Сохранить настройки</button>
-  <section class="card install-card"><h3>📱 Добавить как приложение</h3><p>Safari → Поделиться → На экран «Домой».</p></section>
-  <button id="logoutBtn" class="danger-ghost">Выйти</button><p id="accountEmail" class="micro center"></p>
-</section>
-
-<nav class="bottom-nav"><button data-screen="today" class="active"><span>✓</span>Сегодня</button><button data-screen="history"><span>▦</span>История</button><button data-screen="trends"><span>⌁</span>Тренды</button><button data-screen="settings"><span>⚙</span>Настройки</button></nav>
-</main>
-
-<div id="toast" class="toast"><span id="toastText"></span><button id="toastAction" class="hidden">Отменить</button></div>
-<div id="quickModal" class="modal" aria-hidden="true"><div class="sheet"><div class="sheet-top"><button id="quickBack" class="icon-btn">←</button><div><span id="quickCounter">1 из 8</span><div class="quick-progress"><i id="quickProgress"></i></div></div><button id="quickClose" class="icon-btn">×</button></div><div class="quick-content"><div id="quickEmoji" class="quick-emoji">🏋️</div><h2 id="quickTitle">Тренировка?</h2><p id="quickSubtitle" class="muted"></p><div id="quickOptions" class="quick-options"></div></div></div></div>
-
 <script src="./v3.js?v=3"></script>
 </body>
 </html>
