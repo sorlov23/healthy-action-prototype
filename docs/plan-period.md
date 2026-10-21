@@ -27,3 +27,7 @@ The browser tests use isolated fixture accounts and intercept all Supabase traff
 Verified custom stored dates on startup, inclusive counts, leap years, year boundaries, a single day, invalid/reversed dates, custom-calendar selection and Escape, reload persistence, exception bounds, unchanged shift anchors and approaches, restored history after expansion, a pending daily save while changing dates, failed-save recovery, general settings compatibility, and phone width 320px. Existing five-program / 57-step technique regressions pass with no missing assets or application errors.
 
 Cloud Browser independently confirmed a saved 105-day demo period after reload and an unchanged 20 October first daytime shift. `scripts/preview-fit74.mjs` persists only its isolated preview fixture, never production account data.
+
+## Stale entry recovery
+
+Post-deploy checks found a CDN edge serving the previous `/` HTML for its five-minute shared cache interval while serving the new scripts and `/index.html`. When the shared plan model is missing, the new entry script navigates once to `index.html?fit74v=13`; it does not clear browser storage or change account data. Companion modules defer to this recovery. An isolated stale-HTML regression confirms recovery, persisted dates, and the local-storage sentinel.

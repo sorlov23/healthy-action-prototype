@@ -5,6 +5,7 @@
   if(!cycleModel){console.error('Fit74: shift cycle model is missing');return}
   const DEFAULT_ANCHOR=cycleModel.DEFAULT_ANCHOR;
   const plan=window.Fit74PlanPeriod;
+  if(!plan)return; // v3.js is refreshing a stale entry page.
   let {start:START,end:END}=plan.current;
   const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
   let anchor=localStorage.getItem('fit74_shift_anchor')||DEFAULT_ANCHOR;

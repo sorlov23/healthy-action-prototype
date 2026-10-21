@@ -1,3 +1,10 @@
+// A CDN can briefly serve an older entry page with newly deployed scripts.
+// Recover to the versioned entry without clearing the session or local drafts.
+if(!window.Fit74PlanPeriod){
+ const fresh=new URL('./index.html',location.href);fresh.searchParams.set('fit74v','13');
+ if(location.href!==fresh.href)location.replace(fresh.href);
+ throw new Error('Fit74: загружаем актуальную страницу без удаления локальных данных.');
+}
 const API='https://dllanxwrezqqufgzucuc.supabase.co';
 const KEY='sb_publishable_RQHLHJfu2da4RllXAXyEIw_MBi-MoTU';
 const planPeriod=window.Fit74PlanPeriod;

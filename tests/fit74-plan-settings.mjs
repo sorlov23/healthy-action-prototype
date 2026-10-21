@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),{chromium}=require('playwright');
 const root=resolve(fileURLToPath(new URL('../fit74/',import.meta.url)));
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.webp':'image/webp','.json':'application/json'};
-const server=createServer(async(req,res)=>{try{let path=new URL(req.url,'http://local').pathname;if(path==='/')path='/index.html';const file=resolve(root,'.'+path);if(!file.startsWith(root+'/')){res.writeHead(403).end();return}res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream'}).end(await readFile(file))}catch{res.writeHead(404).end()}});
+const server=createServer(async(req,res)=>{try{let path=new URL(req.url,'http://local').pathname;const stale=path==='/stale.html';if(path==='/'||stale)path='/index.html';const file=resolve(root,'.'+path);if(!file.startsWith(root+'/')){res.writeHead(403).end();return}let data=await readFile(file);if(stale)data=Buffer.from(data.toString().replace(/<script src="\.\/plan-(period|settings)\.js[^>]*><\/script>/g,''));res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream'}).end(data)}catch{res.writeHead(404).end()}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true,...(process.env.FIT74_CHROMIUM_PATH?{executablePath:process.env.FIT74_CHROMIUM_PATH}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
 const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,timezoneId:'Europe/Moscow'}),page=await context.newPage();
@@ -84,5 +84,8 @@ try{
  await page.locator('#saveSettingsBtn').click();await page.waitForFunction(()=>!document.querySelector('#saveSettingsBtn').disabled);assert.equal(preferences.end_date,'2027-01-31','general settings cannot reset the period');
  await page.setViewportSize({width:320,height:740});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('[data-plan-picker="end"]').click();assert.equal(await page.evaluate(()=>document.querySelector('dialog').getBoundingClientRect().right>innerWidth),false);await page.keyboard.press('Escape');
  assert.deepEqual(sessions,sessionSnapshot);assert.equal(await page.evaluate(()=>localStorage.getItem('fit74_test_sentinel')),'keep');assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
- console.log(JSON.stringify({ok:true,storedDatesAtStartup:true,calendarPicker:true,invalidRangeRejected:true,reloadPersistence:true,singleDayAndYearBoundary:true,pendingSavePreserved:true,historyAndApproachesPreserved:true,shiftAnchorPreserved:true,failedSaveKeepsDraft:true,phone320:true},null,2));
+ // An old CDN entry lacking the shared model recovers without clearing local state.
+ const stalePage=await context.newPage();await stalePage.goto(`http://127.0.0.1:${server.address().port}/stale.html`);await stalePage.waitForURL('**/index.html?fit74v=13');await stalePage.waitForFunction(()=>window.Fit74PlanPeriod?.loaded);
+ assert.equal(await stalePage.locator('#challengeCount').textContent(),'3 из 105');assert.equal(await stalePage.evaluate(()=>localStorage.getItem('fit74_test_sentinel')),'keep');await stalePage.close();
+ console.log(JSON.stringify({ok:true,storedDatesAtStartup:true,calendarPicker:true,invalidRangeRejected:true,reloadPersistence:true,singleDayAndYearBoundary:true,pendingSavePreserved:true,historyAndApproachesPreserved:true,shiftAnchorPreserved:true,failedSaveKeepsDraft:true,staleEntryRecovery:true,phone320:true},null,2));
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

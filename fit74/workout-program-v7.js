@@ -1,6 +1,7 @@
 (()=>{
 'use strict';
 const VERSION='7.0',CONTENT_REVISION='cards-2026-10',plan=window.Fit74PlanPeriod;
+if(!plan)return; // The main entry is recovering from a stale CDN page.
 const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const fmtShort=iso=>{try{return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit'}).format(new Date(iso+'T12:00:00'))}catch{return iso}};
