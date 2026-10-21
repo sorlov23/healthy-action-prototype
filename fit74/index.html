@@ -17,15 +17,16 @@
   <link rel="stylesheet" href="./shift-schedule.css?v=1">
   <link rel="stylesheet" href="./technique-images.css?v=10.0">
   <link rel="preload" href="./assets/impulse/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="./impulse.css?v=12.0">
+  <link rel="stylesheet" href="./impulse.css?v=13.0">
+  <link rel="stylesheet" href="./plan-settings.css?v=13.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
 </head>
 <body>
 <div id="boot" class="boot">Fit74</div>
 <section id="authView" class="auth-view hidden">
   <div class="auth-card">
-    <div class="logo-mark">74</div><p class="eyebrow">19.10 → 31.12</p><h1>Fit74</h1>
-    <p class="muted">Личный 74-дневный трекер без наказаний и догонялок.</p>
+    <div class="logo-mark">74</div><p class="eyebrow">ТВОЙ ТЕМП · ТВОЙ ПЛАН</p><h1>Fit74</h1>
+    <p class="muted">Личный трекер без наказаний и догонялок. Даты плана выбираешь ты.</p>
     <form id="authForm">
       <label>Email<input id="email" type="email" autocomplete="email" required></label>
       <label>Пароль<input id="password" type="password" autocomplete="current-password" minlength="8" required></label>
@@ -51,10 +52,10 @@
       <div id="scoreRing" class="score-ring"><span id="scoreValue">0</span><small>/10</small></div>
       <div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p></div>
     </div>
-    <div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small>дня</small></div>
+    <div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small id="daysLeftUnit">дня</small></div>
   </div>
 
-  <div id="prestartBanner" class="banner hidden">Стартуем в понедельник, 19 октября. Можно заранее настроить привычки 👌</div>
+  <div id="prestartBanner" class="banner hidden">Можно заранее настроить привычки 👌</div>
 
   <section id="minimumCard" class="minimum-card card">
     <div class="card-head"><div><p class="eyebrow">РЕЖИМ</p><h2>Бережный день</h2></div><button id="minimumToggle" class="mode-toggle">Включить</button></div>
@@ -95,7 +96,7 @@
   <div class="screen-subnav"><button data-goto="history" class="active">История</button><button data-goto="trends">Тренды</button></div>
   <div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div>
   <section class="card"><div class="card-head"><div><p class="eyebrow">НЕДЕЛЯ</p><h2 id="weekRange">—</h2></div></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div><div><b id="weekAvgScore">0.0</b><span>ср. балл</span></div><div><b id="weekMood">—</b><span>самочувствие</span></div></div><p id="weekInsight" class="muted compact"></p></section>
-  <section class="card calendar-card"><div class="card-head"><h2>74 дня</h2><span>тапни по дню</span></div><div id="calendarGrid" class="calendar-grid"></div></section>
+  <section class="card calendar-card"><div class="card-head"><h2 id="calendarTitle">74 дня</h2><span>тапни по дню</span></div><div id="calendarPager" class="calendar-pager hidden"><button id="calendarPrev" aria-label="Предыдущие дни">←</button><span id="calendarPageRange"></span><button id="calendarNext" aria-label="Следующие дни">→</button></div><div id="calendarGrid" class="calendar-grid"></div></section>
   <section class="card milestone-card"><div class="card-head"><div><p class="eyebrow">СЛЕДУЮЩИЙ РУБЕЖ</p><h2 id="milestoneNumber">7 дней</h2></div></div><div class="progress big"><i id="milestoneBar"></i></div><p id="milestoneText" class="muted compact"></p></section>
   <div id="historyList" class="history-list"></div>
 </section>
@@ -112,6 +113,19 @@
 
 <section id="settingsScreen" class="screen">
   <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Профиль</h2></div></div>
+  <section id="planSettingsCard" class="card plan-settings-card">
+    <div class="card-head"><div><p class="eyebrow">ТВОЯ ДИСТАНЦИЯ</p><h2>Период плана</h2></div><span id="planDuration" class="plan-duration">74 дня</span></div>
+    <p class="muted compact">Выбери начало и окончание. Длительность пересчитается автоматически.</p>
+    <div class="plan-date-fields">
+      <div><label for="planStartInput">Начало</label><div class="plan-date-field"><input id="planStartInput" type="text" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" aria-describedby="planDateHint planDateError"><button type="button" data-plan-picker="start" aria-label="Выбрать дату начала"><img class="ui-icon" src="./assets/impulse/icons/calendar-blank.svg" alt=""></button></div></div>
+      <div><label for="planEndInput">Окончание</label><div class="plan-date-field"><input id="planEndInput" type="text" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" aria-describedby="planDateHint planDateError"><button type="button" data-plan-picker="end" aria-label="Выбрать дату окончания"><img class="ui-icon" src="./assets/impulse/icons/calendar-blank.svg" alt=""></button></div></div>
+    </div>
+    <p id="planDateHint" class="micro">ДД.ММ.ГГГГ · обе даты входят в план.</p>
+    <p id="planDateError" class="plan-date-error" role="alert"></p>
+    <div id="planRangePreview" class="plan-range-preview" aria-live="polite"></div>
+    <button id="savePlanPeriodBtn" class="primary" type="button">Сохранить период</button>
+    <p class="micro plan-preserve-note">История и подходы не удаляются. Записи вне периода не входят в его статистику. График смен остаётся на своих датах.</p>
+  </section>
   <section class="card"><h2>Привычки</h2><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label></section>
   <section class="card"><h2>Цели недели</h2><div class="three-inputs"><label>Тренировки<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label><label>Питание<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label><label>Вода<input id="weeklyWaterGoal" type="number" min="0" max="7"></label></div></section>
   <section class="card reminder-card"><div class="card-head"><div><p class="eyebrow">БЕЗ СПАМА</p><h2>Умное напоминание</h2></div><label class="switch"><input id="reminderEnabled" type="checkbox"><span></span></label></div><p class="muted compact">Если к выбранному времени день ещё не зачтён, Fit74 мягко напомнит. Если всё уже закрыто — молчит.</p><label>После какого времени<input id="reminderTime" type="time" value="21:30"></label><p id="reminderHint" class="micro"></p></section>
@@ -127,11 +141,13 @@
 <div id="quickModal" class="modal" aria-hidden="true"><div class="sheet"><div class="sheet-top"><button id="quickBack" class="icon-btn">←</button><div><span id="quickCounter">1 из 8</span><div class="quick-progress"><i id="quickProgress"></i></div></div><button id="quickClose" class="icon-btn">×</button></div><div class="quick-content"><div id="quickEmoji" class="quick-emoji">🏋️</div><h2 id="quickTitle">Тренировка?</h2><p id="quickSubtitle" class="muted"></p><div id="quickOptions" class="quick-options"></div></div></div></div>
 
 <script src="./impulse-ui.js?v=11.0"></script>
-<script src="./v3.js?v=12.0"></script>
-<script src="./visuals-v4.js?v=12.0"></script>
-<script src="./workout.js?v=11.0"></script>
+<script src="./plan-period.js?v=13.0"></script>
+<script src="./v3.js?v=13.0"></script>
+<script src="./plan-settings.js?v=13.0"></script>
+<script src="./visuals-v4.js?v=13.0"></script>
+<script src="./workout.js?v=13.0"></script>
 <script src="./shift-cycle.js?v=12.0"></script>
-<script src="./shift-schedule.js?v=12.0"></script>
+<script src="./shift-schedule.js?v=13.0"></script>
 <script>
 (()=>{
   const ready=()=>{

@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='7.0',CONTENT_REVISION='cards-2026-10',START='2026-10-19',END='2026-12-31';
+const VERSION='7.0',CONTENT_REVISION='cards-2026-10',plan=window.Fit74PlanPeriod;
 const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const fmtShort=iso=>{try{return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit'}).format(new Date(iso+'T12:00:00'))}catch{return iso}};
@@ -53,9 +53,9 @@ const P={
  ],cooldown:[['Растяжка ягодиц','20–30 сек / сторона','Мягко, без боли.','stretch-glute'],['Растяжка сгибателей бедра','20–30 сек / сторона','Без пружинящих движений.','stretch-hip-flexor']]}
 };
 let active=null,ticker=null,syncTimer=null,sessions=[];
-function currentDate(){try{if(typeof selectedDate!=='undefined'&&selectedDate)return selectedDate}catch{}return START}
+function currentDate(){try{if(typeof selectedDate!=='undefined'&&selectedDate)return selectedDate}catch{}return plan.current.start}
 function codeFromTodayTitle(){const code=q('#todayWorkoutCard')?.dataset.workoutCode;if(code)return P[code]?code:null;const t=q('#todayWorkoutTitle')?.textContent||'';if(/Тренировка A/.test(t))return'A';if(/Тренировка B/.test(t))return'B';if(/Ягодиц/.test(t))return'GLUTES';if(/Восстанов/.test(t))return'LIGHT';return null}
-async function loadSessions(){try{if(typeof db!=='function')return;sessions=await db(`fit74_workout_sessions?select=*&session_date=gte.${START}&session_date=lte.${END}&order=session_date.desc,created_at.desc`)||[]}catch(e){console.warn('Fit74 v7 sessions',e);sessions=[]}}
+async function loadSessions(){await plan.whenReady();const period=plan.current;try{if(typeof db!=='function')return;const rows=await plan.readRange(db,'fit74_workout_sessions?select=*&order=session_date.desc,created_at.desc','session_date',period);if(period===plan.current)sessions=rows}catch(e){console.warn('Fit74 v7 sessions',e)}}
 function sessionFor(date,code){return sessions.find(s=>s.session_date===date&&s.workout_code===code)}
 function freshProgress(short=false){return{program_version:VERSION,content_revision:CONTENT_REVISION,step:0,sets:{},doneSimple:{},timerRemaining:{},short}}
 function migrateProgress(progress,code){
@@ -96,5 +96,6 @@ async function renderLibrary(){const lib=q('#strengthLibrary');if(lib){const rec
 function resolve(target){const el=target.closest?.('button');if(!el)return null;let code=null,date=currentDate(),short=false;if(el.id==='startTodayWorkout')code=codeFromTodayTitle();else if(el.id==='shortTodayWorkout'){code=codeFromTodayTitle();short=true}else if(el.dataset.v7Start)code=el.dataset.v7Start;else if(el.dataset.v7Short){code=el.dataset.v7Short;short=true}else if(el.dataset.shiftHubStart){code=el.dataset.shiftHubStart;date=el.dataset.shiftHubDate||date;}else if(el.dataset.hubStart)code=el.dataset.hubStart;else if(el.dataset.shiftCode){code=el.dataset.shiftCode;date=el.dataset.shiftDate||date}else if(el.dataset.dayWorkout){code=el.dataset.dayWorkout;date=el.dataset.dayDate||date}return code&&P[code]?{code,date,short}:null}
 document.addEventListener('click',e=>{const open=e.target.closest?.('#openWorkoutLibrary');if(open){setTimeout(renderLibrary,40);return}const reset=e.target.closest?.('[data-v7-reset]');if(reset){e.preventDefault();e.stopImmediatePropagation();if(confirm('Сбросить эту завершённую тренировку?'))resetSession(reset.dataset.v7Date,reset.dataset.v7Reset);return}if(q('#workoutPlayer')?.classList.contains('open')&&active){const b=e.target.closest?.('button');if(!b)return;if(b.id==='playerPrev'){e.preventDefault();e.stopImmediatePropagation();prev()}else if(b.id==='playerNext'){e.preventDefault();e.stopImmediatePropagation();next()}else if(b.id==='toggleShortMode'){e.preventDefault();e.stopImmediatePropagation();toggleShort()}else if(b.id==='closeWorkoutPlayer'){e.preventDefault();e.stopImmediatePropagation();if(confirm('Выйти из тренировки? Прогресс сохранится.'))close()}return}const r=resolve(e.target);if(r){e.preventDefault();e.stopImmediatePropagation();start(r.code,r.short,r.date)}},true);
 function install(){loadSessions();window.Fit74ProgramV7={version:VERSION,programs:P,start,resetSession,renderLibrary}}
+window.addEventListener('fit74:plan-change',()=>{if(q('#workoutHub')?.classList.contains('open'))renderLibrary();else loadSessions()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();

@@ -4,7 +4,8 @@
   const cycleModel=window.Fit74ShiftCycle;
   if(!cycleModel){console.error('Fit74: shift cycle model is missing');return}
   const DEFAULT_ANCHOR=cycleModel.DEFAULT_ANCHOR;
-  const START='2026-10-19', END='2026-12-31';
+  const plan=window.Fit74PlanPeriod;
+  let {start:START,end:END}=plan.current;
   const q=(s,r=document)=>r.querySelector(s), qa=(s,r=document)=>[...r.querySelectorAll(s)];
   let anchor=localStorage.getItem('fit74_shift_anchor')||DEFAULT_ANCHOR;
   let sessions=[], overrides=new Map();
@@ -132,7 +133,7 @@
     if(!groups.length){box.innerHTML='<div class="shift-exception-empty">Пока исключений нет.</div>';return}
     box.innerHTML=groups.map(g=>{const isVac=g.type==='vacation',label=isVac?'🏖️ Отпуск':'☕️ Day off',date=isVac&&g.start!==g.end?`${fmtShort(g.start)}–${fmtShort(g.end)}`:fmtShort(g.start);return `<div class="shift-exception-item"><div><b>${label}</b><small>${date}</small></div><button data-exception-delete data-type="${g.type}" data-start="${g.start}" data-end="${g.end}" aria-label="Удалить">×</button></div>`}).join('');
   }
-  function renderSettings(){ensureSettings();const a=q('#shiftAnchorTitle'),t=q('#shiftAnchorText');if(a&&t){a.textContent=`${fmt(addDays(anchor,1))} — день 1, дневная 09:00–21:00`;t.textContent=`${fmt(anchor)} — день 8, второй выходной после ночных. Дни 7 и 8 — восстановление. Календарная привязка смен сохранена.`}renderExceptionList()}
+  function renderSettings(){ensureSettings();for(const id of ['#shiftExceptionStart','#shiftExceptionEnd']){const input=q(id);if(input){input.min=START;input.max=END}}const a=q('#shiftAnchorTitle'),t=q('#shiftAnchorText');if(a&&t){a.textContent=`${fmt(addDays(anchor,1))} — день 1, дневная 09:00–21:00`;t.textContent=`${fmt(anchor)} — день 8, второй выходной после ночных. Дни 7 и 8 — восстановление. Календарная привязка смен сохранена.`}renderExceptionList()}
   function openExceptionForm(mode){ensureSettings();const form=q('#shiftExceptionForm'),start=q('#shiftExceptionStart'),end=q('#shiftExceptionEnd'),endLabel=q('#shiftExceptionEndLabel'),title=q('#shiftExceptionTitle');if(!form||!start||!end)return;form.dataset.mode=mode;form.classList.remove('hidden');const d=clampDate(currentDate());start.value=d;end.value=d;const vac=mode==='vacation';endLabel?.classList.toggle('hidden',!vac);if(title)title.textContent=vac?'Отпуск':'Day off';setTimeout(()=>start.focus(),50)}
   function closeExceptionForm(){q('#shiftExceptionForm')?.classList.add('hidden')}
   async function saveException(){const form=q('#shiftExceptionForm'),start=q('#shiftExceptionStart'),end=q('#shiftExceptionEnd');if(!form||!start?.value)return;const mode=form.dataset.mode==='vacation'?'vacation':'day_off';let a=clampDate(start.value),b=mode==='vacation'?clampDate(end?.value||a):a;if(b<a)[a,b]=[b,a];const dates=[];for(let d=a;d<=b;d=addDays(d,1))dates.push(d);if(!dates.length)return;try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=dates.map(work_date=>({user_id:user.id,work_date,override_type:mode,updated_at:new Date().toISOString()}));await db('fit74_shift_overrides?on_conflict=user_id,work_date',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});closeExceptionForm();overridesLoaded=false;await loadOverrides(true)}catch(e){console.warn('save shift override',e)}}
@@ -140,9 +141,9 @@
 
   function launch(code,short=false,date=currentDate()){if(code!=='REST'&&window.Fit74ProgramV7){window.Fit74ProgramV7.start(code,short,date);return}if(code==='REST'){q('#openWorkoutLibrary')?.click();return}q('#openWorkoutLibrary')?.click();const go=(tries=0)=>{renderHub();const sel=short?`[data-library-short="${code}"]`:`[data-library-start="${code}"]`,btn=q(sel);if(btn){btn.click();return}if(tries<8)setTimeout(()=>go(tries+1),80)};setTimeout(()=>go(),60)}
 
-  async function refreshSessions(){try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;sessions=await db(`fit74_workout_sessions?select=session_date,workout_code,completed_at&session_date=gte.${START}&session_date=lte.${END}`)||[];renderToday();renderHub()}catch(e){console.warn('shift sessions',e)}}
+  async function refreshSessions(){if(!plan.loaded)return;const period=plan.current;try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await plan.readRange(db,'fit74_workout_sessions?select=session_date,workout_code,completed_at&order=session_date.asc,workout_code.asc','session_date',period);if(period!==plan.current)return;sessions=rows;renderToday();renderHub()}catch(e){console.warn('shift sessions',e)}}
   async function loadPrefs(){if(prefsLoaded)return;try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await db('fit74_preferences?select=shift_cycle_enabled,shift_anchor_date&limit=1');if(rows?.[0]?.shift_anchor_date){anchor=rows[0].shift_anchor_date;localStorage.setItem('fit74_shift_anchor',anchor)}prefsLoaded=true;renderSettings();renderToday();renderHub();revealUI()}catch(e){console.warn('shift prefs',e);prefsLoaded=true;revealUI()}}
-  async function loadOverrides(force=false){if(overridesLoaded&&!force)return;try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await db(`fit74_shift_overrides?select=work_date,override_type,note&work_date=gte.${START}&work_date=lte.${END}&order=work_date.asc`)||[];overrides=new Map(rows.map(r=>[r.work_date,r]));overridesLoaded=true;renderSettings();renderToday();renderHub();revealUI()}catch(e){console.warn('shift overrides',e);overridesLoaded=true;revealUI()}}
+  async function loadOverrides(force=false){if(!plan.loaded||overridesLoaded&&!force)return;const period=plan.current;try{if(typeof user==='undefined'||!user?.id||typeof db!=='function')return;const rows=await plan.readRange(db,'fit74_shift_overrides?select=work_date,override_type,note&order=work_date.asc','work_date',period);if(period!==plan.current)return;overrides=new Map(rows.map(r=>[r.work_date,r]));overridesLoaded=true;renderSettings();renderToday();renderHub();revealUI()}catch(e){console.warn('shift overrides',e);overridesLoaded=true;revealUI()}}
   async function saveAnchor(){localStorage.setItem('fit74_shift_anchor',anchor);try{if(typeof user!=='undefined'&&user?.id&&typeof db==='function')await db('fit74_preferences?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:user.id,shift_cycle_enabled:true,shift_anchor_date:anchor})})}catch(e){console.warn('save shift anchor',e)}renderSettings();renderToday();renderHub()}
 
   function capturePlanSnapshot(){
@@ -171,6 +172,11 @@
   },true);
 
   window.Fit74ShiftSchedule=Object.freeze({renderToday,renderHub,slotFor});
+  window.addEventListener('fit74:plan-change',()=>{
+    ({start:START,end:END}=plan.current);hubDate=null;overridesLoaded=false;closeExceptionForm();renderSettings();
+    // Only the visible range changes. The physical shift anchor and saved rows do not.
+    Promise.all([loadOverrides(true),refreshSessions()]).then(()=>{renderToday();renderHub()});
+  });
   function tick(){ensureTechniqueAssets();loadPrefs();loadOverrides();ensureSettings();renderSettings();renderToday();renderHub();installPlanStabilizer();installHubStabilizer();revealUI()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tick);else tick();
   setInterval(tick,1200);

@@ -12,7 +12,8 @@ const fixture=`<script>
  window.Date=class extends NativeDate{constructor(...a){super(...(a.length?a:[fixed]))}static now(){return fixed}};
  const user={id:'00000000-0000-4000-8000-000000000074',email:'preview@example.invalid',user_metadata:{display_name:'Сергей'}};
  localStorage.setItem('fit74_session',JSON.stringify({user,access_token:'local-preview-only',expires_at:4102444800}));
- const nativeFetch=window.fetch.bind(window), tables={fit74_preferences:[{user_id:user.id,reminder_enabled:false}],fit74_workout_sessions:[],fit74_daily_entries:[],fit74_shift_overrides:[]};
+ const nativeFetch=window.fetch.bind(window), defaults={fit74_preferences:[{user_id:user.id,start_date:'2026-10-19',end_date:'2026-12-31',reminder_enabled:false}],fit74_workout_sessions:[],fit74_daily_entries:[],fit74_shift_overrides:[]};
+ let tables=defaults;try{tables=JSON.parse(localStorage.getItem('fit74_preview_tables'))||defaults}catch{}
  window.fetch=async(input,opts={})=>{
   const url=String(input);if(!url.startsWith('https://dllanxwrezqqufgzucuc.supabase.co/'))return nativeFetch(input,opts);
   const table=new URL(url).pathname.split('/').pop(), method=opts.method||'GET';let result=tables[table]||[];
@@ -20,6 +21,10 @@ const fixture=`<script>
    const body=JSON.parse(opts.body||'{}'),rows=Array.isArray(body)?body:[body];
    for(const row of rows){const key=table==='fit74_workout_sessions'?'workout_code':table==='fit74_daily_entries'?'entry_date':table==='fit74_shift_overrides'?'work_date':'user_id';const i=result.findIndex(x=>x[key]===row[key]&&(table!=='fit74_workout_sessions'||x.session_date===row.session_date));if(i<0)result.push(row);else result[i]={...result[i],...row};}tables[table]=result;result=rows;
   }else if(method==='DELETE'){const params=new URL(url).searchParams;tables[table]=result.filter(row=>![...params].every(([k,v])=>!v.startsWith('eq.')||String(row[k])===v.slice(3)));result=[];}
+  if(method==='GET'){
+   const params=new URL(url).searchParams;result=result.filter(row=>[...params].every(([key,value])=>value.startsWith('gte.')?String(row[key])>=value.slice(4):value.startsWith('lte.')?String(row[key])<=value.slice(4):value.startsWith('eq.')?String(row[key])===value.slice(3):true));
+   const offset=Number(params.get('offset')||0),limit=Number(params.get('limit')||result.length);result=result.slice(offset,offset+limit);
+  }else localStorage.setItem('fit74_preview_tables',JSON.stringify(tables));
   return new Response(JSON.stringify(result),{status:200,headers:{'Content-Type':'application/json'}});
  };
 })();</script>`;
