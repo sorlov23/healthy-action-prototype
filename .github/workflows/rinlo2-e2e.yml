@@ -4,12 +4,16 @@ on:
   push:
     paths:
       - 'rinlo2/**'
+      - 'runtime-config.js'
       - 'tests/rinlo2-decision-smoke.mjs'
+      - 'tests/rinlo2-home-mobile-pass.mjs'
       - '.github/workflows/rinlo2-e2e.yml'
   pull_request:
     paths:
       - 'rinlo2/**'
+      - 'runtime-config.js'
       - 'tests/rinlo2-decision-smoke.mjs'
+      - 'tests/rinlo2-home-mobile-pass.mjs'
       - '.github/workflows/rinlo2-e2e.yml'
 
 jobs:
@@ -52,6 +56,15 @@ jobs:
       - name: Run Rinlo 2 mobile decision smoke
         run: |
           if node tests/rinlo2-decision-smoke.mjs; then
+            exit 0
+          fi
+          echo '--- Rinlo 2 HTTP server log ---'
+          cat /tmp/rinlo2-http.log || true
+          exit 1
+
+      - name: Run Rinlo 2 Home mobile pass
+        run: |
+          if node tests/rinlo2-home-mobile-pass.mjs; then
             exit 0
           fi
           echo '--- Rinlo 2 HTTP server log ---'
