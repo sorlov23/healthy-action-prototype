@@ -10,7 +10,7 @@ on:
 
 jobs:
   live-vision-probe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +18,15 @@ jobs:
         with:
           node-version: 22
       - name: Probe Supabase Edge Function and Gemini
-        run: node tests/rinlo2-live-vision.cjs
+        run: |
+          for attempt in 1 2 3; do
+            if node tests/rinlo2-live-vision.cjs; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Live vision probe failed after 3 attempts"
+              exit 1
+            fi
+            echo "Live vision probe failed (attempt $attempt/3); retrying..."
+            sleep $((attempt * 5))
+          done
