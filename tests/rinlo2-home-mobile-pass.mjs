@@ -22,19 +22,37 @@ try {
   await page.waitForFunction(() => document.querySelector('#homeSuggestNow')?.dataset.zeroPromptReady === 'false');
 
   assert.equal((await page.locator('.home-suggest-kicker').textContent())?.trim(), 'НАСТРОЙ ОДИН РАЗ');
-  assert((await page.locator('#homeSuggestContext').textContent())?.includes('Сначала выбери'), 'first_use_context_missing');
+  assert((await page.locator('#homeSuggestContext').textContent())?.includes('Выбери 2 продукта'), 'first_use_context_missing');
   assert((await page.locator('#homeSuggestReadiness').textContent())?.includes('Дальше'), 'first_use_readiness_missing');
 
   const firstBox = await page.locator('#homeSuggestNow').boundingBox();
   assert(firstBox && firstBox.x >= 0 && firstBox.x + firstBox.width <= 390, `first_use_cta_overflow:${JSON.stringify(firstBox)}`);
 
-  await page.evaluate(() => {
-    const key = 'rinlo2-foundation-state-v1';
-    const state = JSON.parse(localStorage.getItem(key) || '{}');
-    state.staples = ['eggs', 'cheese'];
-    localStorage.setItem(key, JSON.stringify(state));
+  await page.locator('#homeSuggestNow').click();
+  await page.locator('[data-screen="profile"].active').waitFor({ state: 'visible' });
+  await page.waitForTimeout(450);
+
+  const setupLanding = await page.evaluate(() => {
+    const rect = (selector) => {
+      const box = document.querySelector(selector)?.getBoundingClientRect();
+      return box ? { top: box.top, bottom: box.bottom } : null;
+    };
+    return {
+      head: rect('.profile-staples-head'),
+      chips: rect('.profile-staples'),
+      save: rect('#saveDecisionProfile'),
+      nav: rect('.bottom-nav'),
+    };
   });
-  await page.reload({ waitUntil: 'networkidle' });
+  assert(setupLanding.head && setupLanding.chips && setupLanding.save && setupLanding.nav,
+    `home_setup_target_missing:${JSON.stringify(setupLanding)}`);
+  assert(setupLanding.head.top >= 0 && setupLanding.save.bottom <= setupLanding.nav.top + 1,
+    `home_setup_not_in_first_view:${JSON.stringify(setupLanding)}`);
+
+  await page.locator('[data-profile-staple="eggs"]').click();
+  await page.locator('[data-profile-staple="cheese"]').click();
+  await page.locator('#saveDecisionProfile').click();
+  await page.locator('[data-screen="home"].active').waitFor({ state: 'visible' });
   await page.waitForFunction(() => document.querySelector('#homeSuggestNow')?.dataset.zeroPromptReady === 'true');
 
   assert.equal((await page.locator('.home-suggest-kicker').textContent())?.trim(), 'ZERO-PROMPT');
@@ -62,6 +80,7 @@ try {
   await page.locator('#cookFlow').waitFor({ state: 'hidden' });
   assert.equal((await page.locator('.home-suggest-main b').textContent())?.trim(), 'Предложи мне');
 
+  console.log(`RINLO2_HOME_SETUP=${JSON.stringify(setupLanding)}`);
   console.log(`RINLO2_HOME_MOBILE_PASS=${JSON.stringify(structure)}`);
   console.log('RINLO2_HOME_MOBILE_RESULT=PASS');
 } finally {
