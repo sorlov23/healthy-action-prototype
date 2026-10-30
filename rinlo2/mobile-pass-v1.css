@@ -1,0 +1,42 @@
+@media (max-width: 560px) {
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .flow-header {
+    grid-template-columns: 44px 1fr 44px;
+  }
+
+  .flow-header button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .back-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 0 6px;
+    margin-left: -6px;
+  }
+
+  .text-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+  }
+
+  .section-head button {
+    position: relative;
+  }
+
+  .section-head button::after {
+    content: '';
+    position: absolute;
+    inset: -14px -8px;
+  }
+}
