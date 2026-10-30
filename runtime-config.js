@@ -8,6 +8,11 @@ window.HEALTHY_ACTION_CONFIG = Object.freeze({
 });
 
 if (location.pathname.includes('/rinlo2/')) {
+  const mobilePassStyles = document.createElement('link');
+  mobilePassStyles.rel = 'stylesheet';
+  mobilePassStyles.href = './mobile-pass-v1.css';
+  document.head.appendChild(mobilePassStyles);
+
   document.addEventListener('DOMContentLoaded', () => {
     const script = document.createElement('script');
     script.src = './home-decision-entry-v1.js';
