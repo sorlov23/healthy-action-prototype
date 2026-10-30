@@ -5,6 +5,7 @@
   if (!button || !window.RinloCook?.suggestFromHome) return;
 
   let busy = false;
+  let returnHomeAfterSetup = false;
 
   const getIngredients = () => window.RinloCook?.getZeroPromptIngredients?.() || [];
   const getParts = () => ({
@@ -27,7 +28,7 @@
     if (parts.context) {
       parts.context.textContent = ready
         ? ingredients.slice(0, 4).join(' · ')
-        : 'Сначала выбери, что обычно есть дома';
+        : 'Выбери 2 продукта, которые обычно есть дома';
     }
     if (parts.readiness) {
       parts.readiness.textContent = ready
@@ -37,6 +38,15 @@
     if (!preserveStatus && parts.status) parts.status.textContent = '';
   }
 
+  function openHomeSetup() {
+    returnHomeAfterSetup = true;
+    const profileNav = [...document.querySelectorAll('[data-nav="profile"]')].at(-1);
+    profileNav?.click();
+    requestAnimationFrame(() => {
+      document.querySelector('.profile-staples-head')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
   async function handleSuggest(event) {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -44,7 +54,7 @@
 
     const ready = getIngredients().length >= 2;
     if (!ready) {
-      await window.RinloCook.suggestFromHome();
+      openHomeSetup();
       return;
     }
 
@@ -81,7 +91,14 @@
   }
 
   button.addEventListener('click', handleSuggest, true);
-  window.addEventListener('rinlo2:profile-applied', () => renderEntryState());
+  window.addEventListener('rinlo2:profile-applied', () => {
+    renderEntryState();
+    if (!returnHomeAfterSetup || getIngredients().length < 2) return;
+    returnHomeAfterSetup = false;
+    const homeNav = [...document.querySelectorAll('[data-nav="home"]')].at(-1);
+    homeNav?.click();
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  });
   window.addEventListener('rinlo2:behavior-memory-changed', () => renderEntryState({ preserveStatus: true }));
   renderEntryState();
 })();
