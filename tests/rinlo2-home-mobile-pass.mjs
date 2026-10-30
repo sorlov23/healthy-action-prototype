@@ -12,14 +12,28 @@ try {
     locale: 'ru-RU',
   });
   const page = await context.newPage();
+  const assertTouchHeight = async (selector, label) => {
+    const box = await page.locator(selector).boundingBox();
+    assert(box && box.height >= 43.5, `${label}_touch_target_too_small:${JSON.stringify(box)}`);
+  };
 
   await page.goto(`${baseUrl}?reset=1&local=1`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => document.querySelector('#homeSuggestNow')?.dataset.zeroPromptReady !== undefined);
+  await assertTouchHeight('#skipOnboarding', 'onboarding_skip');
+  const strayBodyText = await page.evaluate(() => [...document.body.childNodes]
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent || '')
+    .filter((text) => /^\s*\\\s*$/.test(text)));
+  assert.equal(strayBodyText.length, 0, `stray_body_text_present:${JSON.stringify(strayBodyText)}`);
+
   await page.locator('#startSetup').click();
+  await assertTouchHeight('#backWelcome', 'onboarding_back');
   await page.locator('#currentWeight').fill('80');
   await page.locator('#targetWeight').fill('72');
   await page.locator('#finishOnboarding').click();
   await page.locator('[data-screen="home"].active').waitFor({ state: 'visible' });
   await page.waitForFunction(() => document.querySelector('#homeSuggestNow')?.dataset.zeroPromptReady === 'false');
+  await assertTouchHeight('.icon-button', 'profile_icon');
 
   assert.equal((await page.locator('.home-suggest-kicker').textContent())?.trim(), 'НАСТРОЙ ОДИН РАЗ');
   assert((await page.locator('#homeSuggestContext').textContent())?.includes('Выбери 2 продукта'), 'first_use_context_missing');
@@ -60,6 +74,7 @@ try {
 
   await page.locator('#homeSuggestNow').click();
   await page.locator('[data-cook-step="result"].active').waitFor({ state: 'visible' });
+  await assertTouchHeight('[data-cook-step="result"] .flow-header button', 'cook_back');
 
   const structure = await page.evaluate(() => ({
     kicker: Boolean(document.querySelector('#homeSuggestNow .home-suggest-kicker')),
