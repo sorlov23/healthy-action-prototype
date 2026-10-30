@@ -7,6 +7,10 @@
   let busy = false;
   let returnHomeAfterSetup = false;
 
+  [...document.body.childNodes]
+    .filter((node) => node.nodeType === Node.TEXT_NODE && /^\s*\\\s*$/.test(node.textContent || ''))
+    .forEach((node) => node.remove());
+
   const getIngredients = () => window.RinloCook?.getZeroPromptIngredients?.() || [];
   const getParts = () => ({
     kicker: button.querySelector('.home-suggest-kicker'),
