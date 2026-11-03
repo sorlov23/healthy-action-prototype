@@ -16,6 +16,7 @@ const fixture=`<script>
  let tables=defaults;try{tables=JSON.parse(localStorage.getItem('fit74_preview_tables'))||defaults}catch{}
  window.fetch=async(input,opts={})=>{
   const url=String(input);if(!url.startsWith('https://dllanxwrezqqufgzucuc.supabase.co/'))return nativeFetch(input,opts);
+  if(new URLSearchParams(location.search).get('service')==='unavailable')return new Response(JSON.stringify({message:'Preview: temporarily unavailable'}),{status:503,headers:{'Content-Type':'application/json'}});
   const table=new URL(url).pathname.split('/').pop(), method=opts.method||'GET';let result=tables[table]||[];
   if(method==='POST'||method==='PATCH'){
    const body=JSON.parse(opts.body||'{}'),rows=Array.isArray(body)?body:[body];
@@ -33,7 +34,8 @@ createServer(async(req,res)=>{
   const requestURL=new URL(req.url,'http://preview');let path=decodeURIComponent(requestURL.pathname);
   if(path==='/'){
    const stage=`<!doctype html><html lang="ru"><meta charset="utf-8"><title>Fit74 · Импульс</title><style>body{margin:0;background:#e7e7e4;font:14px system-ui;display:grid;justify-content:center}nav{display:flex;align-items:center;justify-content:center;gap:12px;height:48px}button{padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:white}iframe{border:0;background:#f8f8f6;box-shadow:0 8px 50px #0001;display:block}small{color:#666}</style><nav><b>Fit74</b><button onclick="document.querySelector('iframe').width=320">320</button><button onclick="document.querySelector('iframe').width=390">390</button><button onclick="document.querySelector('iframe').width=680">680</button><select aria-label="Дата предпросмотра" onchange="document.querySelector('iframe').src='/app/?date='+this.value"><option value="2026-10-19">19 октября · день 8</option><option value="2026-10-22">22 октября · A</option><option value="2026-10-23">23 октября · кардио</option><option value="2026-10-24">24 октября · B</option><option value="2026-11-01">1 ноября · ягодицы</option></select><small>Предпросмотр</small></nav><iframe id="fit74Preview" title="Fit74" width="390" height="844" src="/app/"></iframe></html>`;
-   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(stage);return;
+   const stageHTML=requestURL.searchParams.get('service')==='unavailable'?stage.replace('src="/app/"','src="/app/?service=unavailable"'):stage;
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(stageHTML);return;
   }
   if(path.startsWith('/app/'))path=path.slice(4);
   if(path==='/')path='/index.html';

@@ -1,7 +1,7 @@
 // A CDN can briefly serve an older entry page with newly deployed scripts.
 // Recover to the versioned entry without clearing the session or local drafts.
 if(!window.Fit74PlanPeriod){
- const fresh=new URL('./index.html',location.href);fresh.searchParams.set('fit74v','13');
+ const fresh=new URL('./index.html',location.href);fresh.searchParams.set('fit74v','14');
  if(location.href!==fresh.href)location.replace(fresh.href);
  throw new Error('Fit74: загружаем актуальную страницу без удаления локальных данных.');
 }
@@ -11,7 +11,7 @@ const planPeriod=window.Fit74PlanPeriod;
 let {start:START,end:END,total:TOTAL}=planPeriod.current;
 const defaults={habit_1_name:'10 минут без телефона утром',habit_2_name:'5 минут порядка / подготовка на завтра',habit_3_name:'Отметить трекер до сна',weekly_workout_goal:2,weekly_nutrition_goal:5,weekly_water_goal:6,reminder_enabled:false,reminder_time:'21:30'};
 const empty=()=>({workout:false,nutrition:0,movement:false,water:false,sleep:false,habit_1:false,habit_2:false,habit_3:false,weight_kg:null,mood:null,notes:'',minimum_mode:false});
-let session=null,user=null,prefs={...defaults},entries=[],draft=empty(),selectedDate=START,saveTimer=null,undoDraft=null,quickIndex=0,trendRange=14,reminderTimer=null,calendarOffset=0,settingsSaving=false;
+let session=null,user=null,prefs={...defaults},entries=[],draft=empty(),selectedDate=START,saveTimer=null,undoDraft=null,quickIndex=0,trendRange=14,reminderTimer=null,calendarOffset=0,settingsSaving=false,refreshTask=null;
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const dateFromISO=iso=>{const[y,m,d]=iso.split('-').map(Number);return new Date(y,m-1,d,12,0,0)};
 const isoLocal=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -32,15 +32,60 @@ function toast(msg,withUndo=false){const t=$('#toast'),txt=$('#toastText'),a=$('
 function sync(state,text){const p=$('#syncPill');p.className='sync-pill'+(state?' '+state:'');p.textContent=text}
 function saveSession(s){session=s;if(s)localStorage.setItem('fit74_session',JSON.stringify(s));else localStorage.removeItem('fit74_session')}
 function loadSession(){try{return JSON.parse(localStorage.getItem('fit74_session')||'null')}catch{return null}}
-async function authReq(path,body){const r=await fetch(API+'/auth/v1/'+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.msg||j.message||j.error_description||'Ошибка входа');return j}
+async function cloudJSON(url,options={}){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+ try{
+  const response=await fetch(url,{...options,signal:controller.signal});
+  const data=response.status===204?null:await response.json().catch(error=>{if(controller.signal.aborted)throw error;if(response.ok)throw new Error('Не удалось прочитать ответ сервиса. Повтори загрузку.');return {}});
+  if(!response.ok){const error=new Error(response.status>=500?'Сервис временно недоступен. Попробуй ещё раз через несколько минут.':data?.msg||data?.message||data?.error_description||'Не удалось выполнить запрос.');error.status=response.status;error.code=data?.error_code||data?.code;throw error}
+  return data;
+ }catch(error){
+  if(controller.signal.aborted)throw new Error('Сервис не ответил вовремя. Проверь интернет и повтори загрузку.');
+  if(error instanceof TypeError)throw new Error('Не удалось подключиться к сервису. Проверь интернет и повтори загрузку.');
+  throw error;
+ }finally{clearTimeout(timer)}
+}
+async function authReq(path,body){return cloudJSON(API+'/auth/v1/'+path,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify(body)})}
 async function login(email,password){const j=await authReq('token?grant_type=password',{email,password});saveSession(j);return j}
-async function signup(email,password){const redirect=encodeURIComponent(location.origin+location.pathname);const r=await fetch(API+'/auth/v1/signup?redirect_to='+redirect,{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.msg||j.message||'Ошибка регистрации');if(j.access_token)saveSession(j);return j}
-async function refresh(){if(!session?.refresh_token)return null;try{const j=await authReq('token?grant_type=refresh_token',{refresh_token:session.refresh_token});saveSession(j);return j}catch{saveSession(null);return null}}
-async function ensureSession(){session=loadSession();if(!session)return null;const exp=session.expires_at?session.expires_at*1000:0;if(exp&&Date.now()>exp-60000)await refresh();return session}
-async function db(path,opts={}){if(!session?.access_token)throw new Error('Нет сессии');const headers={apikey:KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json',...(opts.headers||{})};let r=await fetch(API+'/rest/v1/'+path,{...opts,headers});if(r.status===401&&await refresh()){headers.Authorization='Bearer '+session.access_token;r=await fetch(API+'/rest/v1/'+path,{...opts,headers})}if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.message||'Ошибка облака')}if(r.status===204)return null;return r.json()}
-async function boot(){await ensureSession();$('#boot')?.remove();if(session?.user){user=session.user;await enter()}else showAuth();registerSW()}
-function showAuth(){show($('#authView'));show($('#appView'),false)}
-async function enter(){show($('#authView'),false);show($('#appView'));$('#accountEmail').textContent=user.email||'';await loadPrefs();applyPlanPeriod();selectedDate=clamp(todayISO());await loadEntries();loadDraft();renderAll();scheduleReminder();planPeriod.publish()}
+async function signup(email,password){const redirect=encodeURIComponent(location.origin+location.pathname),j=await authReq('signup?redirect_to='+redirect,{email,password});if(j.access_token)saveSession(j);return j}
+async function refresh(){
+ if(refreshTask)return refreshTask;
+ if(!session?.refresh_token)return null;
+ const previous=session;
+ refreshTask=(async()=>{
+  try{const next=await authReq('token?grant_type=refresh_token',{refresh_token:previous.refresh_token});saveSession(next);return next}
+  catch(error){if(error.status===400||error.status===401||error.status===403){if(session===previous)saveSession(null);return null}throw error}
+  finally{refreshTask=null}
+ })();
+ return refreshTask;
+}
+async function ensureSession(){session=loadSession();if(!session?.access_token||!session?.user?.id){session=null;return null}const exp=session.expires_at?session.expires_at*1000:0;if(exp&&Date.now()>exp-60000){if(session.refresh_token)await refresh();else saveSession(null)}return session}
+async function db(path,opts={}){
+ if(!session?.access_token)throw new Error('Сессия завершена. Войди снова.');
+ const usedToken=session.access_token,headers={apikey:KEY,Authorization:'Bearer '+usedToken,'Content-Type':'application/json',...(opts.headers||{})};
+ try{return await cloudJSON(API+'/rest/v1/'+path,{...opts,headers})}
+ catch(error){
+  if(error.status!==401)throw error;
+  if(session?.access_token===usedToken&&!await refresh())throw error;
+  if(!session?.access_token)throw error;
+  headers.Authorization='Bearer '+session.access_token;return cloudJSON(API+'/rest/v1/'+path,{...opts,headers});
+ }
+}
+function completeStartup(){document.documentElement.classList.add('fit74-ready');$('#appView')?.classList.add('fit74-ui-ready');window.Fit74Startup?.complete();$('#boot')?.remove()}
+function failStartup(error){
+ console.error('Fit74 startup',error);
+ if(!session?.access_token&&user){user=null;showAuth();$('#authMessage').textContent='Сессия завершена. Войди снова — твои записи сохранены.';return}
+ show($('#appView'),false);show($('#authView'),false);
+ if(window.Fit74Startup){window.Fit74Startup.fail(error.message);return}
+ // Older cached HTML must also have a visible recovery path.
+ let panel=$('#boot');if(!panel){panel=document.createElement('div');panel.id='boot';panel.className='boot';document.body.appendChild(panel)}
+ panel.style.cssText='position:fixed;inset:0;z-index:999;display:grid;place-content:center;gap:20px;padding:24px;background:#f8f8f6;color:#252c31;font:16px/1.5 system-ui;text-align:center';
+ panel.textContent='Не удалось открыть Fit74. Проверь интернет и попробуй ещё раз.';
+ const retry=document.createElement('a');retry.href='./index.html?fit74v=14';retry.textContent='Повторить загрузку';panel.appendChild(retry);
+}
+async function boot(){registerSW();await ensureSession();if(session?.user){user=session.user;await enter()}else showAuth()}
+function showAuth(){show($('#authView'));show($('#appView'),false);completeStartup()}
+async function enter(){await loadPrefs();applyPlanPeriod();selectedDate=clamp(todayISO());await loadEntries();loadDraft();$('#accountEmail').textContent=user.email||'';renderAll();scheduleReminder();show($('#authView'),false);show($('#appView'));planPeriod.publish();completeStartup()}
 $('#authForm').addEventListener('submit',async e=>{e.preventDefault();const m=$('#authMessage');m.textContent='Входим…';try{const j=await login($('#email').value.trim(),$('#password').value);user=j.user;await enter();m.textContent=''}catch(err){m.textContent=err.message}});
 $('#signupBtn').addEventListener('click',async()=>{const email=$('#email').value.trim(),password=$('#password').value,m=$('#authMessage');if(!email||password.length<8){m.textContent='Нужен email и пароль минимум из 8 символов.';return}m.textContent='Создаём аккаунт…';try{const j=await signup(email,password);if(j.access_token){session=j;user=j.user;await enter()}else m.textContent='Аккаунт создан. Если придёт письмо — подтверди email, затем войди.'}catch(err){m.textContent=err.message}});
 async function loadPrefs(){const d=await db('fit74_preferences?select=*&user_id=eq.'+user.id);if(d?.[0])prefs={...defaults,...d[0]};else{const arr=await db('fit74_preferences',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({user_id:user.id,...defaults,start_date:START,end_date:END})});prefs={...defaults,...(arr?.[0]||{})}}}
@@ -167,4 +212,4 @@ function todayEntry(){const iso=clamp(todayISO());if(selectedDate===iso)return{.
 async function checkSmartReminder(){if(!prefs.reminder_enabled||todayISO()<START||todayISO()>END)return;const [h,m]=(prefs.reminder_time||'21:30').split(':').map(Number),now=new Date();if(now.getHours()*60+now.getMinutes()<h*60+m)return;const e=todayEntry()||empty();if(stable(e)){show($('#smartNudge'),false);return}const s=score(e),need=Math.max(1,5-s);$('#smartNudgeText').textContent=s?`Сейчас ${s}/10. До обычного зачёта ${need} ${plural(need,'очко','очка','очков')}.`:'Сегодня ещё ничего не отмечено. Можно закрыть день быстрым чек-ином.';show($('#smartNudge'));const key='fit74_notify_'+todayISO();if(localStorage.getItem(key))return;localStorage.setItem(key,'1');if('Notification' in window&&Notification.permission==='granted'){try{const reg=await navigator.serviceWorker?.ready;if(reg)await reg.showNotification('Fit74 · день ещё открыт',{body:s?`Сейчас ${s}/10. Можно добрать совсем немного.`:'Быстрый чек-ин займёт около 10 секунд.',tag:'fit74-daily'});else new Notification('Fit74 · день ещё открыт',{body:'Загляни на 10 секунд — без догонялок.'})}catch(e){console.warn(e)}}}
 $('#dismissNudge').onclick=()=>show($('#smartNudge'),false);
 window.addEventListener('online',()=>{if(user)saveRemote()});window.addEventListener('offline',()=>sync('offline','● офлайн'));document.addEventListener('visibilitychange',()=>{if(!document.hidden&&user)checkSmartReminder()});window.addEventListener('focus',()=>{if(user)checkSmartReminder()});
-boot().catch(e=>{console.error(e);const b=$('#boot');if(b)b.textContent='Ошибка загрузки'});
+boot().catch(failStartup);

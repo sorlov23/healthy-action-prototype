@@ -85,7 +85,7 @@ try{
  await page.setViewportSize({width:320,height:740});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('[data-plan-picker="end"]').click();assert.equal(await page.evaluate(()=>document.querySelector('dialog').getBoundingClientRect().right>innerWidth),false);await page.keyboard.press('Escape');
  assert.deepEqual(sessions,sessionSnapshot);assert.equal(await page.evaluate(()=>localStorage.getItem('fit74_test_sentinel')),'keep');assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
  // An old CDN entry lacking the shared model recovers without clearing local state.
- const stalePage=await context.newPage();await stalePage.goto(`http://127.0.0.1:${server.address().port}/stale.html`);await stalePage.waitForURL('**/index.html?fit74v=13');await stalePage.waitForFunction(()=>window.Fit74PlanPeriod?.loaded);
+ const stalePage=await context.newPage();await stalePage.goto(`http://127.0.0.1:${server.address().port}/stale.html`);await stalePage.waitForURL('**/index.html?fit74v=14');await stalePage.waitForFunction(()=>window.Fit74PlanPeriod?.loaded);
  assert.equal(await stalePage.locator('#challengeCount').textContent(),'3 из 105');assert.equal(await stalePage.evaluate(()=>localStorage.getItem('fit74_test_sentinel')),'keep');await stalePage.close();
  console.log(JSON.stringify({ok:true,storedDatesAtStartup:true,calendarPicker:true,invalidRangeRejected:true,reloadPersistence:true,singleDayAndYearBoundary:true,pendingSavePreserved:true,historyAndApproachesPreserved:true,shiftAnchorPreserved:true,failedSaveKeepsDraft:true,staleEntryRecovery:true,phone320:true},null,2));
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

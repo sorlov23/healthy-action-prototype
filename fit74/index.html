@@ -20,9 +20,22 @@
   <link rel="stylesheet" href="./impulse.css?v=13.0">
   <link rel="stylesheet" href="./plan-settings.css?v=13.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
+  <style>
+    #boot{position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:24px;background:#f8f8f6;color:#252c31;font:400 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
+    #boot .boot-card{width:100%;max-width:340px}#boot h1{font-size:42px;letter-spacing:-2px;margin:0 0 18px;font-weight:850}#boot h1 span{color:#f56732}#boot p{font-size:15px;font-weight:400;letter-spacing:normal;margin:0 0 18px;color:#616b73}#boot a{display:inline-block;border-radius:12px;background:#f56732;color:white;padding:12px 20px;font-size:15px;font-weight:700;text-decoration:none}#boot [hidden]{display:none}#boot .boot-detail{font-size:12px;color:#747c82;margin-top:16px}
+  </style>
 </head>
 <body>
-<div id="boot" class="boot">Fit74</div>
+<div id="boot" class="boot"><div class="boot-card"><h1>Fit<span>74</span></h1><p id="bootStatus" role="status" aria-live="polite">Открываем твой план…</p><a id="bootRetry" href="./index.html?fit74v=14" hidden>Повторить загрузку</a><p id="bootDetail" class="boot-detail" hidden>Сохранённые отметки и подходы останутся на месте.</p><noscript><p>Для Fit74 нужно включить JavaScript в настройках браузера.</p></noscript></div></div>
+<script>
+(()=>{
+ const panel=document.getElementById('boot'),status=document.getElementById('bootStatus'),retry=document.getElementById('bootRetry'),detail=document.getElementById('bootDetail');
+ let done=false;
+ const failure=message=>{if(done)return;panel.hidden=false;status.textContent=message||'Не удалось открыть Fit74. Проверь подключение и попробуй ещё раз.';retry.hidden=false;detail.hidden=false;};
+ const timer=setTimeout(()=>failure('Загрузка занимает больше времени. Проверь интернет и попробуй ещё раз.'),15000);
+ window.Fit74Startup={complete(){done=true;clearTimeout(timer);panel.remove()},fail(message){clearTimeout(timer);failure(message)}};
+})();
+</script>
 <section id="authView" class="auth-view hidden">
   <div class="auth-card">
     <div class="logo-mark">74</div><p class="eyebrow">ТВОЙ ТЕМП · ТВОЙ ПЛАН</p><h1>Fit74</h1>
@@ -142,7 +155,7 @@
 
 <script src="./impulse-ui.js?v=11.0"></script>
 <script src="./plan-period.js?v=13.0"></script>
-<script src="./v3.js?v=13.0"></script>
+<script src="./v3.js?v=14.0"></script>
 <script src="./plan-settings.js?v=13.0"></script>
 <script src="./visuals-v4.js?v=13.0"></script>
 <script src="./workout.js?v=13.0"></script>
