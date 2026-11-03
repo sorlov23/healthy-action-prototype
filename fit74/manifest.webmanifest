@@ -6,5 +6,9 @@
   "background_color":"#f8f8f6",
   "theme_color":"#f8f8f6",
   "lang":"ru",
-  "description":"74-дневный личный трекер привычек, тренировок и прогресса"
+  "description":"Личный трекер привычек, тренировок и прогресса",
+  "icons":[
+    {"src":"./icons/icon-192-v17.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icons/icon-512-v17.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
 }

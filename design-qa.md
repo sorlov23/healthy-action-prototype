@@ -64,3 +64,9 @@ The earlier 18 October captures document the visual design selection; their samp
 Replaced mixed emoji/text icons in the gentle-day pills with the existing SVG icon set. The three pills use equal columns and centered 16px icon/text rows; narrow 320px screens stack each icon above its label. Replaced the extras disclosure character with the existing SVG caret, centered in the summary and rotated by the native details open state.
 
 Manual browser checks: all three pills measure 36px high at 390px, their icon and label centers match, completed pills retain the same dimensions, and the 320px layout fits without horizontal overflow. The disclosure opens/closes its fields and the caret rotates down/up. Review: `docs/qa/chip-alignment.jpg` (isolated fixture profile). No program, scoring or account-data changes.
+
+## 3 November: Home Screen icon
+
+Replaced the old mint SVG with an outlined Inter Fit74 mark in the approved graphite/orange palette. Added an explicit opaque 180px Apple touch icon and manifest PNGs at 192px and 512px, plus a 32px favicon. All essential artwork fits inside the maskable safe circle (radius 40%); the background extends to the edges without baked-in rounded corners. Versioned references avoid stale asset caches. App identity and start URL stay unchanged.
+
+Validation: regenerate with `node scripts/build-fit74-icons.mjs`; check PNG dimensions, opacity, manifest references and published asset hashes. On iPhone an existing Home Screen shortcut may retain its old icon; add the updated site from Safari and keep the old shortcut until the new one works.
