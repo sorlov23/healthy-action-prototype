@@ -35,7 +35,11 @@ assert.equal(slotFor('2026-11-09').code, 'B');
 const moved = '2026-10-21';
 for (let i = -24; i < 80; i++) {
   const date=addDays(moved,i);
-  assert.deepEqual(slotFor(date,moved),slotFor(addDays(date,-2)));
+  // A shifted anchor preserves cycle slots; calendar-specific guidance names
+  // the next shift on its actual date instead of using the same relative text.
+  const {planNote:movedNote,...movedSlot}=slotFor(date,moved);
+  const {planNote:originalNote,...originalSlot}=slotFor(addDays(date,-2));
+  assert.deepEqual(movedSlot,originalSlot);
 }
 assert.equal(slotFor('2027-01-01').day, ((slotFor('2026-12-31').day)%8)+1);
 console.log(JSON.stringify({ok:true,cyclesChecked:8,exactDateMapping:true,anchorPreserved:true,twoStrengthSessionsPerCycle:true,alternation:'B / GLUTES',yearBoundary:true},null,2));

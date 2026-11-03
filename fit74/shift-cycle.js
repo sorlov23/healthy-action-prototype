@@ -9,6 +9,7 @@
     return Date.UTC(y, m - 1, d);
   };
   const addDays = (iso, days) => new Date(utc(iso) + days * 86400000).toISOString().slice(0, 10);
+  const dateLabel = iso => new Intl.DateTimeFormat('ru-RU', {day:'numeric', month:'long', timeZone:'UTC'}).format(new Date(utc(iso)));
 
   function slotFor(iso, anchor = DEFAULT_ANCHOR) {
     const offset = Math.round((utc(iso) - utc(anchor)) / 86400000) - 1;
@@ -38,7 +39,7 @@
         short:'Вых 2', title:'2-й полный выходной', detail:'перед первой ночной', icon:'🏠',
         code:'CARDIO', kind:'cardio', status:'умеренно',
         planTitle:'Кардио + кор + мобилизация', planLabel:'Умеренная нагрузка',
-        planNote:'Кардио, упражнения на корпус и мягкая мобилизация. Второй тяжёлой силовой сегодня нет.'
+        planNote:'Кардио, упражнения на корпус и мягкая мобилизация. Второй тяжёлой силовой в этот день нет.'
       },
       {
         short:'Н1', title:'Ночная 1', detail:'21:00–09:00 · тренировка до смены', icon:'🌙',
@@ -63,13 +64,13 @@
         short:'Вых 2', title:'2-й выходной после ночных', detail:'перед первой дневной 09:00–21:00', icon:'🌿',
         code:'REST', kind:'recovery', status:'легко',
         planTitle:'Отдых и лёгкая активность', planLabel:'Второй выходной после ночных',
-        planNote:'Отдых, прогулка или лёгкое вело по самочувствию. Завтра снова день 1 — дневная смена. Тяжёлая тренировка не запланирована.'
+        planNote:`Отдых, прогулка или лёгкое вело по самочувствию. ${dateLabel(addDays(iso,1))} — день 1, дневная смена 09:00–21:00. Тяжёлая тренировка не запланирована.`
       }
     ];
     return {...slots[idx], idx, day:idx + 1, cycle, gluteCycle};
   }
 
-  const api = Object.freeze({version:'12.0', DEFAULT_ANCHOR, slotFor, addDays});
+  const api = Object.freeze({version:'15.0', DEFAULT_ANCHOR, slotFor, addDays});
   if (typeof window !== 'undefined') window.Fit74ShiftCycle = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

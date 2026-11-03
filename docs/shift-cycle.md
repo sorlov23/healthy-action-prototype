@@ -50,3 +50,9 @@ Vacation removes automatic obligations; extra days off do not add a strength ses
 All verification account requests use isolated fixtures; the production database is not used for tests.
 
 Cloud Browser review screenshot: `docs/qa/cycle-correction.jpg` (390 × 844; demo data only).
+
+## Date-specific guidance · 3 November 2026
+
+Before the plan begins, Home already previews the start date. The old day-8 sentence “Завтра снова день 1” referred to the day after that previewed date, which made a 4 November card look as though it scheduled work on 4 November. Both Home and the training catalog now name the actual next date: **5 November — day 1, daytime shift 09:00–21:00**. Home also includes 4 November in the card label. Archive/future card labels refer to the selected date, and date-only formatting uses UTC consistently.
+
+The eight-day calculation, anchor and alternating B/glutes rotation are unchanged. With the screenshot's period 4 November–6 December (33 days), manual isolated QA confirms 0/33 before the start; 4 November rest; 5–6 daytime shifts; 7 A; 8 cardio; 9 B; 10 second night; 11 post-night recovery. The forced orange first progress tick was removed so the prestart ruler agrees with 0/33. Existing cycle regressions and a year-boundary guidance check pass. Review: `docs/qa/prestart-date-copy.jpg` (fixture profile).

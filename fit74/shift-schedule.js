@@ -26,10 +26,11 @@
   function utc(iso){const [y,m,d]=iso.split('-').map(Number);return Date.UTC(y,m-1,d)}
   function diffDays(a,b){return Math.round((utc(a)-utc(b))/86400000)}
   function addDays(iso,n){return new Date(utc(iso)+n*86400000).toISOString().slice(0,10)}
-  function fmt(iso){return new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'}).format(new Date(utc(iso)))}
-  function fmtShort(iso){return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit'}).format(new Date(utc(iso)))}
+  function fmt(iso){return new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',timeZone:'UTC'}).format(new Date(utc(iso)))}
+  function fmtShort(iso){return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(utc(iso)))}
   function currentDate(){try{if(typeof selectedDate!=='undefined'&&selectedDate)return selectedDate}catch{}return START}
-  function isPrestart(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`<START}
+  function calendarToday(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+  function isPrestart(){return calendarToday()<START}
   function clampDate(iso){return iso<START?START:iso>END?END:iso}
 
   function ensureTechniqueAssets(){
@@ -90,7 +91,7 @@
     if(letter){const text=['A','B'].includes(s.code)?s.code:s.code==='GLUTES'?'Сила':s.code==='CARDIO'?'Кардио':s.code==='LIGHT'?'Легко':'Отдых';if(letter.textContent!==text)letter.textContent=text;letter.classList.toggle('long',!['A','B'].includes(s.code));}
     if(description&&ui){const html=ui.escape(s.planLabel||ui.meta[s.code]||ui.meta.REST)+(ui.duration[s.code]?'<br>'+ui.duration[s.code]:'');if(description.innerHTML!==html)description.innerHTML=html;}
     if(art){const src='./assets/impulse/'+(s.code==='A'?'hero-v2':(['B','GLUTES','CARDIO','LIGHT'].includes(s.code)?s.code:'LIGHT').toLowerCase())+'.webp';if(art.getAttribute('src')!==src)art.src=src;}
-    if(eyebrow){const pre=isPrestart();eyebrow.textContent=pre?(s.code==='REST'?'ПЛАН НА СТАРТ':'СЛЕДУЮЩАЯ ТРЕНИРОВКА'):s.code==='REST'?'ТВОЙ ПЛАН НА СЕГОДНЯ':'ТРЕНИРОВКА НА СЕГОДНЯ';}
+    if(eyebrow){eyebrow.textContent=date===calendarToday()?(s.code==='REST'?'ТВОЙ ПЛАН НА СЕГОДНЯ':'ТРЕНИРОВКА НА СЕГОДНЯ'):(isPrestart()&&date===START?'ПЛАН НА СТАРТ · ':'ПЛАН НА ')+fmt(date).toUpperCase();}
     if(s.code!=='REST'&&!done)start.innerHTML='Открыть тренировку '+(ui?.icon('arrow-right')||'→');
     capturePlanSnapshot();
   }
@@ -100,7 +101,7 @@
     const date=hubDate||currentDate(), s=slotFor(date), info=W[s.code]||W.REST, done=s.code!=='REST'&&isDone(date,s.code), hero=q('#hubTodayCard');
     if(hero){
       const ui=window.Fit74UI,esc=ui?.escape||(value=>String(value));
-      hero.innerHTML=`<p class="eyebrow">${isPrestart()?'ПЛАН НА СТАРТ':'ПО ПЛАНУ'} · ${fmt(date).toUpperCase()} · ДЕНЬ ${s.day}/8</p><div class="hub-recommend-copy"><span class="plan-letter ${['A','B'].includes(s.code)?'':'long'}">${['A','B'].includes(s.code)?s.code:s.code==='GLUTES'?'Сила':s.code==='CARDIO'?'Кардио':'Отдых'}</span><h2>${esc(s.planTitle||info.title)}</h2><p>${esc(s.planLabel||ui?.meta[s.code]||s.detail)}${ui?.duration[s.code]?'<br>'+ui.duration[s.code]:''}</p></div>${ui?.art(s.code)||''}<p class="shift-guidance">${esc(s.planNote)}</p>${s.code==='REST'?'':`<button class="workout-primary" data-shift-hub-start="${s.code}" data-shift-hub-date="${date}">${done?'Посмотреть':'Открыть'} тренировку ${ui?.icon('arrow-right')||'→'}</button>`}`;
+      hero.innerHTML=`<p class="eyebrow">${isPrestart()&&date===START?'ПЛАН НА СТАРТ':'ПО ПЛАНУ'} · ${fmt(date).toUpperCase()} · ДЕНЬ ${s.day}/8</p><div class="hub-recommend-copy"><span class="plan-letter ${['A','B'].includes(s.code)?'':'long'}">${['A','B'].includes(s.code)?s.code:s.code==='GLUTES'?'Сила':s.code==='CARDIO'?'Кардио':'Отдых'}</span><h2>${esc(s.planTitle||info.title)}</h2><p>${esc(s.planLabel||ui?.meta[s.code]||s.detail)}${ui?.duration[s.code]?'<br>'+ui.duration[s.code]:''}</p></div>${ui?.art(s.code)||''}<p class="shift-guidance">${esc(s.planNote)}</p>${s.code==='REST'?'':`<button class="workout-primary" data-shift-hub-start="${s.code}" data-shift-hub-date="${date}">${done?'Посмотреть':'Открыть'} тренировку ${ui?.icon('arrow-right')||'→'}</button>`}`;
     }
     const chip=q('#workoutWeekStat');if(chip)chip.textContent='8 дней';
     const strip=q('#weekPlanStrip');if(!strip)return;
@@ -111,7 +112,7 @@
     strip.innerHTML=Array.from({length:8},(_,i)=>{
       const d=addDays(cycleStart,i), x=slotFor(d), wi=W[x.code]||W.REST, ok=x.code!=='REST'&&isDone(d,x.code), active=d===date;
       const wlabel=x.overrideType==='vacation'?'отпуск':x.overrideType==='day_off'?'day off':x.code==='A'?'A':x.code==='B'?'B':x.code==='GLUTES'?'ягод.':x.code==='CARDIO'?'кардио':x.code==='LIGHT'?'восст.':'отдых';
-      return `<button class="week-plan-day ${dayClass(x.kind)} ${active?'active':''} ${ok?'done':''}" ${d<START||d>END?'disabled':''} data-shift-date="${d}" data-shift-day="${x.day}" data-shift-code="${x.code}" data-shift-override="${x.overrideType||''}" aria-label="${fmt(d)} · день ${x.day} из 8 · ${x.title} · ${x.planTitle}" title="${fmt(d)} · день ${x.day} из 8 · ${x.title}: ${x.planTitle}"><span>${new Date(utc(d)).toLocaleDateString('ru-RU',{weekday:'short'})}</span><b>${Number(d.slice(-2))}</b><small>${x.short}</small><small class="shift-day-plan">${wlabel}</small></button>`;
+      return `<button class="week-plan-day ${dayClass(x.kind)} ${active?'active':''} ${ok?'done':''}" ${d<START||d>END?'disabled':''} data-shift-date="${d}" data-shift-day="${x.day}" data-shift-code="${x.code}" data-shift-override="${x.overrideType||''}" aria-label="${fmt(d)} · день ${x.day} из 8 · ${x.title} · ${x.planTitle}" title="${fmt(d)} · день ${x.day} из 8 · ${x.title}: ${x.planTitle}"><span>${new Date(utc(d)).toLocaleDateString('ru-RU',{weekday:'short',timeZone:'UTC'})}</span><b>${Number(d.slice(-2))}</b><small>${x.short}</small><small class="shift-day-plan">${wlabel}</small></button>`;
     }).join('');
   }
 
