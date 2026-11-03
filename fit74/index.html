@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="./shift-schedule.css?v=1">
   <link rel="stylesheet" href="./technique-images.css?v=10.0">
   <link rel="preload" href="./assets/impulse/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="./impulse.css?v=15.0">
+  <link rel="stylesheet" href="./impulse.css?v=16.0">
   <link rel="stylesheet" href="./plan-settings.css?v=13.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
   <style>
@@ -73,7 +73,7 @@
   <section id="minimumCard" class="minimum-card card">
     <div class="card-head"><div><p class="eyebrow">РЕЖИМ</p><h2>Бережный день</h2></div><button id="minimumToggle" class="mode-toggle">Включить</button></div>
     <p class="muted compact">Если день развалился — не обнуляемся. Закрой движение, воду и последнюю привычку. Серия стабильности сохранится, но день не станет «сильным».</p>
-    <div class="mini-goal-row"><span id="minMove" class="mini-goal">🚶 Движение</span><span id="minWater" class="mini-goal"><img class="ui-icon" src="./assets/impulse/icons/drop.svg" alt="">Вода</span><span id="minTrack" class="mini-goal">✓ Трекер</span></div>
+    <div class="mini-goal-row"><span id="minMove" class="mini-goal"><img class="ui-icon" src="./assets/impulse/icons/person-simple-run.svg" alt="" aria-hidden="true"><span>Движение</span></span><span id="minWater" class="mini-goal"><img class="ui-icon" src="./assets/impulse/icons/drop.svg" alt="" aria-hidden="true"><span>Вода</span></span><span id="minTrack" class="mini-goal"><img class="ui-icon" src="./assets/impulse/icons/check.svg" alt="" aria-hidden="true"><span>Трекер</span></span></div>
     <div class="mini-progress"><i id="minProgress"></i></div><div class="mini-progress-label"><span id="minStatus">0/3</span><span>без самообмана</span></div>
   </section>
 
@@ -99,7 +99,7 @@
     <button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><img class="ui-icon" src="./assets/impulse/icons/list-checks.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
   </section>
 
-  <details class="card extras-card"><summary><span><b>Пара цифр</b><small>необязательно</small></span><span>⌄</span></summary><div class="extras-body"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label></div></details>
+  <details class="card extras-card"><summary><span class="extras-summary-copy"><b>Пара цифр</b><small>необязательно</small></span><img class="ui-icon extras-chevron" src="./assets/impulse/icons/caret-right.svg" alt="" aria-hidden="true"></summary><div class="extras-body"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label></div></details>
   <button id="finishDayBtn" class="finish-btn">Готово на сегодня</button>
   <p class="minimum-note">5+ очков — обычный зачёт. Бережный день сохраняет стабильность, если закрыты 3 базовых пункта.</p>
 </section>

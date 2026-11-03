@@ -58,3 +58,9 @@ final result: passed
 ## 19 October: schedule correction
 
 The earlier 18 October captures document the visual design selection; their sample recommendation is superseded by the user's corrected schedule. See `docs/shift-cycle.md`. The active schedule now uses day 1 = first daytime shift, A on day 3, cardio on day 4, alternating B/Glutes on day 5, and recovery on days 6–8. The stored second-day-off anchor remains unchanged. Cloud Browser checks covered the recovery card, B and Glutes on their respective cycle dates, cardio and 320-pixel width. Fixed recovery-card flex shrinking so guidance is fully visible; added a regression assertion for clipped content. Functional regression and the eight-cycle date model pass.
+
+## 3 November: recovery chips and disclosure alignment
+
+Replaced mixed emoji/text icons in the gentle-day pills with the existing SVG icon set. The three pills use equal columns and centered 16px icon/text rows; narrow 320px screens stack each icon above its label. Replaced the extras disclosure character with the existing SVG caret, centered in the summary and rotated by the native details open state.
+
+Manual browser checks: all three pills measure 36px high at 390px, their icon and label centers match, completed pills retain the same dimensions, and the 320px layout fits without horizontal overflow. The disclosure opens/closes its fields and the caret rotates down/up. Review: `docs/qa/chip-alignment.jpg` (isolated fixture profile). No program, scoring or account-data changes.
