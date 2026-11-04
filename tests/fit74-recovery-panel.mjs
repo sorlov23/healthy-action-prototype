@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const html=fs.readFileSync(new URL('../fit74/index.html',import.meta.url),'utf8');
+const controller=html.match(/<script>\s*\(\(\)=>\{[\s\S]*?window\.Fit74Startup[\s\S]*?<\/script>/)[0].replace(/^<script>|<\/script>$/g,'');
+const nodes=Object.fromEntries(['boot','bootStatus','bootRetry','bootDetail'].map(id=>[id,{isConnected:true,hidden:true,textContent:'',remove(){this.isConnected=false}}]));
+const window={};let watchdog;
+vm.runInNewContext(controller,{window,document:{getElementById:id=>nodes[id],body:{prepend:node=>{node.isConnected=true}}},setTimeout:fn=>{watchdog=fn;return 1},clearTimeout(){}});
+watchdog();assert.equal(nodes.boot.hidden,false);assert.equal(nodes.bootRetry.hidden,false);
+window.Fit74Startup.complete();assert.equal(nodes.boot.isConnected,false);
+window.Fit74Startup.fail('Fixture: failure after startup');
+assert.equal(nodes.boot.isConnected,true);assert.equal(nodes.boot.hidden,false);
+assert.equal(nodes.bootStatus.textContent,'Fixture: failure after startup');assert.equal(nodes.bootRetry.hidden,false);
+window.Fit74Startup.complete();assert.equal(nodes.boot.isConnected,false);
+console.log('Recovery panel: watchdog, late failure, visible retry and subsequent completion passed.');

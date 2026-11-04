@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="./shift-schedule.css?v=1">
   <link rel="stylesheet" href="./technique-images.css?v=10.0">
   <link rel="preload" href="./assets/impulse/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="./impulse.css?v=19.0">
+  <link rel="stylesheet" href="./impulse.css?v=20.0">
   <link rel="stylesheet" href="./plan-settings.css?v=13.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
   <style>
@@ -33,7 +33,7 @@
 (()=>{
  const panel=document.getElementById('boot'),status=document.getElementById('bootStatus'),retry=document.getElementById('bootRetry'),detail=document.getElementById('bootDetail');
  let done=false;
- const failure=message=>{if(done)return;panel.hidden=false;status.textContent=message||'Не удалось открыть Fit74. Проверь подключение и попробуй ещё раз.';retry.hidden=false;detail.hidden=false;};
+ const failure=message=>{done=false;if(!panel.isConnected)document.body.prepend(panel);panel.hidden=false;status.textContent=message||'Не удалось открыть Fit74. Проверь подключение и попробуй ещё раз.';retry.hidden=false;detail.hidden=false;};
  const timer=setTimeout(()=>failure('Загрузка занимает больше времени. Проверь интернет и попробуй ещё раз.'),15000);
  window.Fit74Startup={complete(){done=true;clearTimeout(timer);panel.remove()},fail(message){clearTimeout(timer);failure(message)}};
 })();
@@ -158,7 +158,7 @@
 <script src="./impulse-ui.js?v=11.0"></script>
 <script src="./plan-period.js?v=13.0"></script>
 <script src="./push-notifications.js?v=19.0"></script>
-<script src="./v3.js?v=19.0"></script>
+<script src="./v3.js?v=20.0"></script>
 <script src="./plan-settings.js?v=13.0"></script>
 <script src="./visuals-v4.js?v=13.0"></script>
 <script src="./workout.js?v=13.0"></script>
