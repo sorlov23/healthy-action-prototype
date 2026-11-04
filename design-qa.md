@@ -76,3 +76,9 @@ Validation: regenerate with `node scripts/build-fit74-icons.mjs`; check PNG dime
 Raised the check-in overlay above the bottom navigation (160 versus 120). Kept the hidden first-step back button in its grid cell so the counter stays centered and Close stays on the right. Added 44px header targets, a dynamic-viewport height limit, internal scrolling, safe-area padding and background scroll locking. Answer handling is unchanged.
 
 Browser verification in the isolated fixture: 390px and 320px widths, both answer buttons pass hit testing over the navigation, Back returns to question 1, Close dismisses the sheet, all eight question screens are reachable, completion closes it, and reopening starts at question 1. Screenshot: `docs/qa/checkin-fixed.jpg`. No production account records were used.
+
+## 4 November: background reminders
+
+Replaced page-only notification attempts with a persistent visible-push worker, authenticated device registration, server scheduling and a separate permission/test flow. Profile labels reminder time as Moscow time and reports the actual device connection. Its switch now has a 44px native accessible input; connect/test controls fit at 320px without horizontal overflow.
+
+Browser checks used an explicit local-only mock push transport: enable and save 21:30, connect, see the connected state and test button, inspect 320/390 widths, and follow the notification deep link to today's first check-in question. No cloud browser notification permission or production device was created. Screenshot: `docs/qa/push-settings.jpg` (model of the connected state). Real server/SQL verification and the phone permission limitation are recorded in `docs/push-reminders.md`.

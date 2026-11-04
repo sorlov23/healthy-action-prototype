@@ -1,0 +1,4 @@
+{
+  "nodeModulesDir": "auto",
+  "compilerOptions": { "allowJs": true, "checkJs": false, "strict": true }
+}

@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="./shift-schedule.css?v=1">
   <link rel="stylesheet" href="./technique-images.css?v=10.0">
   <link rel="preload" href="./assets/impulse/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="./impulse.css?v=18.0">
+  <link rel="stylesheet" href="./impulse.css?v=19.0">
   <link rel="stylesheet" href="./plan-settings.css?v=13.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
   <style>
@@ -143,7 +143,7 @@
   </section>
   <section class="card"><h2>Привычки</h2><label>Привычка 1<input id="habit1Input" maxlength="80"></label><label>Привычка 2<input id="habit2Input" maxlength="80"></label><label>Привычка 3<input id="habit3Input" maxlength="80"></label></section>
   <section class="card"><h2>Цели недели</h2><div class="three-inputs"><label>Тренировки<input id="weeklyWorkoutGoal" type="number" min="0" max="7"></label><label>Питание<input id="weeklyNutritionGoal" type="number" min="0" max="7"></label><label>Вода<input id="weeklyWaterGoal" type="number" min="0" max="7"></label></div></section>
-  <section class="card reminder-card"><div class="card-head"><div><p class="eyebrow">БЕЗ СПАМА</p><h2>Умное напоминание</h2></div><label class="switch"><input id="reminderEnabled" type="checkbox"><span></span></label></div><p class="muted compact">Если к выбранному времени день ещё не зачтён, Fit74 мягко напомнит. Если всё уже закрыто — молчит.</p><label>После какого времени<input id="reminderTime" type="time" value="21:30"></label><p id="reminderHint" class="micro"></p></section>
+  <section class="card reminder-card"><div class="card-head"><div><p class="eyebrow">БЕЗ СПАМА</p><h2>Умное напоминание</h2></div><label class="switch"><input id="reminderEnabled" type="checkbox" aria-label="Включить ежедневное напоминание"><span></span></label></div><p class="muted compact">Если к выбранному времени день ещё не зачтён, Fit74 напомнит, даже когда приложение закрыто. Если всё уже закрыто — молчит.</p><label>Время напоминания<input id="reminderTime" type="time" value="21:30"></label><p class="micro">Московское время · UTC+3</p><p id="reminderHint" class="micro" role="status" aria-live="polite"></p><button id="connectPushBtn" class="ghost" type="button" disabled>Подключить уведомления</button><button id="testPushBtn" class="ghost" type="button" hidden>Проверить уведомление</button></section>
   <button id="saveSettingsBtn" class="primary">Сохранить настройки</button>
   <section class="card install-card"><h3>📱 Добавить как приложение</h3><p>Safari → Поделиться → На экран «Домой».</p></section>
   <button id="logoutBtn" class="danger-ghost">Выйти</button><p id="accountEmail" class="micro center"></p>
@@ -157,7 +157,8 @@
 
 <script src="./impulse-ui.js?v=11.0"></script>
 <script src="./plan-period.js?v=13.0"></script>
-<script src="./v3.js?v=14.0"></script>
+<script src="./push-notifications.js?v=19.0"></script>
+<script src="./v3.js?v=19.0"></script>
 <script src="./plan-settings.js?v=13.0"></script>
 <script src="./visuals-v4.js?v=13.0"></script>
 <script src="./workout.js?v=13.0"></script>

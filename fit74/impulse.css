@@ -86,3 +86,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
 #quickBack.hidden{display:grid!important;visibility:hidden;pointer-events:none}
 #quickModal .quick-options button{min-height:48px}
 html:has(#quickModal.open){overflow:hidden}
+.reminder-card .switch{position:relative;display:grid;place-items:center;min-width:46px;min-height:44px;flex-shrink:0;margin:0}
+.reminder-card .switch input{display:block;position:absolute;inset:0;width:100%;height:100%;padding:0;margin:0;opacity:0;cursor:pointer;z-index:1}
+.reminder-card .switch:has(input:focus-visible) span{outline:2px solid var(--orange);outline-offset:3px}
+.reminder-card button:disabled{opacity:.55;cursor:default}

@@ -13,9 +13,25 @@ const fixture=`<script>
  const user={id:'00000000-0000-4000-8000-000000000074',email:'preview@example.invalid',user_metadata:{display_name:'Сергей'}};
  localStorage.setItem('fit74_session',JSON.stringify({user,access_token:'local-preview-only',expires_at:4102444800}));
  const nativeFetch=window.fetch.bind(window), defaults={fit74_preferences:[{user_id:user.id,start_date:'2026-10-19',end_date:'2026-12-31',reminder_enabled:false}],fit74_workout_sessions:[],fit74_daily_entries:[],fit74_shift_overrides:[]};
+ // Explicit local-only fixture for the supported-device connection UI. No browser permission or push service is used.
+ if(new URLSearchParams(location.search).get('push')==='ready'){
+  let subscribed=null;
+  const reg={active:{},update:async()=>{},pushManager:{
+   getSubscription:async()=>subscribed,
+   subscribe:async()=>subscribed={
+    endpoint:'https://web.push.apple.com/local-preview-only',
+    toJSON(){return{endpoint:this.endpoint,keys:{p256dh:'B'+'A'.repeat(86),auth:'A'.repeat(22)}}},
+    unsubscribe:async()=>{subscribed=null;return true}
+   }
+  }};
+  Object.defineProperty(window,'PushManager',{configurable:true,value:function(){}});
+  Object.defineProperty(window,'Notification',{configurable:true,value:{permission:'default'}});
+  Object.defineProperty(navigator,'serviceWorker',{configurable:true,value:{register:async()=>reg,getRegistration:async()=>reg,addEventListener(){}}});
+ }
  let tables=defaults;try{tables=JSON.parse(localStorage.getItem('fit74_preview_tables'))||defaults}catch{}
  window.fetch=async(input,opts={})=>{
   const url=String(input);if(!url.startsWith('https://dllanxwrezqqufgzucuc.supabase.co/'))return nativeFetch(input,opts);
+  if(url.includes('/functions/v1/fit74-push')){const action=JSON.parse(opts.body||'{}').action;return new Response(JSON.stringify(opts.method==='POST'?{connected:action==='subscribe',sent:action==='test'}:{publicKey:'B'+'A'.repeat(86),timeZone:'Europe/Moscow',schedulerHealthy:true}),{status:200,headers:{'Content-Type':'application/json'}})}
   if(new URLSearchParams(location.search).get('service')==='unavailable')return new Response(JSON.stringify({message:'Preview: temporarily unavailable'}),{status:503,headers:{'Content-Type':'application/json'}});
   const table=new URL(url).pathname.split('/').pop(), method=opts.method||'GET';let result=tables[table]||[];
   if(method==='POST'||method==='PATCH'){
@@ -36,6 +52,7 @@ createServer(async(req,res)=>{
    const stage=`<!doctype html><html lang="ru"><meta charset="utf-8"><title>Fit74 · Импульс</title><style>body{margin:0;background:#e7e7e4;font:14px system-ui;display:grid;justify-content:center}nav{display:flex;align-items:center;justify-content:center;gap:12px;height:48px}button{padding:5px 10px;border:1px solid #ccc;border-radius:6px;background:white}iframe{border:0;background:#f8f8f6;box-shadow:0 8px 50px #0001;display:block}small{color:#666}</style><nav><b>Fit74</b><button onclick="document.querySelector('iframe').width=320">320</button><button onclick="document.querySelector('iframe').width=390">390</button><button onclick="document.querySelector('iframe').width=680">680</button><select aria-label="Дата предпросмотра" onchange="document.querySelector('iframe').src='/app/?date='+this.value"><option value="2026-10-19">19 октября · день 8</option><option value="2026-10-22">22 октября · A</option><option value="2026-10-23">23 октября · кардио</option><option value="2026-10-24">24 октября · B</option><option value="2026-11-01">1 ноября · ягодицы</option></select><small>Предпросмотр</small></nav><iframe id="fit74Preview" title="Fit74" width="390" height="844" src="/app/"></iframe></html>`;
    let stageHTML=requestURL.searchParams.get('service')==='unavailable'?stage.replace('src="/app/"','src="/app/?service=unavailable"'):stage;
    const stageDate=requestURL.searchParams.get('date');if(/^2026-(10|11|12)-[0-3][0-9]$/.test(stageDate||''))stageHTML=stageHTML.replace('src="/app/"',`src="/app/?date=${stageDate}"`);
+   if(requestURL.searchParams.get('push')==='ready')stageHTML=stageHTML.replace(/src="([^"]+)"/,(_,src)=>`src="${src}${src.includes('?')?'&':'?'}push=ready"`);
    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}).end(stageHTML);return;
   }
   if(path.startsWith('/app/'))path=path.slice(4);
