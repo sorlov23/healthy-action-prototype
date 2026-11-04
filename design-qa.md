@@ -70,3 +70,9 @@ Manual browser checks: all three pills measure 36px high at 390px, their icon an
 Replaced the old mint SVG with an outlined Inter Fit74 mark in the approved graphite/orange palette. Added an explicit opaque 180px Apple touch icon and manifest PNGs at 192px and 512px, plus a 32px favicon. All essential artwork fits inside the maskable safe circle (radius 40%); the background extends to the edges without baked-in rounded corners. Versioned references avoid stale asset caches. App identity and start URL stay unchanged.
 
 Validation: regenerate with `node scripts/build-fit74-icons.mjs`; check PNG dimensions, opacity, manifest references and published asset hashes. On iPhone an existing Home Screen shortcut may retain its old icon; add the updated site from Safari and keep the old shortcut until the new one works.
+
+## 4 November: quick check-in sheet
+
+Raised the check-in overlay above the bottom navigation (160 versus 120). Kept the hidden first-step back button in its grid cell so the counter stays centered and Close stays on the right. Added 44px header targets, a dynamic-viewport height limit, internal scrolling, safe-area padding and background scroll locking. Answer handling is unchanged.
+
+Browser verification in the isolated fixture: 390px and 320px widths, both answer buttons pass hit testing over the navigation, Back returns to question 1, Close dismisses the sheet, all eight question screens are reachable, completion closes it, and reopening starts at question 1. Screenshot: `docs/qa/checkin-fixed.jpg`. No production account records were used.

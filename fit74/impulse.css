@@ -77,3 +77,12 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
 .extras-card[open]>summary>.extras-chevron{transform:rotate(-90deg)}
 @media(max-width:359px){#minimumCard .mini-goal{flex-direction:column;gap:4px;min-height:52px;padding:8px 4px;border-radius:12px}}
 @media(prefers-reduced-motion:reduce){.extras-card summary>.extras-chevron{transition:none}}
+
+/* Check-in covers navigation and stays usable above the iPhone home indicator. */
+#quickModal{z-index:160;padding-top:calc(12px + env(safe-area-inset-top))}
+#quickModal .sheet{max-height:calc(100vh - 12px - env(safe-area-inset-top));max-height:calc(100dvh - 12px - env(safe-area-inset-top));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+#quickModal .sheet-top{grid-template-columns:44px minmax(0,1fr) 44px}
+#quickModal .icon-btn{width:44px;height:44px;display:grid;place-items:center}
+#quickBack.hidden{display:grid!important;visibility:hidden;pointer-events:none}
+#quickModal .quick-options button{min-height:48px}
+html:has(#quickModal.open){overflow:hidden}
