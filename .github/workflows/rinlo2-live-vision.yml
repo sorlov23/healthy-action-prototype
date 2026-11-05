@@ -32,8 +32,8 @@ jobs:
 
             if echo "$output" | grep -Eq 'ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|fetch failed'; then
               if [ "$attempt" -eq 3 ]; then
-                echo "::warning::Live Supabase/Gemini probe skipped after repeated external network/DNS failures"
-                exit 0
+                echo "::error::Live Supabase/Gemini check could not run: backend unavailable (DNS/network after 3 attempts). Release blocked until the actual service responds."
+                exit 1
               fi
               echo "Live vision network probe failed (attempt $attempt/3); retrying..."
               sleep $((attempt * 5))
