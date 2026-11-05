@@ -95,6 +95,21 @@ try {
   await page.locator('#cookFlow').waitFor({ state: 'hidden' });
   assert.equal((await page.locator('.home-suggest-main b').textContent())?.trim(), 'Предложи мне');
 
+  // A failed live call must offer a visible, explicitly non-AI demo path.
+  await page.evaluate(() => {
+    window.RinloCook.suggestFromHome = async () => false;
+  });
+  await page.locator('#homeSuggestNow').click();
+  await page.locator('.home-offline-demo').waitFor({ state: 'visible' });
+  assert((await page.locator('#homeSuggestStatus').textContent())?.includes('AI-сервис'),
+    'missing_honest_backend_failure_message');
+  assert((await page.locator('.home-offline-demo').textContent())?.includes('без AI и облака'),
+    'offline_demo_mislabeled');
+  await assertTouchHeight('.home-offline-demo', 'offline_demo_entry');
+  await page.locator('.home-offline-demo').click();
+  await page.waitForURL(/local=1/);
+  assert(!new URL(page.url()).searchParams.has('reset'), 'offline_demo_should_not_reset_onboarding');
+
   console.log(`RINLO2_HOME_SETUP=${JSON.stringify(setupLanding)}`);
   console.log(`RINLO2_HOME_MOBILE_PASS=${JSON.stringify(structure)}`);
   console.log('RINLO2_HOME_MOBILE_RESULT=PASS');
