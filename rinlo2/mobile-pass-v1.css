@@ -1,0 +1,47 @@
+@media (max-width: 560px) {
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .flow-header {
+    grid-template-columns: 44px 1fr 44px;
+  }
+
+  .flow-header button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .back-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 0 6px;
+    margin-left: -6px;
+  }
+
+  .text-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+  }
+
+  .section-head button {
+    position: relative;
+  }
+
+  .section-head button::after {
+    content: '';
+    position: absolute;
+    inset: -14px -8px;
+  }
+}
+
+/* Explicit fallback when the live AI backend is unavailable. */
+.home-offline-demo{display:block;width:100%;min-height:48px;margin:0 0 14px;padding:12px 15px;border:1px solid rgba(34,40,44,.14);border-radius:16px;background:#fff;color:#25292a;font-size:13px;font-weight:750;text-align:center;line-height:1.4}
+.home-offline-demo[hidden]{display:none!important}
+.home-offline-demo:focus-visible{outline:3px solid #c7ff5b;outline-offset:3px}

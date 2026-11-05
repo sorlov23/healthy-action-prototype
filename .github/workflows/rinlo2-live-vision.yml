@@ -1,0 +1,45 @@
+name: rinlo2 live gemini vision
+
+on:
+  pull_request:
+    paths:
+      - 'tests/rinlo2-live-vision.cjs'
+      - 'supabase/functions/analyze-food/**'
+      - 'runtime-config.js'
+      - '.github/workflows/rinlo2-live-vision.yml'
+
+jobs:
+  live-vision-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe Supabase Edge Function and Gemini
+        run: |
+          for attempt in 1 2 3; do
+            set +e
+            output="$(node tests/rinlo2-live-vision.cjs 2>&1)"
+            status=$?
+            set -e
+            echo "$output"
+
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+
+            if echo "$output" | grep -Eq 'ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|fetch failed'; then
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error::Live Supabase/Gemini check could not run: backend unavailable (DNS/network after 3 attempts). Release blocked until the actual service responds."
+                exit 1
+              fi
+              echo "Live vision network probe failed (attempt $attempt/3); retrying..."
+              sleep $((attempt * 5))
+              continue
+            fi
+
+            echo "Live vision probe returned a product/integration error"
+            exit "$status"
+          done
