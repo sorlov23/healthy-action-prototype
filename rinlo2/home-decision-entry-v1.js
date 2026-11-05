@@ -7,6 +7,21 @@
   let busy = false;
   let returnHomeAfterSetup = false;
 
+  // A failed live request must not leave the Home CTA looking like a dead end.
+  // This is explicitly a demo path, not a substitute for Gemini or cloud sync.
+  const offlineDemoButton = document.createElement('button');
+  offlineDemoButton.type = 'button';
+  offlineDemoButton.className = 'home-offline-demo';
+  offlineDemoButton.hidden = true;
+  offlineDemoButton.textContent = 'Открыть офлайн-демо (без AI и облака) →';
+  button.insertAdjacentElement('afterend', offlineDemoButton);
+  offlineDemoButton.addEventListener('click', () => {
+    const next = new URL(location.href);
+    next.searchParams.set('local', '1');
+    next.searchParams.delete('reset');
+    location.assign(next.href);
+  });
+
   [...document.body.childNodes]
     .filter((node) => node.nodeType === Node.TEXT_NODE && /^\s*\\\s*$/.test(node.textContent || ''))
     .forEach((node) => node.remove());
@@ -63,6 +78,7 @@
     }
 
     busy = true;
+    offlineDemoButton.hidden = true;
     const stableMarkup = button.innerHTML;
     const request = window.RinloCook.suggestFromHome();
 
@@ -89,7 +105,8 @@
       if (parts.status) {
         parts.status.textContent = success
           ? ''
-          : 'Не получилось получить решение. Попробуй ещё раз.';
+          : 'AI-сервис сейчас не ответил. Попробуй позже или открой офлайн-демо.';
+        offlineDemoButton.hidden = Boolean(success);
       }
     }
   }
