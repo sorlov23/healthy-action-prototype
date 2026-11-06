@@ -1,4 +1,7 @@
-export const APP_ORIGIN = 'https://fit74-tracker.onrender.com';
+export const APP_ORIGIN = 'https://fit74.tatnet.app';
+export const LEGACY_ORIGIN = 'https://fit74-tracker.onrender.com';
+// Explicit allowlist: keep the old installed PWA usable during migration.
+const ALLOWED_ORIGINS = new Set([APP_ORIGIN, LEGACY_ORIGIN]);
 export const TIME_ZONE = 'Europe/Moscow';
 
 export function validSubscription(input) {
@@ -26,11 +29,9 @@ export function notificationPayload(day, test = false) {
 }
 
 export function createHandler({ store, authenticate, push, now = () => new Date() }) {
-  const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
-    'Access-Control-Allow-Origin': APP_ORIGIN,
+  const baseHeaders = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store',
     'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-fit74-scheduler',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', Vary: 'Origin' };
-  const reply = (status, body) => new Response(JSON.stringify(body), { status, headers });
 
   async function ensureKeys(config) {
     if (config.vapid_public && config.vapid_private) return config;
@@ -59,6 +60,10 @@ export function createHandler({ store, authenticate, push, now = () => new Date(
   }
 
   return async function handler(req) {
+    const requestOrigin = req.headers.get('origin');
+    const headers = { ...baseHeaders,
+      ...(ALLOWED_ORIGINS.has(requestOrigin) ? { 'Access-Control-Allow-Origin': requestOrigin } : {}) };
+    const reply = (status, body) => new Response(JSON.stringify(body), { status, headers });
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     if (!['GET', 'POST'].includes(req.method)) return reply(405, { error: 'Method not allowed' });
     try {
