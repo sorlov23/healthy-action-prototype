@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import { createHandler, validSubscription, notificationPayload, APP_ORIGIN } from '../supabase/functions/fit74-push/core.mjs';
+import { createHandler, validSubscription, notificationPayload, APP_ORIGIN, LEGACY_ORIGIN } from '../supabase/functions/fit74-push/core.mjs';
 
 const subscription = { endpoint: 'https://web.push.apple.com/test-device', keys: { p256dh: 'B' + 'A'.repeat(86), auth: 'A'.repeat(22) } };
 assert(validSubscription(subscription));
@@ -75,6 +75,26 @@ function fixture(options = {}) {
   assert.deepEqual(await result.json(), { claimed: 1, sent: 0 });
   assert.deepEqual(f.calls.find(x => x[0] === 'failed'), ['failed', subscription.endpoint, 410, true]);
   assert(!f.calls.some(x => x[0] === 'sent'));
+}
+
+// The new Tatnet PWA and the old Render install may call the same push service.
+{
+  const f = fixture();
+  for (const origin of [APP_ORIGIN, LEGACY_ORIGIN]) {
+    const preflight = await f.handler(new Request(APP_ORIGIN, { method: 'OPTIONS',
+      headers: { Origin: origin, 'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization, content-type' } }));
+    assert.equal(preflight.status, 204);
+    assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.match(preflight.headers.get('Access-Control-Allow-Headers'), /authorization/);
+    const get = await f.handler(new Request(APP_ORIGIN, { headers: { Origin: origin } }));
+    assert.equal(get.status, 200);
+    assert.equal(get.headers.get('Access-Control-Allow-Origin'), origin);
+  }
+  const untrusted = await f.handler(new Request(APP_ORIGIN, { method: 'OPTIONS',
+    headers: { Origin: 'https://fake-fit74.example' } }));
+  assert.equal(untrusted.headers.get('Access-Control-Allow-Origin'), null);
+  assert.equal(new URL(notificationPayload('2026-11-06').url).origin, APP_ORIGIN);
 }
 
 const workerSource = await readFile(new URL('../fit74/sw.js', import.meta.url), 'utf8');
