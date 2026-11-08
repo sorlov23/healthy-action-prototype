@@ -27,6 +27,9 @@ jobs:
       - name: Bundle Neon Gemini handler
         run: npm run build
         working-directory: neon
-      - name: Verify cryptographic JWT gate and missing-secret behavior
+      - name: Bundle first-party browser Neon Auth QA SDK
+        run: npm run build:browser
+        working-directory: neon
+      - name: Verify cryptographic JWT gate, safe backup and QA SDK
         run: npm test
         working-directory: neon
