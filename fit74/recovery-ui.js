@@ -21,7 +21,7 @@
   };
 
   async function reload() {
-    if (!ctx) return;
+    if (!ctx || pending) return;
     const requestId = ++seq, p = ctx.period();
     try {
       const data=await ctx.db('fit74_day_context?select=entry_date,reason,return_steps&user_id=eq.' +
@@ -40,6 +40,7 @@
   async function write(date, patch) {
     if (!ctx || pending || date > ctx.today() || date < ctx.period().start || date > ctx.period().end) return;
     pending = true;
+    ++seq; // A stale note fetch must not overwrite a just-saved reflection.
     const old = current(date), next = { ...old, ...patch };
     render(); drawModal();
     try {
