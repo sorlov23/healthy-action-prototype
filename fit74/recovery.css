@@ -1,0 +1,47 @@
+/* Fit74 return-to-rhythm extension. Fits the existing warm Impulse design system. */
+#returnCard{order:2;margin:0 0 12px;padding:17px 16px;background:#fffaf6;border-color:#f4e1d4;border-radius:14px;overflow:hidden}
+.return-eyebrow{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:1.1px;font-weight:800;color:#a55b3b;margin-bottom:12px}
+.return-spark{background:#ffe4d5;color:#ba542b;width:27px;height:27px;border-radius:9px;display:grid;place-items:center;font-size:18px}
+#returnCard h2{font-size:23px;letter-spacing:-.75px;line-height:1.16;margin:0}
+#returnDescription{line-height:1.55;font-size:13px;margin:8px 0 0;color:#5f6265}
+.return-soft-hint{font-size:12px;line-height:1.5;padding:10px 12px;margin:13px 0 0;color:#706153;background:#fff1e7;border-radius:10px}
+.return-past-days{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}
+.return-day{border:1px solid #f0d9c8;border-radius:9px;background:white;color:#7d563d;font-size:11px;line-height:1.35;min-height:36px;padding:7px 10px;text-align:left}
+.return-day:disabled{opacity:.55}
+.return-step-heading{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin:15px 0 9px;font-size:12px}
+.return-step-heading b{font-size:13px}
+.return-step-heading span{font-size:10px;color:#8b8076}
+.return-steps{display:grid;gap:7px}
+.return-step{display:block;width:100%;border:1px solid #eee7e0;background:white;text-align:left;min-height:43px;border-radius:10px;font-size:12px;padding:10px 12px;color:#4a5256;font-weight:600;line-height:1.4}
+.return-step.done{background:#eaf5ec;border-color:#bdddc7;color:#24643f}
+.return-step:disabled{opacity:.6}
+.return-checkin{width:100%;border:0;background:#252c31;color:white;border-radius:10px;min-height:46px;padding:12px;margin-top:13px;font-size:13px;font-weight:700}
+.resilience-teaser{display:block;margin-top:5px;font-size:11px;color:#a45e3f;line-height:1.35;font-weight:600}
+.score-card>div:last-child{min-width:0}
+.resilience-card .card-head h2{font-size:20px}
+.resilience-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:14px 0 12px}
+.resilience-stats>div{background:#f6f6f2;border-radius:11px;padding:12px 6px;text-align:center;min-width:0}
+.resilience-stats span,.resilience-stats small{display:block;color:#777e80;font-size:10px;line-height:1.4}
+.resilience-stats strong{display:block;color:#252c31;font-size:26px;letter-spacing:-1px;line-height:1.35}
+.resilience-card .micro{margin-bottom:0}
+.day-context{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding-top:14px;margin-top:13px}
+.day-context>div{flex:1;min-width:150px}
+.day-context b{font-size:13px}
+.day-context .micro{margin:5px 0 0;max-width:270px}
+.day-context-button{border:1px solid #f2d8ca;background:#fff3ec;color:#a74820;border-radius:9px;padding:10px 12px;font-size:12px;font-weight:700;min-height:44px}
+.day-context-button:disabled{opacity:.45}
+.cal-day.reflected-day:before{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:100%;background:#f56432;box-shadow:0 0 0 1px white}
+.recovery-history-note{display:block;margin-top:4px;font-size:11px;color:#9b6546}
+.recovery-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(23,28,31,.44);align-items:flex-end;justify-content:center;padding:0}
+.recovery-modal.open{display:flex}
+.recovery-sheet{width:min(100%,680px);max-height:90vh;overflow-y:auto;overscroll-behavior:contain;background:#fdfcf9;border-radius:20px 20px 0 0;padding:22px 18px calc(24px + env(safe-area-inset-bottom))}
+.recovery-sheet-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.recovery-sheet-header h2{font-size:25px;letter-spacing:-.8px;margin:2px 0 0}
+.recovery-close{width:42px;height:42px;border:0;border-radius:10px;background:#f0efec;font-size:26px;display:grid;place-items:center;flex-shrink:0}
+.recovery-reasons{display:grid;gap:8px;margin-top:16px}
+.recovery-reason-option{min-height:48px;border:1px solid #e8e7e1;background:white;border-radius:11px;text-align:left;padding:13px 14px;font-size:14px;font-weight:600}
+.recovery-reason-option.selected{border-color:#f56432;background:#fff2eb;color:#9c3c19}
+.recovery-reason-option.neutral{color:#757c7e}
+.recovery-reason-option:disabled{opacity:.55}
+@media(max-width:360px){.resilience-stats strong{font-size:22px}.resilience-stats span,.resilience-stats small{font-size:9px}.return-soft-hint{font-size:11px}.day-context-button{width:100%}}
+@media(prefers-reduced-motion:reduce){.recovery-modal,.return-step,.return-day{transition:none}}
