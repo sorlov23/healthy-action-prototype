@@ -21,6 +21,7 @@ function fixture(options = {}) {
     owned: async (...args) => { calls.push(['owned', ...args]); return { enabled: true }; },
     disable: async (...args) => calls.push(['disable', ...args]),
     claimDue: async () => [{ endpoint: subscription.endpoint, ...subscription.keys, local_date: '2026-11-04' }],
+    reminderContext: async (...args) => { calls.push(['context',...args]); return options.tone || 'regular'; },
     claimTest: async (...args) => { calls.push(['claimTest', ...args]); return options.throttle ? null : { endpoint: subscription.endpoint, ...subscription.keys }; },
     sent: async (...args) => calls.push(['sent', ...args]),
     failed: async (...args) => calls.push(['failed', ...args]),
@@ -97,6 +98,20 @@ function fixture(options = {}) {
   assert.equal(new URL(notificationPayload('2026-11-06').url).origin, APP_ORIGIN);
 }
 
+{
+  const f = fixture({ tone: 'return' });
+  await f.request({ action: 'dispatch' }, { 'x-fit74-scheduler': f.config.scheduler_secret });
+  const sent = f.calls.find(x => x[0] === 'push');
+  assert.match(JSON.parse(sent[2]).notification.title,/всё ещё в игре/);
+  assert.match(JSON.parse(sent[2]).body,/не нужно наверстывать/);
+  assert(f.calls.some(x => x[0] === 'context'));
+}
+{
+  const f = fixture({ tone: 'shift' });
+  await f.request({ action: 'dispatch' }, { 'x-fit74-scheduler': f.config.scheduler_secret });
+  const sent = f.calls.find(x => x[0] === 'push');
+  assert.match(JSON.parse(sent[2]).notification.body,/сон и восстановление/);
+}
 const workerSource = await readFile(new URL('../fit74/sw.js', import.meta.url), 'utf8');
 {
   const handlers = {}, notifications = [], opened = [], messages = [];
