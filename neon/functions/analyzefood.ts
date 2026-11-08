@@ -21,8 +21,8 @@ let cachedJwksUrl = '';
 
 async function authenticatedUserId(req: Request): Promise<string | null> {
   const authHeader = req.headers.get('Authorization') || '';
-  const token = /^Bearer\\s+(.+)$/i.exec(authHeader)?.[1];
-  const issuer = String(process.env.NEON_AUTH_BASE_URL || '').replace(/\\/$/, '');
+  const token = /^Bearer\s+(.+)$/i.exec(authHeader)?.[1];
+  const issuer = String(process.env.NEON_AUTH_BASE_URL || '').replace(/\/$/, '');
   const jwksUrl = String(process.env.NEON_AUTH_JWKS_URL || '');
   if (!token || !issuer || !jwksUrl) return null;
   try {
