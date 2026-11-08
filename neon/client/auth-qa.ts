@@ -145,9 +145,12 @@ async function checkApi() {
       credentials: 'omit',
     });
     if (!userId) {
-      readStatus.textContent = response.status === 401 || response.status === 403
-        ? 'PASS: без входа Neon запрещает доступ к решениям (HTTP ' + response.status + ').'
-        : 'Требуется проверить: без входа сервер вернул HTTP ' + response.status + '.';
+      const message = String((await response.json().catch(() => ({})))?.message || '');
+      const unauthorizedDenied = response.status === 401 || response.status === 403
+        || (response.status === 400 && /missing authentication credentials/i.test(message));
+      readStatus.textContent = unauthorizedDenied
+        ? 'PASS: Neon Data API отклонил запрос без JWT (HTTP ' + response.status + ').'
+        : 'FAIL: запрос без JWT вернул HTTP ' + response.status + ', требуется проверка политики.';
       return;
     }
     const data = await response.json().catch(() => null);
