@@ -1,7 +1,7 @@
 import { createAuthClient } from '@neon/auth';
 
-const AUTH_URL = 'https://ep-round-mud-baycsru1.neonauth.c-8.eu-central-1.aws.neon.tech/rinlo/auth';
-const DATA_URL = 'https://ep-round-mud-baycsru1.apirest.c-8.eu-central-1.aws.neon.tech/rinlo/rest/v1';
+const AUTH_URL = 'https://ep-dark-meadow-baxrhac6.neonauth.c-8.eu-central-1.aws.neon.tech/rinlo/auth';
+const DATA_URL = 'https://ep-dark-meadow-baxrhac6.apirest.c-8.eu-central-1.aws.neon.tech/rinlo/rest/v1';
 
 const client = createAuthClient(AUTH_URL);
 const $ = (id: string) => document.getElementById(id);
