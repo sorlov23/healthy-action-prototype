@@ -15,6 +15,19 @@ The existing Supabase Rinlo project and Vercel preview stay unchanged.
 - No Gemini API key has been copied. No app traffic has been switched.
 - **No Supabase user data has been imported.**
 
+## Local-first safety backup
+
+The migration branch adds a **manual** export in Rinlo 2 Settings: `Скачать локальную копию`.
+It downloads a JSON snapshot of the local profile, decisions, Cook state, corrections,
+and feedback. No request is sent to the server, and the Auth session, refresh token,
+password, and API key storage entries are excluded. The export file is unencrypted,
+may contain sensitive information, and must be stored privately.
+
+This is a device backup, **not** proof of ownership of an existing Supabase account
+and **not** a complete replacement for an export of the old cloud database.
+The corresponding Neon import remains disabled until verified account linking
+and conflict reconciliation are implemented.
+
 ## Why the existing Supabase database cannot be copied yet
 
 Supabase project `xhlbiaueiqcmgifmihur` currently reports `INACTIVE` and SQL queries fail with
