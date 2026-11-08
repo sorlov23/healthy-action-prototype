@@ -21,6 +21,7 @@
   <link rel="preload" href="./assets/impulse/fonts/inter-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="./impulse.css?v=20.0">
   <link rel="stylesheet" href="./plan-settings.css?v=13.0">
+  <link rel="stylesheet" href="./recovery.css?v=1.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
   <style>
     #boot{position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:24px;background:#f8f8f6;color:#252c31;font:400 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
@@ -61,11 +62,23 @@
 <section id="todayScreen" class="screen active">
   <div class="today-hero"><p id="greeting" class="greeting">Привет!</p><h1 id="heroTitle">Твой план<br>на завтра</h1><p id="heroDate">19 октября</p><img class="workout-art" src="./assets/impulse/hero-v2.webp" width="300" height="300" alt="" aria-hidden="true"></div>
   <section class="challenge-progress" aria-label="Прогресс дистанции"><div class="challenge-progress-head"><span id="challengeStatus">Старт завтра · 19 октября</span><strong id="challengeCount">0 из 74</strong></div><div id="challengeTicks" class="challenge-ticks" aria-hidden="true"></div></section>
+  <section id="returnCard" class="card return-card hidden" aria-labelledby="returnTitle">
+    <div class="return-eyebrow"><span class="return-spark" aria-hidden="true">↗</span><span>ВОЗВРАЩЕНИЕ В РИТМ</span></div>
+    <h2 id="returnTitle">Ты всё ещё в игре</h2>
+    <p id="returnDescription" class="muted compact"></p>
+    <p id="returnShiftHint" class="return-soft-hint"></p>
+    <div id="returnPastDays" class="return-past-days" aria-label="Отметки непростых дней"></div>
+    <div id="returnStepsGroup">
+      <div class="return-step-heading"><b>Один шаг — уже движение</b><span id="returnStepCount"></span></div>
+      <div id="returnSteps" class="return-steps"></div>
+    </div>
+    <button id="returnOpenCheckin" class="return-checkin" type="button">⚡ Быстрый чек-ин без догонялок</button>
+  </section>
   <div id="smartNudge" class="smart-nudge hidden"><div><b>Ещё чуть-чуть до зачёта</b><span id="smartNudgeText"></span></div><button id="dismissNudge">×</button></div>
   <div class="hero-grid">
     <div class="score-card">
       <div id="scoreRing" class="score-ring"><span id="scoreValue">0</span><small>/10</small></div>
-      <div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p></div>
+      <div><strong id="scoreLabel">Начинаем</strong><p id="streakText" class="muted">Серия: 0 дней</p><small id="resilienceTeaser" class="resilience-teaser">Ритм важнее серии</small></div>
     </div>
     <div class="mini-card"><span>До финиша</span><strong id="daysLeft">74</strong><small id="daysLeftUnit">дня</small></div>
   </div>
@@ -101,7 +114,9 @@
     <button class="check-row" data-field="habit_3"><span><b id="habit3Label">Привычка 3</b></span><img class="ui-icon" src="./assets/impulse/icons/list-checks.svg" alt=""><span class="points">+1</span><span class="toggle"></span></button>
   </section>
 
-  <details class="card extras-card"><summary><span class="extras-summary-copy"><b>Пара цифр</b><small>необязательно</small></span><img class="ui-icon extras-chevron" src="./assets/impulse/icons/caret-right.svg" alt="" aria-hidden="true"></summary><div class="extras-body"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label></div></details>
+  <details class="card extras-card"><summary><span class="extras-summary-copy"><b>Пара цифр</b><small>необязательно</small></span><img class="ui-icon extras-chevron" src="./assets/impulse/icons/caret-right.svg" alt="" aria-hidden="true"></summary><div class="extras-body"><div class="two-cols"><label>Вес, кг<input id="weightInput" type="number" inputmode="decimal" step="0.1" min="30" max="300"></label><div><span class="field-label">Самочувствие</span><div class="mood"><button data-mood="1">1</button><button data-mood="2">2</button><button data-mood="3">3</button><button data-mood="4">4</button><button data-mood="5">5</button></div></div></div><label>Заметка<textarea id="notesInput" rows="2"></textarea></label>
+    <div class="day-context"><div><b>Контекст дня</b><p id="dayContextNote" class="micro">Можно честно отметить непростой день.</p></div><button id="dayContextButton" type="button" class="day-context-button">Отметить сложный день</button></div>
+  </div></details>
   <button id="finishDayBtn" class="finish-btn">Готово на сегодня</button>
   <p class="minimum-note">5+ очков — обычный зачёт. Бережный день сохраняет стабильность, если закрыты 3 базовых пункта.</p>
 </section>
@@ -110,6 +125,16 @@
   <div class="screen-title"><div><p class="eyebrow">ПРОГРЕСС</p><h2>Прогресс</h2></div><strong id="completedStat">0/74</strong></div>
   <div class="screen-subnav"><button data-goto="history" class="active">История</button><button data-goto="trends">Тренды</button></div>
   <div class="stats-grid"><div class="stat"><span>Текущая серия</span><b id="currentStreak">0</b><small>дней</small></div><div class="stat"><span>Лучшая серия</span><b id="bestStreak">0</b><small>дней</small></div><div class="stat"><span>Сильных 🔥</span><b id="strongDays">0</b><small>дней</small></div></div>
+  <section id="resilienceCard" class="card resilience-card" aria-labelledby="resilienceTitle">
+    <div class="card-head"><div><p class="eyebrow">ДЛИННАЯ ДИСТАНЦИЯ</p><h2 id="resilienceTitle">Ритм важнее серии</h2></div></div>
+    <p class="muted compact">Один пропуск не стирает пройденный путь.</p>
+    <div class="resilience-stats">
+      <div><span>14 дней</span><strong id="return14">—</strong><small id="return14Detail">0 из 0 дней</small></div>
+      <div><span>30 дней</span><strong id="return30">—</strong><small id="return30Detail">0 из 0 дней</small></div>
+      <div><span>Возвращений</span><strong id="returnComebacks">0</strong><small>После паузы</small></div>
+    </div>
+    <p class="micro">Учитываем завершённые дни и уже выполненный сегодняшний. Отметки причин не добавляют баллы.</p>
+  </section>
   <section class="card"><div class="card-head"><div><p class="eyebrow">НЕДЕЛЯ</p><h2 id="weekRange">—</h2></div></div><div class="week-summary"><div><b id="weekGoodDays">0</b><span>зачтено</span></div><div><b id="weekAvgScore">0.0</b><span>ср. балл</span></div><div><b id="weekMood">—</b><span>самочувствие</span></div></div><p id="weekInsight" class="muted compact"></p></section>
   <section class="card calendar-card"><div class="card-head"><h2 id="calendarTitle">74 дня</h2><span>тапни по дню</span></div><div id="calendarPager" class="calendar-pager hidden"><button id="calendarPrev" aria-label="Предыдущие дни">←</button><span id="calendarPageRange"></span><button id="calendarNext" aria-label="Следующие дни">→</button></div><div id="calendarGrid" class="calendar-grid"></div></section>
   <section class="card milestone-card"><div class="card-head"><div><p class="eyebrow">СЛЕДУЮЩИЙ РУБЕЖ</p><h2 id="milestoneNumber">7 дней</h2></div></div><div class="progress big"><i id="milestoneBar"></i></div><p id="milestoneText" class="muted compact"></p></section>
@@ -153,11 +178,20 @@
 </main>
 
 <div id="toast" class="toast"><span id="toastText"></span><button id="toastAction" class="hidden">Отменить</button></div>
+<div id="recoveryReasonModal" class="recovery-modal" aria-hidden="true">
+  <div class="recovery-sheet" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle">
+    <div class="recovery-sheet-header"><div><p class="eyebrow">КОНТЕКСТ ДНЯ</p><h2 id="recoveryModalTitle">Что повлияло?</h2><p id="recoveryModalDate" class="muted compact"></p></div><button id="recoveryModalClose" class="recovery-close" type="button" aria-label="Закрыть">×</button></div>
+    <p class="muted compact">Можно выбрать одну причину или оставить без объяснений. Это не зачёт и не штраф.</p>
+    <div id="recoveryReasonOptions" class="recovery-reasons"></div>
+  </div>
+</div>
 <div id="quickModal" class="modal" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="quickTitle"><div class="sheet-top"><button id="quickBack" class="icon-btn" aria-label="Предыдущий вопрос">←</button><div><span id="quickCounter">1 из 8</span><div class="quick-progress"><i id="quickProgress"></i></div></div><button id="quickClose" class="icon-btn" aria-label="Закрыть чек-ин">×</button></div><div class="quick-content"><div id="quickEmoji" class="quick-emoji">🏋️</div><h2 id="quickTitle">Тренировка?</h2><p id="quickSubtitle" class="muted"></p><div id="quickOptions" class="quick-options"></div></div></div></div>
 
 <script src="./impulse-ui.js?v=11.0"></script>
 <script src="./plan-period.js?v=13.0"></script>
 <script src="./push-notifications.js?v=19.0"></script>
+<script src="./recovery-core.js?v=1.0"></script>
+<script src="./recovery-ui.js?v=1.0"></script>
 <script src="./v3.js?v=20.0"></script>
 <script src="./plan-settings.js?v=13.0"></script>
 <script src="./visuals-v4.js?v=13.0"></script>
