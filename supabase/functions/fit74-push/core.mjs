@@ -17,9 +17,13 @@ export function validSubscription(input) {
   } catch { return false; }
 }
 
-export function notificationPayload(day, test = false) {
-  const title = test ? 'Fit74 · уведомления работают' : 'Fit74 · день ещё открыт';
+export function notificationPayload(day, test = false, tone = 'regular') {
+  const title = test ? 'Fit74 · уведомления работают' :
+    tone === 'shift' ? 'Fit74 · бережный ритм' :
+    tone === 'return' ? 'Fit74 · ты всё ещё в игре' : 'Fit74 · день ещё открыт';
   const body = test ? 'Это проверка. Напомним в выбранное время, если день ещё не закрыт.' :
+    tone === 'shift' ? 'После смены сон и восстановление важнее отчётности. Отметь день, когда будет удобно.' :
+    tone === 'return' ? 'После перерыва достаточно одного небольшого шага. Ничего не нужно наверстывать.' :
     'Быстрый чек-ин займёт около 10 секунд. Загляни без догонялок.';
   const navigate = `${APP_ORIGIN}/index.html?fit74v=19&checkin=1`;
   // A visible declarative fallback also works in recent Safari if its worker is unavailable.
@@ -44,9 +48,14 @@ export function createHandler({ store, authenticate, push, now = () => new Date(
   async function send(row, config, test = false) {
     const date = row.local_date || now().toISOString().slice(0, 10);
     try {
+      let tone = 'regular';
+      if (!test && typeof store.reminderContext === 'function') {
+        try { tone = await store.reminderContext(row.endpoint, date); }
+        catch { /* Context is optional; push must still be delivered. */ }
+      }
       await push.sendNotification({ endpoint: row.endpoint,
         keys: { p256dh: row.p256dh, auth: row.auth } },
-      JSON.stringify(notificationPayload(date, test)), {
+      JSON.stringify(notificationPayload(date, test, tone)), {
         vapidDetails: { subject: APP_ORIGIN, publicKey: config.vapid_public, privateKey: config.vapid_private },
         TTL: 1800, urgency: 'high', timeout: 10000,
       });
