@@ -45,3 +45,15 @@
 .recovery-reason-option:disabled{opacity:.55}
 @media(max-width:360px){.resilience-stats strong{font-size:22px}.resilience-stats span,.resilience-stats small{font-size:9px}.return-soft-hint{font-size:11px}.day-context-button{width:100%}}
 @media(prefers-reduced-motion:reduce){.recovery-modal,.return-step,.return-day{transition:none}}
+
+/* Make the return card appear before workouts even when the workout hub is inserted dynamically. */
+#todayScreen #returnCard{order:2}
+#todayScreen #todayWorkoutCard{order:3}
+#todayScreen .checklist-card{order:4}
+#todayScreen .quick-row{order:5}
+#todayScreen .hero-grid{order:6}
+#todayScreen .weekly-goals-card{order:7}
+#todayScreen #minimumCard{order:8}
+#todayScreen .extras-card{order:9}
+#todayScreen #finishDayBtn{order:10}
+#todayScreen .minimum-note{order:11}
