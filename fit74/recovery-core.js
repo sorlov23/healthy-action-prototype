@@ -57,7 +57,7 @@
     }
     const gapDates = [];
     if (doneEnd >= start) {
-      const from = max(start, add(doneEnd, -6), lastStable ? add(lastStable, 1) : start);
+      const from = max(max(start, add(doneEnd, -6)), lastStable ? add(lastStable, 1) : start);
       for (let d = from; d <= doneEnd; d = add(d, 1))
         if (!stable(map.get(d))) gapDates.push(d);
     }
