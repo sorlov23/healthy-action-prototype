@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Rinlo · Neon Auth QA</title>
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <style>
+    :root{font-family:system-ui,-apple-system,Roboto,Arial,sans-serif;color:#1e2324;background:#f6f7f3}
+    *{box-sizing:border-box}body{margin:0;padding:24px 16px 60px}
+    main{max-width:540px;margin:auto}
+    h1{font-size:30px;letter-spacing:-.04em;margin:12px 0}
+    p{color:#535a5b;line-height:1.5}
+    a{color:#272f16;font-weight:600}
+    .tag{font-size:11px;letter-spacing:.14em;font-weight:850;color:#66861f}
+    .panel{margin:16px 0;padding:22px;border:1px solid #e3e6df;background:#fff;border-radius:20px}
+    h2{margin:0 0 12px;font-size:18px}
+    label{display:block;margin:12px 0;font-weight:700;font-size:13px}
+    input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #c9cfcb;border-radius:12px;font:inherit;font-weight:400}
+    button{min-height:46px;border:0;border-radius:14px;padding:11px 17px;font:inherit;font-weight:760;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    .primary{background:#c8ff5a;color:#172010;width:100%}
+    .secondary{background:#f1f4ea;color:#1f2b1a;width:100%}
+    .row{display:flex;gap:10px}.row>*{flex:1}
+    .status{min-height:44px;white-space:pre-wrap;word-break:break-word;background:#edf3e4;padding:12px;border-radius:12px;font-size:13px;line-height:1.45}
+    .warn{background:#fff1df}.muted{font-size:12px;color:#6c7173}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<main>
+  <a href="./">← Rinlo</a>
+  <p class="tag">ТЕСТОВЫЙ СЕРВИС · НЕ ОСНОВНОЙ ВХОД</p>
+  <h1>Проверка Neon Auth</h1>
+  <p>Отдельная проверка новой инфраструктуры. На действующий аккаунт Rinlo и локальную историю этот экран не влияет. Старые пароли Supabase здесь не работают автоматически.</p>
+
+  <section class="panel">
+    <h2>Состояние подключения</h2>
+    <div id="neonQaStatus" class="status" role="status" aria-live="polite">Проверяю сессию…</div>
+    <p id="neonQaAccount" class="muted"></p>
+    <div class="row">
+      <button id="neonQaReload" type="button" class="secondary">Проверить снова</button>
+      <button id="neonQaSignOut" type="button" class="secondary" hidden>Выйти</button>
+    </div>
+  </section>
+
+  <section class="panel" id="neonQaLoginPanel">
+    <h2>Тестовый аккаунт Neon</h2>
+    <p class="muted">Используй отдельные учётные данные. Не вводи здесь пароль от старого Rinlo, пока перенос пользователей не завершён.</p>
+    <form id="neonQaAuthForm">
+      <label>Email<input name="email" type="email" autocomplete="email" inputmode="email" required></label>
+      <label>Пароль<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+      <label id="neonQaNameWrap" hidden>Имя<input name="name" autocomplete="nickname" maxlength="60"></label>
+      <div class="row">
+        <button id="neonQaLogin" type="submit" class="primary">Войти</button>
+        <button id="neonQaRegister" type="button" class="secondary">Регистрация</button>
+      </div>
+    </form>
+    <p class="muted">Реальная регистрация создаёт новый аккаунт в Neon. Это не перенос старой учётной записи.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Проверка доступа к данным</h2>
+    <p class="muted">Чтение ограничено политиками RLS. Тест не записывает и не изменяет информацию в базе.</p>
+    <button id="neonQaRead" type="button" class="primary">Проверить Neon Data API</button>
+    <div id="neonQaDataStatus" class="status" role="status" aria-live="polite">Запрос ещё не выполнялся.</div>
+  </section>
+  <p class="muted">Версия: Neon Auth QA v1. Только миграционная ветка PR #26.</p>
+</main>
+<script src="./neon-auth-qa.bundle.js" defer></script>
+</body>
+</html>
