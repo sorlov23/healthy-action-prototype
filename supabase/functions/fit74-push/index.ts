@@ -55,7 +55,7 @@ const store = {
     if (a < p.start_date) return 'regular';
     const history = await db('fit74_daily_entries?select=entry_date,workout,nutrition,movement,water,sleep,habit_1,habit_2,habit_3,minimum_mode&user_id=eq.'+
       user + '&entry_date=gte.' + a + '&entry_date=lte.' + b);
-    const found = new Map((history || []).map((row: Record<string, unknown>) => [row.entry_date, row]));
+    const found = new Map<string, Record<string, unknown>>((history || []).map((row: Record<string, unknown>) => [String(row.entry_date), row]));
     return !stableEntry(found.get(a)) && !stableEntry(found.get(b)) ? 'return' : 'regular';
   },
   async owned(user: string, endpoint: string) {
