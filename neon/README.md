@@ -11,7 +11,7 @@ The existing Supabase Rinlo project and Vercel preview stay unchanged.
 - Default branch: `main`
 - Neon Managed Better Auth: provisioned
 - Neon Data API: provisioned, authenticated via Neon Auth
-- User data schema: `migrations/001_rinlo_decision_core.sql`, validated on a *temporary Neon migration branch*
+- User data schema: `migrations/001_rinlo_decision_core.sql`, **applied to Neon `main` on 2026-11-08 with explicit user approval**
 - No Gemini API key has been copied. No app traffic has been switched.
 - **No Supabase user data has been imported.**
 
@@ -40,9 +40,8 @@ fabricate migrations from client-side sample data or imply the new database cont
 
 ## Database migration order
 
-1. Inspect and test `001_rinlo_decision_core.sql` on the temporary migration branch
-   (tables, FK to `neon_auth."user"`, constraints, privileges, RLS).
-2. Get explicit approval before applying the prepared migration to Neon `main`.
+1. **Complete:** Tested `001_rinlo_decision_core.sql` on temporary branch (tables, FK to `neon_auth."user"`, privileges and RLS).
+2. **Complete:** Explicitly approved and applied migration `2d6df879-008f-4f54-9640-fd6cfddb25ba` to Neon `main`; temporary branch removed.
 3. Recover a read-only export of the stopped Supabase project's four Rinlo 2.0 tables
    and its ownership identifiers. Also audit other legacy tables before dropping anything.
 4. Implement authenticated identity-linking: prove the current Supabase identity **and**
@@ -100,3 +99,18 @@ rate-limited, abuse-protected endpoint and appropriate quotas.
 
 Source: the current Rinlo 2.0 Supabase schema, Auth implementation, Edge Function,
 and sync modules in the `rinlo-2-foundation` branch.
+
+## Neon main schema deployment — verified
+
+Applied 2026-11-08 after explicit user approval. Neon confirmed migration completion and cleanup.
+
+- Four tables: `rinlo_decision_profiles`, `rinlo_decisions`, `rinlo_decision_corrections`, `rinlo_decision_feedback`
+- All four have RLS enabled; eight policies in total
+- Anonymous SELECT privilege denied for all four
+- Authenticated SELECT privilege granted with owner-filtering RLS policies
+- All four FKs reference `neon_auth."user"`
+- Every table contains **0 records**: real user data has **not** been imported
+- Neon `main` is the only remaining branch
+
+This verifies schema/privileges, not signed-token integration or cross-user isolation.
+Do not switch frontend routing or merge until auth, Gemini, cloud-sync and source-data migration pass.
