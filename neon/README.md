@@ -59,6 +59,14 @@ Do not simply replace `supabaseUrl` with a Neon URL:
 
 ## Gemini migration
 
+The complete decision engine is now **ported in source only** at
+`functions/analyzefood.ts` and security-tested with a mocked JWKS server.
+`npm run typecheck`, `npm run build` and `npm test` pass in the
+`rinlo neon backend ci` workflow. The Neon function has **not** been deployed:
+the Gemini key is unavailable from the inactive Supabase project and public
+rate limiting / quota policy is not yet implemented. Do not use a private
+credential from local browser storage or expose any key in runtime-config.js.
+
 The 997-line `supabase/functions/analyze-food/index.ts` handles multiple modes:
 food/photo/audio decisions, ingredient vision, and Cook, with strict response validation.
 It must be ported as a separate, authenticated service (Neon Function or Vercel Function).
