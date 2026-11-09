@@ -1,0 +1,16 @@
+**/.git
+**/node_modules
+**/.env
+**/.env.*
+**/package-lock.json
+**/*.log
+backend/
+supabase/
+tests/
+docs/
+neon/tests/
+neon/migrations/
+neon/functions/
+neon/dist/
+tatnet/tests/
+tatnet/README.md
