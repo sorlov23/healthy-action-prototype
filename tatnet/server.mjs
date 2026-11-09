@@ -47,9 +47,9 @@ function sameOriginCookie(value,prefix) {
   return cookie;
 }
 async function relay(req,res,{base,prefix,origin,fetchImpl,withCookies=false,requireBearer=false}) {
-  if(!base)return json(res,503,{error:'upstream_not_configured'});
   if(requireBearer&&!/^Bearer\s+\S+$/i.test(String(req.headers.authorization||'')))
     return json(res,401,{error:'authorization_required'});
+  if(!base)return json(res,503,{error:'upstream_not_configured'});
   const method=req.method?.toUpperCase();
   if(!['GET','HEAD','POST','PATCH','PUT','DELETE','OPTIONS'].includes(method))
     return json(res,405,{error:'method_not_allowed'});
