@@ -1,0 +1,49 @@
+name: Rinlo TatNet ingress CI
+
+on:
+  pull_request:
+    paths:
+      - 'tatnet/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'rinlo2/neon-auth-qa.html'
+      - 'neon/client/auth-qa.ts'
+      - '.github/workflows/rinlo-tatnet-ingress-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ingress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test secure local-first ingress
+        run: node --test tatnet/tests/*.test.mjs
+      - name: Build TatNet Docker image
+        run: docker build --pull -t rinlo-tatnet-qa:ci .
+      - name: Verify container boot and public endpoints
+        run: |
+          set -euo pipefail
+          docker run --rm -d -p 127.0.0.1:18080:8080 --name rinlo-tatnet-ci rinlo-tatnet-qa:ci
+          trap 'docker stop rinlo-tatnet-ci || true' EXIT
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:18080/healthz && break
+            sleep 1
+          done
+          home_html=$(curl -fsS http://127.0.0.1:18080/rinlo2/)
+          [[ "$home_html" == *"Что будем есть"* ]]
+          echo "RINLO_TATNET_HOME=PASS"
+          curl -fsS http://127.0.0.1:18080/rinlo2/neon-auth-qa.bundle.js >/dev/null
+          echo "RINLO_TATNET_AUTH_BUNDLE=PASS"
+          runtime_js=$(curl -fsS http://127.0.0.1:18080/runtime-config.js)
+          [[ "$runtime_js" == *"tatnetSameOrigin:true"* ]]
+          echo "RINLO_TATNET_RUNTIME=PASS"
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/neon/data/rinlo_decisions)
+          test "$code" = "401"
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/ai)
+          test "$code" = "503"

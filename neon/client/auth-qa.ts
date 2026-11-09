@@ -1,7 +1,12 @@
 import { createAuthClient } from '@neon/auth';
 
-const AUTH_URL = 'https://ep-dark-meadow-baxrhac6.neonauth.c-8.eu-central-1.aws.neon.tech/rinlo/auth';
-const DATA_URL = 'https://ep-dark-meadow-baxrhac6.apirest.c-8.eu-central-1.aws.neon.tech/rinlo/rest/v1';
+const TATNET_SAME_ORIGIN = (window as any).HEALTHY_ACTION_CONFIG?.tatnetSameOrigin === true;
+const AUTH_URL = TATNET_SAME_ORIGIN
+  ? location.origin + '/api/neon/auth'
+  : 'https://ep-dark-meadow-baxrhac6.neonauth.c-8.eu-central-1.aws.neon.tech/rinlo/auth';
+const DATA_URL = TATNET_SAME_ORIGIN
+  ? location.origin + '/api/neon/data'
+  : 'https://ep-dark-meadow-baxrhac6.apirest.c-8.eu-central-1.aws.neon.tech/rinlo/rest/v1';
 
 const client = createAuthClient(AUTH_URL);
 const $ = (id: string) => document.getElementById(id);
