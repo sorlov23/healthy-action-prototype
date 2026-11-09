@@ -35,9 +35,14 @@ jobs:
             curl -fsS http://127.0.0.1:18080/healthz && break
             sleep 1
           done
-          curl -fsS http://127.0.0.1:18080/rinlo2/ | grep -q 'Что будем есть'
+          home_html=$(curl -fsS http://127.0.0.1:18080/rinlo2/)
+          [[ "$home_html" == *"Что будем есть"* ]]
+          echo "RINLO_TATNET_HOME=PASS"
           curl -fsS http://127.0.0.1:18080/rinlo2/neon-auth-qa.bundle.js >/dev/null
-          curl -fsS http://127.0.0.1:18080/runtime-config.js | grep -q 'tatnetSameOrigin:true'
+          echo "RINLO_TATNET_AUTH_BUNDLE=PASS"
+          runtime_js=$(curl -fsS http://127.0.0.1:18080/runtime-config.js)
+          [[ "$runtime_js" == *"tatnetSameOrigin:true"* ]]
+          echo "RINLO_TATNET_RUNTIME=PASS"
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/neon/data/rinlo_decisions)
           test "$code" = "401"
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/ai)
