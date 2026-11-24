@@ -24,17 +24,18 @@
     { id: 'reflection', text: 'Честно отметил, как прошёл день' }
   ]);
 
-  function calculate({ entries = [], start, end, today }) {
+  function calculate({ entries = [], start, end, today, pausedDates = [] }) {
     if (!start || !end || !today || end < start) throw new Error('Invalid recovery plan');
-    const map = new Map(entries.map(e => [e.entry_date, e]));
+    const map = new Map(entries.map(e => [e.entry_date, e])), paused = new Set(pausedDates);
     const yesterday = add(today, -1), doneEnd = min(end, yesterday);
-    const todayStable = today >= start && today <= end && stable(map.get(today));
+    const todayStable = today >= start && today <= end && !paused.has(today) && stable(map.get(today));
     const reportEnd = todayStable ? today : doneEnd;
     const range = days => {
       if (reportEnd < start) return { completed: 0, total: 0, percent: 0 };
       const from = max(start, add(reportEnd, -days + 1));
       let total = 0, completed = 0;
       for (let d = from; d <= reportEnd; d = add(d, 1)) {
+        if(paused.has(d))continue;
         total++;
         if (stable(map.get(d))) completed++;
       }
@@ -43,6 +44,7 @@
     let returns = 0, gapSinceStable = false, hadStable = false;
     if (reportEnd >= start) {
       for (let d = start; d <= reportEnd; d = add(d, 1)) {
+        if(paused.has(d))continue;
         if (stable(map.get(d))) {
           if (hadStable && gapSinceStable) returns++;
           hadStable = true; gapSinceStable = false;
@@ -53,16 +55,16 @@
     let lastStable = null;
     if (doneEnd >= start) {
       for (let d = start; d <= doneEnd; d = add(d, 1))
-        if (stable(map.get(d))) lastStable = d;
+        if (!paused.has(d)&&stable(map.get(d))) lastStable = d;
     }
     const gapDates = [];
     if (doneEnd >= start) {
       const from = max(max(start, add(doneEnd, -6)), lastStable ? add(lastStable, 1) : start);
       for (let d = from; d <= doneEnd; d = add(d, 1))
-        if (!stable(map.get(d))) gapDates.push(d);
+        if (!paused.has(d)&&!stable(map.get(d))) gapDates.push(d);
     }
     const active = today >= start && today <= end;
-    const show = active && (gapDates.length > 0 && (lastStable !== null || dayNo(today) - dayNo(start) >= 2));
+    const show = active && !paused.has(today) && (gapDates.length > 0 && (lastStable !== null || dayNo(today) - dayNo(start) >= 2));
     return {
       active, show, returning: show && !todayStable, success: show && todayStable,
       startedBefore: lastStable !== null, gapDates, returns,

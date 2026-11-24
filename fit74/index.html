@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="./impulse.css?v=20.0">
   <link rel="stylesheet" href="./plan-settings.css?v=13.0">
   <link rel="stylesheet" href="./recovery.css?v=1.0">
+  <link rel="stylesheet" href="./rhythm.css?v=2.0">
   <style>html:not(.fit74-ready) #appView{visibility:hidden}html.fit74-ready #appView{visibility:visible}</style>
   <style>
     #boot{position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:24px;background:#f8f8f6;color:#252c31;font:400 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
@@ -62,6 +63,45 @@
 <section id="todayScreen" class="screen active">
   <div class="today-hero"><p id="greeting" class="greeting">Привет!</p><h1 id="heroTitle">Твой план<br>на завтра</h1><p id="heroDate">19 октября</p><img class="workout-art" src="./assets/impulse/hero-v2.webp" width="300" height="300" alt="" aria-hidden="true"></div>
   <section class="challenge-progress" aria-label="Прогресс дистанции"><div class="challenge-progress-head"><span id="challengeStatus">Старт завтра · 19 октября</span><strong id="challengeCount">0 из 74</strong></div><div id="challengeTicks" class="challenge-ticks" aria-hidden="true"></div></section>
+  <section id="rhythmCard" class="card rhythm-card hidden" aria-labelledby="rhythmHeading">
+    <div class="rhythm-header"><p class="eyebrow">FIT74 2.0 · ТВОЙ РИТМ</p><span class="rhythm-edition">2.0</span></div>
+    <h2 id="rhythmHeading">Как ты сегодня?</h2>
+    <p id="rhythmStatus" class="micro" role="status">Загружаем твой ритм…</p>
+    <button id="rhythmRetry" class="ghost hidden" type="button">Повторить загрузку</button>
+    <div id="rhythmContent" class="hidden">
+      <div id="rhythmPausePanel" class="rhythm-pause-panel hidden">
+        <h3>Сегодня можно просто отдохнуть</h3><p id="rhythmPauseDate"></p><button id="rhythmResume" class="rhythm-primary" type="button">Вернуться к плану</button>
+      </div>
+      <div id="rhythmNormalPanel">
+        <div class="rhythm-energy" role="group" aria-label="Уровень энергии">
+          <button type="button" data-rhythm-energy="low" aria-pressed="false"><span>◔</span>Нет сил</button>
+          <button type="button" data-rhythm-energy="mid" aria-pressed="false"><span>◑</span>Нормально</button>
+          <button type="button" data-rhythm-energy="high" aria-pressed="false"><span>●</span>Есть силы</button>
+        </div>
+        <div id="rhythmOffer" class="rhythm-restart hidden">
+          <b>Рад, что ты вернулся!</b><p>Предыдущий прогресс остаётся. Можно начать с трёх гибких этапов.</p>
+          <button id="rhythmStart" class="rhythm-primary" type="button">Мягкий перезапуск</button>
+          <button id="rhythmLater" class="rhythm-link" type="button">Не сегодня</button>
+        </div>
+        <div id="rhythmRestart" class="rhythm-restart hidden">
+          <p id="rhythmStage" class="eyebrow">Этап</p><b id="rhythmStageName"></b><p id="rhythmStageHint"></p>
+          <button id="rhythmNext" class="rhythm-primary" type="button">Следующий этап</button>
+          <button id="rhythmStop" class="rhythm-link" type="button">Вернуться к обычному плану</button>
+        </div>
+        <div class="rhythm-plan"><p class="eyebrow">ТВОЙ ПЛАН СЕГОДНЯ</p><h3 id="rhythmPlanTitle"></h3><ul id="rhythmSteps"></ul>
+          <button id="rhythmCheckin" class="rhythm-primary" type="button">Отметиться за 10 секунд</button>
+          <p class="micro">Отметка присутствия не начисляет баллы за привычки.</p>
+        </div>
+        <div class="rhythm-coach"><div class="rhythm-coach-icon" aria-hidden="true">✳</div><div><b>Fit74 Coach</b><p id="rhythmCoachText"></p></div></div>
+        <details id="rhythmPauseControls" class="rhythm-controls"><summary>Настроить темп или взять паузу</summary>
+          <p class="micro">Пауза начинается сегодня, не продлевает план автоматически. Напоминания и требования на эти дни отключаются.</p>
+          <div class="rhythm-durations"><button type="button" data-rhythm-pause="1">1 день</button><button type="button" data-rhythm-pause="3">3 дня</button><button type="button" data-rhythm-pause="7">7 дней</button></div>
+          <button id="rhythmManualStart" type="button" class="rhythm-link">Начать мягкий перезапуск</button>
+        </details>
+      </div>
+      <button id="rhythmShowFull" type="button" class="rhythm-link hidden">Показать полный чек-лист</button>
+    </div>
+  </section>
   <section id="returnCard" class="card return-card hidden" aria-labelledby="returnTitle">
     <div class="return-eyebrow"><span class="return-spark" aria-hidden="true">↗</span><span>ВОЗВРАЩЕНИЕ В РИТМ</span></div>
     <h2 id="returnTitle">Ты всё ещё в игре</h2>
@@ -153,6 +193,7 @@
 
 <section id="settingsScreen" class="screen">
   <div class="screen-title"><div><p class="eyebrow">НАСТРОЙКИ</p><h2>Профиль</h2></div></div>
+  <section class="card rhythm-collection" aria-labelledby="rhythmAwardsTitle"><div class="card-head"><div><p class="eyebrow">КОЛЛЕКЦИЯ</p><h2 id="rhythmAwardsTitle">Мои достижения</h2></div><span id="rhythmAwardCount">0 из 6</span></div><p class="muted compact">За реальные действия и возвращения. Полученные награды остаются с тобой.</p><div id="rhythmAwards" class="rhythm-awards"></div></section>
   <section id="planSettingsCard" class="card plan-settings-card">
     <div class="card-head"><div><p class="eyebrow">ТВОЯ ДИСТАНЦИЯ</p><h2>Период плана</h2></div><span id="planDuration" class="plan-duration">74 дня</span></div>
     <p class="muted compact">Выбери начало и окончание. Длительность пересчитается автоматически.</p>
@@ -190,14 +231,16 @@
 <script src="./impulse-ui.js?v=11.0"></script>
 <script src="./plan-period.js?v=13.0"></script>
 <script src="./push-notifications.js?v=19.0"></script>
-<script src="./recovery-core.js?v=1.0"></script>
-<script src="./recovery-ui.js?v=1.0"></script>
-<script src="./v3.js?v=21.0"></script>
+<script src="./recovery-core.js?v=2.0"></script>
+<script src="./recovery-ui.js?v=2.0"></script>
+<script src="./rhythm-core.js?v=2.0"></script>
+<script src="./rhythm-ui.js?v=2.0"></script>
+<script src="./v3.js?v=22.0"></script>
 <script src="./plan-settings.js?v=13.0"></script>
 <script src="./visuals-v4.js?v=13.0"></script>
 <script src="./workout.js?v=13.0"></script>
 <script src="./shift-cycle.js?v=15.0"></script>
-<script src="./shift-schedule.js?v=15.0"></script>
+<script src="./shift-schedule.js?v=16.0"></script>
 <script>
 (()=>{
   const ready=()=>{

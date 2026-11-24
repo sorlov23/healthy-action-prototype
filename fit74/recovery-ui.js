@@ -51,7 +51,7 @@
         body:JSON.stringify(payload)
       });
       if (!result?.[0]) throw new Error('Сервер не подтвердил сохранение');
-      rows.set(date,result[0]); ctx.toast('Сохранил без изменения баллов ✓');
+      rows.set(date,result[0]); window.dispatchEvent(new CustomEvent('fit74:reflection-saved')); ctx.toast('Сохранил без изменения баллов ✓');
       if (modalDay) closeModal();
     } catch(error) {
       console.warn('Fit74 recovery save',error);
@@ -113,7 +113,7 @@
   function render() {
     if(!ctx)return;
     const p=ctx.period(), today=ctx.today();
-    try{state=core.calculate({entries:ctx.entries(),start:p.start,end:p.end,today});}
+    try{state=core.calculate({entries:ctx.entries(),start:p.start,end:p.end,today,pausedDates:window.Fit74Rhythm?.pausedDates()||[]});}
     catch(error){console.warn('Fit74 recovery stats',error);return;}
     const f=state.fortnight,m=state.month;
     setText('#return14',f.total?f.percent+'%':'—');

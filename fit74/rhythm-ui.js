@@ -115,6 +115,7 @@ function render(){
  text('#rhythmShowFull',expanded?'Свернуть полный чек-лист':'Показать полный чек-лист');
  const steps=q('#rhythmSteps');if(steps){steps.replaceChildren();for(const title of info.steps){const li=document.createElement('li');li.textContent=title;steps.append(li)}}
  for(const b of qa('[data-rhythm-energy]')){b.setAttribute('aria-pressed',String(b.dataset.rhythmEnergy===info.energy));b.disabled=disabled()}
+ show('#rhythmManualStart',on&&!info.stage);
  const sameDay=info.stageDate===ctx.today();
  text('#rhythmStage','Этап '+info.stage+' из 3');
  text('#rhythmStageName',['','Возвращаем режим','Добавляем движение','Возвращаемся к плану'][info.stage]||'');
@@ -152,6 +153,6 @@ function bind(){
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ctx){if(ctx.today()!==lastDay){expanded=false;void load()}else render()}});
 }
 function start(next){ctx=next;rows=[];contexts=[];awards=new Map();ready=false;expanded=false;bind();render();void load()}
-function changed(){render();void unlock()}
+function changed(){if(!ctx)return;render();void unlock()}
 window.Fit74Rhythm=Object.freeze({start,render:changed,isPaused,pausedDates,decorate});
 })();

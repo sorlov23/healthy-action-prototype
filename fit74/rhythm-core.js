@@ -23,7 +23,7 @@ function state({rows=[],entries=[],start,end,today,shift={}}){
  if(prior)for(let d=add(prior,1);d<today;d=add(d,1))if(d>=start&&!pauses.has(d))gap++;
  const last=rows.filter(r=>r.restart_stage!=null&&r.entry_date>=start&&r.entry_date<=today).sort((a,b)=>b.entry_date.localeCompare(a.entry_date))[0];
  const stage=inPlan?Number(last?.restart_stage||0):0;
- const suggestion=inPlan&&!paused&&!stage&&!current.dismissed&&(gap>=3);
+ const suggestion=inPlan&&!paused&&!stage&&!current.dismissed&&current.restart_stage!==0&&(gap>=3);
  const energy=current.energy||null;
  const shiftKind=shift.kind||'';
  const restShift=['work','night','recovery','vacation'].includes(shiftKind)||shift.code==='REST';
