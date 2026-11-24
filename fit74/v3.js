@@ -88,14 +88,14 @@ function showAuth(){show($('#authView'));show($('#appView'),false);completeStart
 async function enter(){await loadPrefs();applyPlanPeriod();selectedDate=clamp(todayISO());await loadEntries();loadDraft();$('#accountEmail').textContent=user.email||'';renderAll();scheduleReminder();show($('#authView'),false);show($('#appView'));planPeriod.publish();completeStartup();startPush();
 try{window.Fit74Recovery?.start({userId:user.id,db,entries:effectiveEntries,
   period:()=>({start:START,end:END}),today:todayISO,selected:()=>selectedDate,
-  shift:()=>window.Fit74ShiftCycle?.slotFor(todayISO(),prefs.shift_anchor_date||'2026-10-19'),
+  shift:()=>prefs.shift_cycle_enabled===false?{}:window.Fit74ShiftSchedule?.slotFor(todayISO())||window.Fit74ShiftCycle?.slotFor(todayISO(),prefs.shift_anchor_date||'2026-10-19'),
   checkin:openQuick,toast});}
 catch(error){console.warn('Optional recovery UI',error)}
 try{window.Fit74Rhythm?.start({userId:user.id,db,entries:effectiveEntries,period:()=>({start:START,end:END}),
  today:todayISO,selected:()=>selectedDate,
  shift:()=>prefs.shift_cycle_enabled===false?{}:window.Fit74ShiftSchedule?.slotFor(todayISO())||window.Fit74ShiftCycle?.slotFor(todayISO(),prefs.shift_anchor_date||'2026-10-19'),
  readRange:(path,field,period)=>planPeriod.readRange(db,path,field,period),toast,
- refresh:()=>{renderSummary();renderWeeklyGoals();renderCalendar();renderTrends();window.Fit74Recovery?.render();window.Fit74Rhythm?.render();checkSmartReminder()}
+ refresh:()=>{renderSummary();renderWeeklyGoals();if($('#historyScreen').classList.contains('active'))renderHistory();if($('#trendsScreen').classList.contains('active'))renderTrends();window.Fit74Recovery?.render();checkSmartReminder()}
 })}catch(error){console.warn('Optional rhythm UI',error)}
 if(new URL(location.href).searchParams.get('checkin')==='1'){openNotificationCheckin();const clean=new URL(location.href);clean.searchParams.delete('checkin');history.replaceState(null,'',clean)}}
 $('#authForm').addEventListener('submit',async e=>{e.preventDefault();const m=$('#authMessage');m.textContent='Входим…';try{const j=await login($('#email').value.trim(),$('#password').value);user=j.user;await enter();m.textContent=''}catch(err){m.textContent=err.message}});
@@ -231,9 +231,9 @@ async function pushRequest(body){await ensureSession();const send=()=>cloudJSON(
 function startPush(){try{window.Fit74Push?.start({userId:user.id,settings:prefs,request:pushRequest,publicConfig:()=>cloudJSON(API+'/functions/v1/fit74-push',{headers:{apikey:KEY}}),openCheckin:openNotificationCheckin})}catch(error){console.warn('Fit74 push initialization',error)}}
 function scheduleReminder(){clearTimeout(reminderTimer);if(!prefs.reminder_enabled||todayISO()<START||todayISO()>END)return;const now=new Date(),date=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow'}).format(now),target=new Date(date+'T'+(prefs.reminder_time||'21:30')+':00+03:00');if(target<=now){checkSmartReminder();target.setTime(target.getTime()+86400000)}reminderTimer=setTimeout(()=>{checkSmartReminder();scheduleReminder()},Math.min(target-now,2147483647))}
 function todayEntry(){const iso=clamp(todayISO());if(selectedDate===iso)return{...draft,entry_date:iso};return effectiveEntries().find(e=>e.entry_date===iso)||null}
-async function checkSmartReminder(){if(rhythmPaused(todayISO())){show($('#smartNudge'),false);return}if(!prefs.reminder_enabled||todayISO()<START||todayISO()>END)return;const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(p=>[p.type,p.value]));const [h,m]=(prefs.reminder_time||'21:30').split(':').map(Number);if(Number(parts.hour)*60+Number(parts.minute)<h*60+m)return;const e=todayEntry()||empty();if(stable(e)){show($('#smartNudge'),false);return}const s=score(e),need=Math.max(1,5-s);const returnInfo=window.Fit74RecoveryCore?.calculate({entries:effectiveEntries(),start:START,end:END,today:todayISO(),pausedDates:window.Fit74Rhythm?.pausedDates()||[]});
-if(returnInfo?.returning){
-  const slot=window.Fit74ShiftCycle?.slotFor(todayISO(),prefs.shift_anchor_date||'2026-10-19');
+async function checkSmartReminder(){const rhythm=window.Fit74Rhythm?.state();if(rhythmPaused(todayISO())||rhythm?.checked){show($('#smartNudge'),false);return}if(!prefs.reminder_enabled||todayISO()<START||todayISO()>END)return;const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(p=>[p.type,p.value]));const [h,m]=(prefs.reminder_time||'21:30').split(':').map(Number);if(Number(parts.hour)*60+Number(parts.minute)<h*60+m)return;const e=todayEntry()||empty();if(stable(e)){show($('#smartNudge'),false);return}const s=score(e),need=Math.max(1,5-s);const returnInfo=window.Fit74RecoveryCore?.calculate({entries:effectiveEntries(),start:START,end:END,today:todayISO(),pausedDates:window.Fit74Rhythm?.pausedDates()||[]});
+if(rhythm?.energy==='low'||rhythm?.stage>0||returnInfo?.returning){
+  const slot=prefs.shift_cycle_enabled===false?{}:window.Fit74ShiftSchedule?.slotFor(todayISO())||window.Fit74ShiftCycle?.slotFor(todayISO(),prefs.shift_anchor_date||'2026-10-19');
   $('#smartNudge').querySelector('b').textContent='Возвращаемся спокойно';
   $('#smartNudgeText').textContent=['night','recovery'].includes(slot?.kind)?
     'После ночной важнее сон. Отметь день, когда будет удобно. Ничего не нужно догонять.':

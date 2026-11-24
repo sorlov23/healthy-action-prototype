@@ -7,7 +7,7 @@ const text=(s,v)=>{const el=q(s);if(el)el.textContent=v};
 const show=(s,on)=>q(s)?.classList.toggle('hidden',!on);
 const dates=()=>ctx?.period()||{};
 let ctx=null,rows=[],contexts=[],awards=new Map(),ready=false,busy=false,awardBusy=false,epoch=0,lastDay=null;
-let info=null,expanded=false;
+let info=null,expanded=false,awardSignature=null;
 const isoLabel=d=>new Date(d+'T12:00:00Z').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
 const row=d=>rows.find(r=>r.entry_date===d)||{};
 const calc=()=>ctx?core.state({rows,entries:ctx.entries(),...dates(),today:ctx.today(),shift:ctx.shift?.()||{}}):null;
@@ -74,7 +74,7 @@ async function unlock(){
  }catch(e){console.warn('Rhythm awards',e)}finally{awardBusy=false}
 }
 function drawAwards(){
- const box=q('#rhythmAwards');if(!box)return;box.replaceChildren();
+ const box=q('#rhythmAwards');if(!box)return;const signature=[...awards].sort().map(([code,date])=>code+date).join('|');if(awardSignature===signature)return;awardSignature=signature;box.replaceChildren();
  for(const [code,icon,title,desc] of core.badges){
   const el=document.createElement('div');el.className='rhythm-award'+(awards.has(code)?' earned':'');
   const symbol=document.createElement('span');symbol.className='rhythm-award-icon';symbol.textContent=icon;
@@ -125,7 +125,7 @@ function render(){
  if(q('#rhythmRetry'))q('#rhythmRetry').disabled=busy;
  if(q('#rhythmNext'))q('#rhythmNext').disabled=disabled()||sameDay;
  if(q('#rhythmCheckin'))q('#rhythmCheckin').disabled=disabled()||info.checked;
- if(on&&info.paused)show('#smartNudge',false);
+ if(on&&(info.paused||info.checked))show('#smartNudge',false);
  decorate();drawAwards();
 }
 function bind(){
@@ -152,7 +152,7 @@ function bind(){
  window.addEventListener('fit74:reflection-saved',()=>load());
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ctx){if(ctx.today()!==lastDay){expanded=false;void load()}else render()}});
 }
-function start(next){ctx=next;rows=[];contexts=[];awards=new Map();ready=false;expanded=false;bind();render();void load()}
+function start(next){ctx=next;rows=[];contexts=[];awards=new Map();awardSignature=null;ready=false;expanded=false;bind();render();void load()}
 function changed(){if(!ctx)return;render();void unlock()}
-window.Fit74Rhythm=Object.freeze({start,render:changed,isPaused,pausedDates,decorate});
+window.Fit74Rhythm=Object.freeze({start,render:changed,isPaused,pausedDates,decorate,state:()=>ready?calc():null});
 })();

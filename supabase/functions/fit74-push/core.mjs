@@ -20,10 +20,11 @@ export function validSubscription(input) {
 export function notificationPayload(day, test = false, tone = 'regular') {
   const title = test ? 'Fit74 · уведомления работают' :
     tone === 'shift' ? 'Fit74 · бережный ритм' :
-    tone === 'return' ? 'Fit74 · ты всё ещё в игре' : 'Fit74 · день ещё открыт';
+    tone === 'return' ? 'Fit74 · ты всё ещё в игре' : tone === 'gentle' ? 'Fit74 · в своём темпе' : 'Fit74 · день ещё открыт';
   const body = test ? 'Это проверка. Напомним в выбранное время, если день ещё не закрыт.' :
     tone === 'shift' ? 'После смены сон и восстановление важнее отчётности. Отметь день, когда будет удобно.' :
     tone === 'return' ? 'После перерыва достаточно одного небольшого шага. Ничего не нужно наверстывать.' :
+    tone === 'gentle' ? 'Сегодня можно просто отметить, как ты себя чувствуешь. Отдых и регулярное питание важнее баллов.' :
     'Быстрый чек-ин займёт около 10 секунд. Загляни без догонялок.';
   const navigate = `${APP_ORIGIN}/index.html?fit74v=19&checkin=1`;
   // A visible declarative fallback also works in recent Safari if its worker is unavailable.

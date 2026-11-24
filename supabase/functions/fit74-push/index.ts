@@ -49,14 +49,20 @@ const store = {
     const user = eq(own.user_id);
     const p = (await db('fit74_preferences?select=start_date,end_date,shift_cycle_enabled,shift_anchor_date&user_id=eq.' + user))?.[0];
     if (!p || date < p.start_date || date > p.end_date) return 'regular';
-    if (p.shift_cycle_enabled && [4,5,6].includes(shiftSlot(date, p.shift_anchor_date || '2026-10-19')))
+    const override = (await db('fit74_shift_overrides?select=override_type&user_id=eq.'+user+'&work_date=eq.'+date))?.[0];
+    if (!override && p.shift_cycle_enabled && [4,5,6].includes(shiftSlot(date, p.shift_anchor_date || '2026-10-19')))
       return 'shift';
+    const rhythm = await db('fit74_rhythm_days?select=entry_date,energy,restart_stage,paused&user_id=eq.'+user+'&entry_date=gte.'+p.start_date+'&entry_date=lte.'+date+'&order=entry_date.desc');
+    const current = rhythm?.find((r: {entry_date:string}) => r.entry_date === date);
+    const stage = rhythm?.find((r: {restart_stage:number|null}) => r.restart_stage != null)?.restart_stage || 0;
+    if (stage > 0 || current?.energy === 'low') return 'gentle';
     const a = addDay(date, -2), b = addDay(date, -1);
     if (a < p.start_date) return 'regular';
     const history = await db('fit74_daily_entries?select=entry_date,workout,nutrition,movement,water,sleep,habit_1,habit_2,habit_3,minimum_mode&user_id=eq.'+
       user + '&entry_date=gte.' + a + '&entry_date=lte.' + b);
     const found = new Map<string, Record<string, unknown>>((history || []).map((row: Record<string, unknown>) => [String(row.entry_date), row]));
-    return !stableEntry(found.get(a)) && !stableEntry(found.get(b)) ? 'return' : 'regular';
+    const paused = new Set((rhythm || []).filter((r: {paused:boolean}) => r.paused).map((r: {entry_date:string}) => r.entry_date));
+    return !paused.has(a) && !paused.has(b) && !stableEntry(found.get(a)) && !stableEntry(found.get(b)) ? 'return' : 'regular';
   },
   async owned(user: string, endpoint: string) {
     return (await db(`fit74_push_subscriptions?user_id=eq.${eq(user)}&endpoint=eq.${eq(endpoint)}&select=enabled,last_status`))?.[0];

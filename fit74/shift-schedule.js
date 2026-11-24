@@ -94,7 +94,8 @@
     if(eyebrow){eyebrow.textContent=date===calendarToday()?(s.code==='REST'?'ТВОЙ ПЛАН НА СЕГОДНЯ':'ТРЕНИРОВКА НА СЕГОДНЯ'):(isPrestart()&&date===START?'ПЛАН НА СТАРТ · ':'ПЛАН НА ')+fmt(date).toUpperCase();}
     if(s.code!=='REST'&&!done)start.innerHTML='Открыть тренировку '+(ui?.icon('arrow-right')||'→');
     capturePlanSnapshot();
-    window.Fit74Rhythm?.render();
+    const rhythmKey=date+'|'+s.kind+'|'+s.code+'|'+(s.overrideType||'');
+    if(renderToday.rhythmKey!==rhythmKey){renderToday.rhythmKey=rhythmKey;window.Fit74Rhythm?.render()}
   }
 
   function renderHub(){
